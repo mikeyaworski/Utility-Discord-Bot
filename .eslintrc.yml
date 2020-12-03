@@ -1,0 +1,58 @@
+parser: '@typescript-eslint/parser'
+env:
+  node: true
+settings:
+  import/resolver:
+    typescript:
+      alwaysTryTypes: true
+extends:
+  - airbnb-base
+  - 'plugin:@typescript-eslint/recommended'
+plugins:
+  - import
+  - '@typescript-eslint'
+# Disable TS linting for JS files and then override it for TS files
+# https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/explicit-module-boundary-types.md#configuring-in-a-mixed-jsts-codebase
+overrides:
+  - files: ['*.ts']
+    rules:
+      '@typescript-eslint/explicit-module-boundary-types': error
+rules:
+  # Rules which will be overriden (see overrides).
+  '@typescript-eslint/explicit-module-boundary-types': off
+  
+  # Redundant TS rules which can just be disabled.
+  '@typescript-eslint/no-unused-vars': off
+
+  # TS rules
+  '@typescript-eslint/ban-ts-comment': off # we obviously need to use this in certain cases
+  '@typescript-eslint/no-non-null-assertion': off # obviously if we're specifying this, we know this assertion to be true
+
+  # https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/no-use-before-define.md#how-to-use
+  no-use-before-define: off
+  '@typescript-eslint/no-use-before-define':
+    - error
+
+  react/prop-types: off # Was using InferProps to get TS type from this, but this made non-required types null, which conflicts with MUI. Not worth the headache.
+  linebreak-style: off # convenience for Windows
+  import/prefer-default-export: off # this is stupid to be made a general rule. should be case by case
+  max-len: # 100 is too little and often leads to uglier formatting
+    - error
+    - code: 150
+      tabWidth: 2
+  arrow-parens: # no parenthesis are cleaner
+    - error
+    - as-needed
+  no-param-reassign: off # there are lots of valid use cases for this. having it off leads to messy code with weird variables names.
+  no-plusplus: # obviously better for loops lol
+    - error
+    - allowForLoopAfterthoughts: true
+  object-curly-newline: # define this rule ourselves since we don't want minProperties: 3 (this should be determined by line length)
+    - error
+    - multiline: true
+      consistent: true
+  import/extensions:
+    - error
+    - js: never
+      ts: never
+  arrow-body-style: off # this often leads to difficult-to-read inline functions

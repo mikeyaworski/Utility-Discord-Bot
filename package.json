@@ -1,0 +1,42 @@
+{
+  "name": "utility-discord-bot",
+  "version": "1.0.0",
+  "description": "https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "npm run lint",
+    "start": "ts-node -r tsconfig-paths/register src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikeyaworski/utility-discord-bot.git"
+  },
+  "author": "Michael Yaworski",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mikeyaworski/utility-discord-bot/issues"
+  },
+  "homepage": "https://github.com/mikeyaworski/utility-discord-bot#readme",
+  "dependencies": {
+    "axios": "^0.21.0",
+    "discord.js": "^12.5.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.9",
+    "@types/jest": "^26.0.16",
+    "@types/node": "^14.14.10",
+    "@typescript-eslint/eslint-plugin": "^4.9.0",
+    "@typescript-eslint/parser": "^4.9.0",
+    "eslint": "^7.14.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-import-resolver-typescript": "^2.3.0",
+    "eslint-plugin-import": "^2.22.1",
+    "jest": "^26.6.3",
+    "ts-node": "^9.0.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^4.1.2"
+  }
+}
