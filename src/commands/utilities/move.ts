@@ -13,6 +13,8 @@ interface Args {
   end: CommandoMessage | false,
 }
 
+type EitherMessage = Message | CommandoMessage;
+
 /**
  * Example:
  * !move <channel> <start_msg> <end_msg?>
@@ -48,7 +50,7 @@ export default class MoveCommand extends Command {
     });
   }
 
-  static async moveMessage(channel: TextChannel, msg: CommandoMessage | Message): Promise<void> {
+  static async moveMessage(channel: TextChannel, msg: EitherMessage): Promise<void> {
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
     const { author } = msg;
     const newMessage = new Discord.MessageEmbed()
@@ -72,7 +74,7 @@ export default class MoveCommand extends Command {
     channel: TextChannel | DMChannel,
     start: CommandoMessage,
     end: CommandoMessage,
-  ): Promise<(Message | CommandoMessage)[]> {
+  ): Promise<(EitherMessage)[]> {
     // this would be nice...
     // return (await channel.messages.fetch({
     //   after: start.id,
@@ -80,27 +82,33 @@ export default class MoveCommand extends Command {
     //   limit: BULK_MESSAGES_LIMIT,
     // })).array();
 
-    const msgs = [start];
-    const afterStartMsgs = (await channel.messages.fetch({
+    // swap them if start > end
+    if (start.createdTimestamp > end.createdTimestamp) {
+      const temp = start;
+      start = end;
+      end = temp;
+    }
+
+    const afterStartMsgs: (EitherMessage)[] = (await channel.messages.fetch({
       after: start.id,
       limit: BULK_MESSAGES_LIMIT,
     })).array().reverse(); // reverse so the messages are ordered chronologically
-    const beforeEndMsgs = (await channel.messages.fetch({
+    afterStartMsgs.unshift(start);
+
+    const beforeEndMsgs: (EitherMessage)[] = (await channel.messages.fetch({
       before: end.id,
       limit: BULK_MESSAGES_LIMIT,
     })).array();
-    const intersection = getIntersection(
+    beforeEndMsgs.push(end);
+
+    const intersection = getIntersection<EitherMessage>(
       afterStartMsgs,
       beforeEndMsgs,
-      (a: Message, b: Message) => a.id === b.id,
+      (a, b) => a.id === b.id,
     );
 
-    if (intersection.length === 0) return [start, ...afterStartMsgs];
-    return [
-      start,
-      ...intersection,
-      end,
-    ];
+    if (intersection.length === 0) return [...afterStartMsgs];
+    return intersection;
   }
 
   // TODO: check that the user asking to move the messages actually
