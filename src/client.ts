@@ -2,10 +2,12 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { CommandoClient } from 'discord.js-commando';
 
+import { COMMAND_PREFIX } from 'src/constants';
+
 dotenv.config();
 
 const client = new CommandoClient({
-  commandPrefix: '!',
+  commandPrefix: COMMAND_PREFIX,
   owner: process.env.OWNER_ID,
 });
 
@@ -36,10 +38,3 @@ export function initClient(): Promise<void> {
   });
 }
 /* eslint-enable no-console */
-
-/**
- * Should be called AFTER initClient
- */
-export function getClient(): CommandoClient {
-  return client;
-}
