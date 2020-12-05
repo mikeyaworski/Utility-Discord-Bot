@@ -136,7 +136,7 @@ export default class MoveCommand extends Command {
       await MoveCommand.moveMessage(toChannel, msgs[i]);
     }
 
-    toChannel.stopTyping();
+    toChannel.stopTyping(true);
     return null;
   }
 }
