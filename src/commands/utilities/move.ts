@@ -1,11 +1,10 @@
 import type { ClientType, CommandRunMethod } from 'src/types';
-import type { DMChannel, Message, TextChannel } from 'discord.js';
+import type { Message, TextChannel } from 'discord.js';
 import type { CommandoMessage } from 'discord.js-commando';
 
 import Discord from 'discord.js';
 import { Command } from 'discord.js-commando';
-import { BULK_MESSAGES_LIMIT } from 'src/constants';
-import { getIntersection } from 'src/utils';
+import { getMessagesInRange } from 'src/discord-utils';
 
 interface Args {
   channel: TextChannel,
@@ -13,11 +12,11 @@ interface Args {
   end: CommandoMessage | false,
 }
 
-type EitherMessage = Message | CommandoMessage;
-
 /**
  * Example:
  * !move <channel> <start_msg> <end_msg?>
+ * !move #other 784702649324929054 784702678847455242
+ * !move #other 784702649324929054
  */
 export default class MoveCommand extends Command {
   constructor(client: ClientType) {
@@ -50,7 +49,7 @@ export default class MoveCommand extends Command {
     });
   }
 
-  static async moveMessage(channel: TextChannel, msg: EitherMessage): Promise<void> {
+  static async moveMessage(channel: TextChannel, msg: Message | CommandoMessage): Promise<void> {
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
     const { author } = msg;
     const newMessage = new Discord.MessageEmbed()
@@ -59,56 +58,6 @@ export default class MoveCommand extends Command {
       .attachFiles(msg.attachments.array());
     await channel.send(newMessage);
     await msg.delete();
-  }
-
-  /**
-   * It would be awesome to just provide
-   * { after: start.id, before: end.id } to the fetch,
-   * but the API apparently does not support simultaneous options (lol).
-   * So instead, we will fetch X messages after the start and X messages before the end,
-   * and then take the intersection as the messages within the range.
-   * If the intersection is empty, then there are more messages between the range than our limit allows us to find.
-   * So just move all of the messages found after the start.
-   */
-  static async getMessagesInRange(
-    channel: TextChannel | DMChannel,
-    start: CommandoMessage,
-    end: CommandoMessage,
-  ): Promise<(EitherMessage)[]> {
-    // this would be nice...
-    // return (await channel.messages.fetch({
-    //   after: start.id,
-    //   before: end.id,
-    //   limit: BULK_MESSAGES_LIMIT,
-    // })).array();
-
-    // swap them if start > end
-    if (start.createdTimestamp > end.createdTimestamp) {
-      const temp = start;
-      start = end;
-      end = temp;
-    }
-
-    const afterStartMsgs: (EitherMessage)[] = (await channel.messages.fetch({
-      after: start.id,
-      limit: BULK_MESSAGES_LIMIT,
-    })).array().reverse(); // reverse so the messages are ordered chronologically
-    afterStartMsgs.unshift(start);
-
-    const beforeEndMsgs: (EitherMessage)[] = (await channel.messages.fetch({
-      before: end.id,
-      limit: BULK_MESSAGES_LIMIT,
-    })).array();
-    beforeEndMsgs.push(end);
-
-    const intersection = getIntersection<EitherMessage>(
-      afterStartMsgs,
-      beforeEndMsgs,
-      (a, b) => a.id === b.id,
-    );
-
-    if (intersection.length === 0) return [...afterStartMsgs];
-    return intersection;
   }
 
   // TODO: check that the user asking to move the messages actually
@@ -125,10 +74,10 @@ export default class MoveCommand extends Command {
     if (!end) {
       await MoveCommand.moveMessage(toChannel, start);
       toChannel.stopTyping();
-      return null;
+      return commandMsg.delete();
     }
 
-    const msgs = await MoveCommand.getMessagesInRange(fromChannel, start, end);
+    const msgs = await getMessagesInRange(fromChannel, start, end);
 
     // do these in order
     for (let i = 0; i < msgs.length; i++) {
@@ -137,6 +86,6 @@ export default class MoveCommand extends Command {
     }
 
     toChannel.stopTyping(true);
-    return null;
+    return commandMsg.delete();
   }
 }
