@@ -33,7 +33,9 @@ rules:
   '@typescript-eslint/no-use-before-define':
     - error
 
-  react/prop-types: off # Was using InferProps to get TS type from this, but this made non-required types null, which conflicts with MUI. Not worth the headache.
+  # Rules that conflict with Discord API
+  class-methods-use-this: off
+
   linebreak-style: off # convenience for Windows
   import/prefer-default-export: off # this is stupid to be made a general rule. should be case by case
   max-len: # 100 is too little and often leads to uglier formatting

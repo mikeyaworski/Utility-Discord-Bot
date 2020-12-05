@@ -21,6 +21,7 @@
   "dependencies": {
     "axios": "^0.21.0",
     "discord.js": "^12.5.1",
+    "discord.js-commando": "github:discordjs/Commando",
     "dotenv": "^8.2.0",
     "express": "^4.17.1"
   },

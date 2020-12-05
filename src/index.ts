@@ -3,6 +3,7 @@ import express from 'express';
 import axios from 'axios';
 
 import { WAKE_INTERVAL } from 'src/constants';
+import { initClient } from './client';
 
 dotenv.config();
 
@@ -11,7 +12,6 @@ function preventSleep() {
   const host = process.env.PING_HOST;
   console.log('Pinging', host, 'on timeout', WAKE_INTERVAL);
   setTimeout(async () => {
-    // TODO
     try {
       await axios.get(host);
       console.log('Successful ping!');
@@ -28,4 +28,4 @@ const app = express();
 app.get('/', (req, res) => res.send('Healthy!'));
 app.listen(process.env.PORT || 3000, preventSleep);
 
-// TODO: initialize Discord client and create test operation.
+initClient();

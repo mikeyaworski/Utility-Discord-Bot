@@ -1,0 +1,1 @@
+- Bulk deleting message (like move, but instead of posting the messages in new channel, just stop once they're deleted).
