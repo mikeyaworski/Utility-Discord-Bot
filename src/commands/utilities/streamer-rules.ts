@@ -85,7 +85,7 @@ export default class StreamerRulesCommand extends Command {
           role_id: (role as Role).id,
           add: false,
         });
-        return msg.say(`Users who are streaming will now be given the <@&${(role as Role).id}> role.`);
+        return msg.say(`Users who are streaming will now have the <@&${(role as Role).id}> role removed.`);
       }
       // @ts-ignore
       if (LIST_OPERATIONS.includes(operation)) {
