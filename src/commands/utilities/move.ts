@@ -4,7 +4,7 @@ import type { CommandoMessage } from 'discord.js-commando';
 
 import Discord from 'discord.js';
 import { Command } from 'discord.js-commando';
-import { getMessagesInRange } from 'src/discord-utils';
+import { getMessagesInRange, userHasPermission } from 'src/discord-utils';
 
 interface Args {
   channel: TextChannel,
@@ -27,6 +27,7 @@ export default class MoveCommand extends Command {
       memberName: 'move',
       description: 'Moves a range of messages to another channel.',
       userPermissions: ['MANAGE_MESSAGES'],
+      clientPermissions: ['MANAGE_MESSAGES'],
       args: [
         {
           key: 'channel',
@@ -60,12 +61,18 @@ export default class MoveCommand extends Command {
     await msg.delete();
   }
 
-  // TODO: check that the user asking to move the messages actually
-  // has read & write access to the channel being moved to
   run: CommandRunMethod<Args> = async (commandMsg, args) => {
     const { channel: toChannel, start, end } = args;
     const fromChannel = start.channel;
-    if (toChannel.id === fromChannel.id) return null;
+    if (toChannel.id === fromChannel.id) {
+      return commandMsg.reply('You\'re moving messages to the same channel??');
+    }
+
+    // It would be nice to use the hasPermission instance function, but that does not give us access to the resolved arguments
+    // (we get strings instead of the resolved message/channel objects). So we check it here, in the run operation.
+    if (!userHasPermission(toChannel, start.author, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
+      return commandMsg.reply(`You do not have access to send messages in <#${toChannel.id}>`);
+    }
 
     toChannel.startTyping();
     await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);

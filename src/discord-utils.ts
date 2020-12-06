@@ -1,4 +1,4 @@
-import type { TextChannel, DMChannel, Message } from 'discord.js';
+import type { TextChannel, DMChannel, Message, User, PermissionString } from 'discord.js';
 import type { CommandoMessage } from 'discord.js-commando';
 
 import { getIntersection } from 'src/utils';
@@ -54,4 +54,12 @@ export async function getMessagesInRange(
 
   if (intersection.length === 0) return [...afterStartMsgs];
   return intersection;
+}
+
+export function userHasPermission(
+  channel: TextChannel,
+  user: User,
+  permission: PermissionString | PermissionString[],
+): boolean {
+  return channel.permissionsFor(user).has(permission);
 }

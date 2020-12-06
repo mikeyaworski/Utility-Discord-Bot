@@ -25,6 +25,7 @@ export default class DeleteCommand extends Command {
       memberName: 'delete',
       description: 'Deletes a range of messages.',
       userPermissions: ['MANAGE_MESSAGES'],
+      clientPermissions: ['MANAGE_MESSAGES'],
       args: [
         {
           key: 'start',
@@ -52,10 +53,7 @@ export default class DeleteCommand extends Command {
     const { start, end, old } = args;
     const { channel } = start;
 
-    // TODO: check that the user has permissions to delete messages in the channel, instead
-    // of this check. Because we should be able to use this command from an arbitrary channel
-    // (e.g. in #commands, delete messages in #general).
-    if (commandMsg.channel.id !== start.channel.id || channel.type === 'dm') return null;
+    if (channel.type === 'dm') return null;
 
     // single message; not a range
     if (!end) {
