@@ -7,6 +7,13 @@ import { COMMAND_PREFIX } from 'src/constants';
 import MoveCommand from 'src/commands/utilities/move';
 import DeleteCommand from 'src/commands/utilities/delete';
 
+// events
+import StreamingEvent from 'src/events/streaming';
+
+const events = [
+  StreamingEvent,
+];
+
 dotenv.config();
 
 const client = new CommandoClient({
@@ -37,6 +44,10 @@ export function initClient(): Promise<void> {
     //   // recursive: true,
     // });
     // .registerCommandsIn(path.join(__dirname, 'commands'));
+
+    events.forEach(([trigger, cb]) => {
+      client.on(trigger, cb);
+    });
 
     /* eslint-disable no-console */
     client.on('ready', () => {

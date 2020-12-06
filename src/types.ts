@@ -4,7 +4,7 @@ import type {
   CommandoClient,
   ArgumentCollectorResult,
 } from 'discord.js-commando';
-import type { Message } from 'discord.js';
+import type { Message, Presence } from 'discord.js';
 
 export type GenericMapping<T1, T2 extends string = string> = {
   [key in T2]?: T1;
@@ -24,3 +24,11 @@ export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
   fromPattern: boolean,
   result?: ArgumentCollectorResult,
 ) => Promise<Message | Message[] | null> | null;
+
+// TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:
+// export type EventTrigger = Parameters<typeof CommandoClient.prototype.on>
+// Except that this only gets the parameters of the last defined overload...
+export type EventTrigger = [
+  'presenceUpdate',
+  (oldMember: Presence, newMember: Presence) => void
+];
