@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { CommandoClient } from 'discord.js-commando';
 
 import { COMMAND_PREFIX } from 'src/constants';
+import { log, warn, error } from 'src/logging';
 
 // commands
 import MoveCommand from 'src/commands/utilities/move';
@@ -49,14 +50,12 @@ export function initClient(): Promise<void> {
       client.on(trigger, cb);
     });
 
-    /* eslint-disable no-console */
     client.on('ready', () => {
-      console.log(`Logged in as ${client.user.tag}! (${client.user.id})`);
+      log(`Logged in as ${client.user.tag}! (${client.user.id})`);
       resolve();
     });
-    client.on('warn', console.warn);
-    client.on('error', console.error);
-    /* eslint-enable no-console */
+    client.on('warn', warn);
+    client.on('error', error);
 
     client.login(process.env.DISCORD_BOT_TOKEN);
   });

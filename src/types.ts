@@ -15,6 +15,9 @@ export type UnknownMapping = GenericMapping<unknown>;
 
 export type ClientType = CommandoClient;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type LogArg = any;
+
 // The typing is bad because they use object as a type, so
 // we define it manually until they fix it.
 // export type CommandRunMethod = typeof Command.prototype.run;

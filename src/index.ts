@@ -3,25 +3,24 @@ import express from 'express';
 import axios from 'axios';
 
 import { WAKE_INTERVAL } from 'src/constants';
+import { log, error } from 'src/logging';
 import { initClient } from './client';
 
 dotenv.config();
 
-/* eslint-disable no-console */
 function preventSleep() {
   const host = process.env.PING_HOST;
-  console.log('Pinging', host, 'on timeout', WAKE_INTERVAL);
+  log('Pinging', host, 'on timeout', WAKE_INTERVAL);
   setTimeout(async () => {
     try {
       await axios.get(host);
-      console.log('Successful ping!');
+      log('Successful ping!');
     } catch (err) {
-      console.error(err);
+      error(err);
     }
     preventSleep();
   }, WAKE_INTERVAL);
 }
-/* eslint-enable no-console */
 
 // endpoint for pinging the server to keep it alive
 const app = express();
