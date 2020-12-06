@@ -7,9 +7,16 @@ import { log, warn, error } from 'src/logging';
 // commands
 import MoveCommand from 'src/commands/utilities/move';
 import DeleteCommand from 'src/commands/utilities/delete';
+import StreamerRulesCommand from 'src/commands/utilities/streamer-rules';
 
 // events
 import StreamingEvent from 'src/events/streaming';
+
+const commands = [
+  MoveCommand,
+  DeleteCommand,
+  StreamerRulesCommand,
+];
 
 const events = [
   StreamingEvent,
@@ -31,10 +38,7 @@ export function initClient(): Promise<void> {
       ])
       .registerDefaultGroups()
       .registerDefaultCommands()
-      .registerCommands([
-        MoveCommand,
-        DeleteCommand,
-      ]);
+      .registerCommands(commands);
     // registerCommandsIn does not play well with TypeScript files, so we are just going to manually register commands.
     // .registerCommandsIn({
     //   // https://www.npmjs.com/package/require-all

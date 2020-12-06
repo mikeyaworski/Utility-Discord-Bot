@@ -4,7 +4,8 @@ import axios from 'axios';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
-import { initClient } from './client';
+import { initClient } from 'src/client';
+import { syncModels } from 'src/models';
 
 dotenv.config();
 
@@ -27,4 +28,4 @@ const app = express();
 app.get('/', (req, res) => res.send('Healthy!'));
 app.listen(process.env.PORT || 3000, preventSleep);
 
-initClient();
+initClient().then(syncModels);

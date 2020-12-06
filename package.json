@@ -6,6 +6,7 @@
   "scripts": {
     "lint": "eslint .",
     "test": "npm run lint",
+    "dev": "nodemon",
     "start": "ts-node -r tsconfig-paths/register src/index.ts"
   },
   "repository": {
@@ -23,12 +24,15 @@
     "discord.js": "^12.5.1",
     "discord.js-commando": "github:discordjs/Commando",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "pg": "^8.5.1",
+    "sequelize": "^6.3.5"
   },
   "devDependencies": {
     "@types/express": "^4.17.9",
     "@types/jest": "^26.0.16",
     "@types/node": "^14.14.10",
+    "@types/sequelize": "^4.28.9",
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
     "eslint": "^7.14.0",
@@ -36,6 +40,7 @@
     "eslint-import-resolver-typescript": "^2.3.0",
     "eslint-plugin-import": "^2.22.1",
     "jest": "^26.6.3",
+    "nodemon": "^2.0.6",
     "ts-node": "^9.0.0",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^4.1.2"

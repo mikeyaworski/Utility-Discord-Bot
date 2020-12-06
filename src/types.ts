@@ -1,10 +1,10 @@
 import type {
-  Command,
   CommandoMessage,
   CommandoClient,
   ArgumentCollectorResult,
 } from 'discord.js-commando';
 import type { Message, Presence } from 'discord.js';
+import type { Sequelize, ModelCtor } from 'sequelize/types';
 
 export type GenericMapping<T1, T2 extends string = string> = {
   [key in T2]?: T1;
@@ -35,3 +35,10 @@ export type EventTrigger = [
   'presenceUpdate',
   (oldMember: Presence, newMember: Presence) => void
 ];
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// TODO: type this better than "any"
+export type ModelGetter = (sequelize: Sequelize) => [ModelKey, ModelCtor<any>];
+export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles';
+export type ModelMapping = GenericMapping<ModelCtor<any>, ModelKey>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
