@@ -80,7 +80,7 @@ export default class MoveCommand extends Command {
     // single message; not a range
     if (!end) {
       await MoveCommand.moveMessage(toChannel, start);
-      toChannel.stopTyping();
+      toChannel.stopTyping(false);
       return commandMsg.delete();
     }
 
