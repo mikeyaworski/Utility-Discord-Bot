@@ -30,7 +30,8 @@ However, this is a private bot. This bot does not have measures in place to hand
     - Add another for `ENVIRONMENT` = `production`
     - Add another for `NPM_CONFIG_PRODUCTION` = `false`
     - Add another for `OWNER_ID` which is the ID of your Discord account.
-    - Finally, add one for `PING_HOST` which is a link to your Heroku app web URL. It will be
+    - Finally, add one for `PING_HOST` which is a link to your Heroku app web URL. It will be:
+    
         ```
         https://<HEROKU_APP_NAME>.herokuapp.com
         ```
