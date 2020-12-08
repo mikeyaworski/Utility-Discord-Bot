@@ -37,7 +37,7 @@ However, this is a private bot. This bot does not have measures in place to hand
         ```
 1. Now you have everything in place to deploy the code! There are multiple ways to deploy the code. You could clone this repo and then use the Heroku CLI to login to your Heroku account and deploy it manually from the command line. Do that if you're comfortable.
 
-    Otherwise, I recommend forking this repository so that you have your own version of the code on your GitHub profile. Then go to the Deploy tab on your Heroku app and connect your GitHub. Find the repository and enable automatic deploys for the repo! You should choose the `master` branch for the automatic deployment. And you can enable `Wait for CI to pass before deploy`.
+    Otherwise, I recommend forking this repository so that you have your own version of the code on your GitHub profile. Then go to the Deploy tab on your Heroku app and connect your GitHub. Find the repository and enable automatic deploys for the repo! You should choose the `master` branch for the automatic deployment. And you can leave `Wait for CI to pass before deploy` disabled.
 
     You can also click the `Deploy Branch` button at the bottom of the page under `Manual deploy` to manually deploy. You may want to do this the first time.
 
