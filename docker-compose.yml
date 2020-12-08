@@ -1,0 +1,36 @@
+version: '2'
+services:
+  utility_discord_bot:
+    build: .
+    restart: always
+    container_name: utility_discord_bot
+    tty: true
+    command: npm run dev
+    volumes:
+      - .:/code/
+      - /code/node_modules
+    ports:
+      - 3003:3003
+    depends_on:
+      - utility_discord_bot_db
+    links:
+      - utility_discord_bot_db
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      OWNER_ID: ${OWNER_ID}
+      PORT: ${PORT}
+      PING_HOST: ${PING_HOST}
+      DATABASE_URL: ${DATABASE_URL}
+  utility_discord_bot_db:
+    container_name: utility_discord_bot_db
+    volumes:
+      - utility_discord_bot_db_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    image: postgres:11.5
+    environment:
+      POSTGRES_DB: utility_discord_bot_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+volumes:
+  utility_discord_bot_db_data: {}

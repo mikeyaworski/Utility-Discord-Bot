@@ -1,7 +1,7 @@
 import type { ModelMapping } from 'src/types';
 
 import dotenv from 'dotenv';
-import { Sequelize } from 'sequelize';
+import { Sequelize, Options } from 'sequelize';
 
 // models
 import StreamerRules from 'src/models/streamer-rules';
@@ -14,17 +14,24 @@ const modelGetters = [
   StreamerRollbackRoles,
 ];
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+const sequelizeOpts: Options = {
   dialect: 'postgres',
   protocol: 'postgres',
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false, // https://stackoverflow.com/a/61350416/2554605
-    },
-  },
   logging: false,
-});
+};
+
+if (process.env.ENVIRONMENT === 'production') {
+  Object.assign(sequelizeOpts, {
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, // https://stackoverflow.com/a/61350416/2554605
+      },
+    },
+  });
+}
+
+const sequelize = new Sequelize(process.env.DATABASE_URL, sequelizeOpts);
 
 let modelsMapping;
 export function getModels(): ModelMapping {
