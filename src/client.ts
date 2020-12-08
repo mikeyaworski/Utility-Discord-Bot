@@ -4,23 +4,8 @@ import { CommandoClient } from 'discord.js-commando';
 import { COMMAND_PREFIX } from 'src/constants';
 import { log, warn, error } from 'src/logging';
 
-// commands
-import MoveCommand from 'src/commands/utilities/move';
-import DeleteCommand from 'src/commands/utilities/delete';
-import StreamerRulesCommand from 'src/commands/utilities/streamer-rules';
-
-// events
-import StreamingEvent from 'src/events/streaming';
-
-const commands = [
-  MoveCommand,
-  DeleteCommand,
-  StreamerRulesCommand,
-];
-
-const events = [
-  StreamingEvent,
-];
+import commands from 'src/commands';
+import events from 'src/events';
 
 dotenv.config();
 
