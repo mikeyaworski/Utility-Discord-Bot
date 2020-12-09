@@ -1,6 +1,14 @@
-import type { TextChannel, DMChannel, Message, User, PermissionString } from 'discord.js';
+import type {
+  TextChannel,
+  DMChannel,
+  Message,
+  User,
+  PermissionString,
+  EmojiIdentifierResolvable,
+} from 'discord.js';
 import type { CommandoMessage } from 'discord.js-commando';
 
+import emojiRegex from 'emoji-regex/RGI_Emoji';
 import { getIntersection } from 'src/utils';
 import { BULK_MESSAGES_LIMIT } from 'src/constants';
 
@@ -62,4 +70,51 @@ export function userHasPermission(
   permission: PermissionString | PermissionString[],
 ): boolean {
   return channel.permissionsFor(user).has(permission);
+}
+
+export function isEmoji(arg: string): boolean {
+  return /^<a?:.+:\d+>$/.test(arg) || emojiRegex().test(arg);
+}
+
+/**
+ * Applies each reaction to the message in the order received.
+ */
+export async function reactMulitple(msg: Message, reactions: EmojiIdentifierResolvable[]): Promise<void> {
+  for (let i = 0; i < reactions.length; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    await msg.react(reactions[i]);
+  }
+}
+
+export function getLetterEmoji(offset: number): string {
+  // starting code point: 127462
+  return String.fromCodePoint(127462 + offset);
+  // return [
+  //   '🇦',
+  //   '🇧',
+  //   '🇨',
+  //   '🇩',
+  //   '🇪',
+  //   '🇫',
+  //   '🇬',
+  //   '🇭',
+  //   '🇮',
+  //   '🇯',
+  //   '🇰',
+  //   '🇱',
+  //   '🇲',
+  //   '🇳',
+  //   '🇴',
+  //   '🇵',
+  //   '🇶',
+  //   '🇷',
+  //   '🇸',
+  //   '🇹',
+  //   '🇺',
+  //   '🇻',
+  //   '🇼',
+  //   '🇽',
+  //   '🇾',
+  //   '🇿',
+  // ][offset];
 }
