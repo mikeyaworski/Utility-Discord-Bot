@@ -13,10 +13,7 @@ interface Args {
 }
 
 /**
- * Example:
  * !move <channel> <start_msg> <end_msg?>
- * !move #other 784702649324929054 784702678847455242
- * !move #other 784702649324929054
  */
 export default class MoveCommand extends Command {
   constructor(client: ClientType) {
@@ -26,8 +23,13 @@ export default class MoveCommand extends Command {
       group: 'utilities',
       memberName: 'move',
       description: 'Moves a range of messages to another channel.',
+      examples: [
+        '!move #other 784702649324929054 784702678847455242',
+        '!move #other 784702649324929054',
+      ],
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
+      guildOnly: true,
       args: [
         {
           key: 'channel',

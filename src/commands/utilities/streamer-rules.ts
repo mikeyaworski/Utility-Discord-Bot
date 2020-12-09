@@ -21,12 +21,7 @@ interface Args {
 }
 
 /**
- * Example:
  * !streamer_rules <operation> <role>
- * !streamer_rules add @streaming
- * !streamer_rules remove @private
- * !streamer_rules clear @private
- * !streamer_rules list
  */
 export default class StreamerRulesCommand extends Command {
   constructor(client: ClientType) {
@@ -41,8 +36,15 @@ export default class StreamerRulesCommand extends Command {
         + 'Use !streamer_rules remove <role> to set up removing a role from any member who is currently streaming.\n'
         + 'Use !streamer_rules clear <role?> to remove this relationship for a role (or all roles, if not specified).\n'
         + 'Note that "clear" and "remove" are NOT the same. "delete" is also an alias for "remove".',
+      examples: [
+        '!streamer_rules add @streaming',
+        '!streamer_rules remove @private',
+        '!streamer_rules clear @private',
+        '!streamer_rules list',
+      ],
       userPermissions: ['MANAGE_ROLES'],
       clientPermissions: ['MANAGE_ROLES'],
+      guildOnly: true,
       args: [
         {
           key: 'operation',

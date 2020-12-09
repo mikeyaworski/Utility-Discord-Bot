@@ -11,10 +11,7 @@ interface Args {
 }
 
 /**
- * Example:
  * !delete <start_msg> <end_msg?>
- * !delete 784701167241658380 784701171147341834
- * !delete 784701167241658380
  */
 export default class DeleteCommand extends Command {
   constructor(client: ClientType) {
@@ -24,8 +21,13 @@ export default class DeleteCommand extends Command {
       group: 'utilities',
       memberName: 'delete',
       description: 'Deletes a range of messages.',
+      examples: [
+        '!delete 784701167241658380 784701171147341834',
+        '!delete 784701167241658380',
+      ],
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
+      guildOnly: true,
       args: [
         {
           key: 'start',
