@@ -12,6 +12,7 @@ dotenv.config();
 const client = new CommandoClient({
   commandPrefix: COMMAND_PREFIX,
   owner: process.env.OWNER_ID,
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
 
 export function initClient(): Promise<void> {
