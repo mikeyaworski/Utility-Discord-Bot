@@ -1,4 +1,4 @@
-import type { ClientType, CommandRunMethod } from 'src/types';
+import type { ClientType, CommandRunMethod, Mutable } from 'src/types';
 
 import { Command } from 'discord.js-commando';
 import { Role } from 'discord.js';
@@ -34,7 +34,8 @@ export default class StreamerRulesCommand extends Command {
         'Adds/removes roles for members who are currently streaming.\n'
         + 'Use !streamer_rules add <role> to set up adding a role to any member who is currently streaming.\n'
         + 'Use !streamer_rules remove <role> to set up removing a role from any member who is currently streaming.\n'
-        + 'Use !streamer_rules clear <role?> to remove this relationship for a role (or all roles, if not specified).\n'
+        + 'Use !streamer_rules clear [role] to remove this relationship for a role (or all roles, if not specified).\n'
+        + 'Use !streamer_rules list to see all rules.\n'
         + 'Note that "clear" and "remove" are NOT the same. "delete" is also an alias for "remove".',
       examples: [
         '!streamer_rules add @streaming',
@@ -50,7 +51,7 @@ export default class StreamerRulesCommand extends Command {
           key: 'operation',
           prompt: 'Whether to add or remove the following role from someone streaming.',
           type: 'string',
-          validate: text => OPERATIONS.includes(text),
+          oneOf: OPERATIONS as Mutable<typeof OPERATIONS>,
         },
         {
           key: 'role',
@@ -67,29 +68,31 @@ export default class StreamerRulesCommand extends Command {
     const guildId = msg.guild.id;
     const model = getModels().streamer_rules;
 
-    // @ts-ignore These TS errors are useless. Same goes for rest of ts-ignores below.
+    // @ts-expect-error These TS errors are useless. Same goes for rest of ts-expect-errors below.
     if (!role && ADD_OPERATIONS.concat(REMOVE_OPERATIONS).includes(operation)) return msg.reply('A role is required!');
 
     try {
-      // @ts-ignore
+      // @ts-expect-error
       if (ADD_OPERATIONS.includes(operation)) {
+        const roleId = (role as Role).id;
         await model.create({
           guild_id: guildId,
-          role_id: (role as Role).id,
+          role_id: roleId,
           add: true,
         });
-        return msg.say(`Users who are streaming will now be given the <@&${(role as Role).id}> role.`);
+        return msg.say(`Users who are streaming will now be given the <@&${roleId}> role.`);
       }
-      // @ts-ignore
+      // @ts-expect-error
       if (REMOVE_OPERATIONS.includes(operation)) {
+        const roleId = (role as Role).id;
         await model.create({
           guild_id: guildId,
-          role_id: (role as Role).id,
+          role_id: roleId,
           add: false,
         });
-        return msg.say(`Users who are streaming will now have the <@&${(role as Role).id}> role removed.`);
+        return msg.say(`Users who are streaming will now have the <@&${roleId}> role removed.`);
       }
-      // @ts-ignore
+      // @ts-expect-error
       if (LIST_OPERATIONS.includes(operation)) {
         const rules = await model.findAll({
           where: {

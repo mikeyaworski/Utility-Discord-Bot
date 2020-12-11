@@ -13,7 +13,7 @@ interface Args {
 }
 
 /**
- * !move <channel> <start_msg> <end_msg?>
+ * !move <channel> <start_msg> [end_msg]
  */
 export default class MoveCommand extends Command {
   constructor(client: ClientType) {

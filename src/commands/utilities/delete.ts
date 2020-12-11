@@ -11,7 +11,7 @@ interface Args {
 }
 
 /**
- * !delete <start_msg> <end_msg?>
+ * !delete <start_msg> [end_msg]
  */
 export default class DeleteCommand extends Command {
   constructor(client: ClientType) {
