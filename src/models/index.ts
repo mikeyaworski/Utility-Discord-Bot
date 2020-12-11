@@ -1,18 +1,11 @@
 import type { ModelMapping } from 'src/types';
 
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 import { Sequelize, Options } from 'sequelize';
 
-// models
-import StreamerRules from 'src/models/streamer-rules';
-import StreamerRollbackRoles from 'src/models/streamer-rollback-roles';
-
 dotenv.config();
-
-const modelGetters = [
-  StreamerRules,
-  StreamerRollbackRoles,
-];
 
 const sequelizeOpts: Options = {
   dialect: 'postgres',
@@ -33,21 +26,36 @@ if (process.env.ENVIRONMENT === 'production') {
 
 const sequelize = new Sequelize(process.env.DATABASE_URL, sequelizeOpts);
 
-let modelsMapping;
-export function getModels(): ModelMapping {
-  if (modelsMapping) return modelsMapping;
-  modelsMapping = modelGetters.reduce((acc, modelGetter) => {
-    const [modelKey, model] = modelGetter(sequelize);
-    return Object.assign(acc, {
-      [modelKey]: model,
-    });
-  }, {});
-  return modelsMapping;
-}
+const modelDefinitions = fs
+  .readdirSync(__dirname)
+  .filter(file => file.endsWith('.ts') && file !== 'index.ts')
+  .map(file => {
+    // eslint-disable-next-line global-require, import/no-dynamic-require, @typescript-eslint/no-var-requires
+    return require(path.join(__dirname, file)).default(sequelize);
+  });
+
+export const getModels = ((): () => ModelMapping => {
+  let modelsMapping;
+  return (): ModelMapping => {
+    if (modelsMapping) return modelsMapping;
+    modelsMapping = modelDefinitions.reduce((acc, modelDefinition) => {
+      const [modelKey, model] = modelDefinition;
+      return Object.assign(acc, {
+        [modelKey]: model,
+      });
+    }, {});
+    return modelsMapping;
+  };
+})();
 
 export function syncModels(): void {
-  const models = getModels();
-  Object.keys(models).forEach(modelKey => {
-    models[modelKey].sync();
+  const modelsMapping = getModels();
+  // associations between models
+  modelDefinitions.forEach(modelDefinition => {
+    modelDefinition[2]?.(modelsMapping);
+  });
+  // sync models
+  Object.keys(modelsMapping).forEach(modelKey => {
+    modelsMapping[modelKey].sync();
   });
 }
