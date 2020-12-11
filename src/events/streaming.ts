@@ -68,4 +68,4 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   }
 }];
 
-export default StreamingEvent;
+export default [StreamingEvent];

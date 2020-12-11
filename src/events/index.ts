@@ -1,5 +1,5 @@
-import StreamingEvent from './streaming';
+import StreamingEvents from './streaming';
 
 export default [
-  StreamingEvent,
+  ...StreamingEvents,
 ];
