@@ -6,6 +6,10 @@ import type {
 import type { Message, Presence } from 'discord.js';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
 
+// https://stackoverflow.com/a/43001581/2554605
+export type Mutable<T> = { -readonly [P in keyof T]: T[P] };
+export type DeepMutable<T> = { -readonly [P in keyof T]: DeepMutable<T[P]> };
+
 export type GenericMapping<T1, T2 extends string = string> = {
   [key in T2]?: T1;
 }
