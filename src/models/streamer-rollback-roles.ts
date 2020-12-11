@@ -1,8 +1,8 @@
-import type { ModelGetter } from 'src/types';
+import type { ModelDefinition } from 'src/types';
 import Sequelize from 'sequelize';
 
 // This is for storing roles that a member needed to be added/removed once they are finished streaming.
-const StreamerRollbackRoles: ModelGetter = sequelize => {
+const StreamerRollbackRoles: ModelDefinition = sequelize => {
   const tableName = 'streamer_rollback_roles';
   return [
     tableName,

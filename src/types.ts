@@ -3,7 +3,14 @@ import type {
   CommandoClient,
   ArgumentCollectorResult,
 } from 'discord.js-commando';
-import type { Message, Presence } from 'discord.js';
+import type {
+  Message,
+  Presence,
+  MessageReaction,
+  User,
+  Collection,
+  Snowflake,
+} from 'discord.js';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
 
 // https://stackoverflow.com/a/43001581/2554605
@@ -37,12 +44,35 @@ export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
 // Except that this only gets the parameters of the last defined overload...
 export type EventTrigger = [
   'presenceUpdate',
-  (oldMember: Presence, newMember: Presence) => void
+  (oldMember: Presence, newMember: Presence) => void,
+] | [
+  'messageReactionAdd',
+  (messageReaction: MessageReaction, user: User) => void,
+] | [
+  'messageReactionRemove',
+  (messageReaction: MessageReaction, user: User) => void,
+] | [
+  'messageReactionRemoveAll',
+  (message: Message) => void,
+] | [
+  'messageDelete',
+  (message: Message) => void,
+] | [
+  'messageDeleteBulk',
+  (messages: Collection<Snowflake, Message>) => void
 ];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // TODO: type this better than "any"
-export type ModelGetter = (sequelize: Sequelize) => [ModelKey, ModelCtor<any>];
-export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles';
-export type ModelMapping = GenericMapping<ModelCtor<any>, ModelKey>;
+type Model = ModelCtor<any>;
+export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique';
+export type ModelMapping = GenericMapping<Model, ModelKey>;
+export type ModelDefinition = (sequelize: Sequelize) => [
+  ModelKey,
+  Model,
+  (models: ModelMapping) => void, // associations
+] | [
+  ModelKey,
+  Model,
+];
 /* eslint-enable @typescript-eslint/no-explicit-any */

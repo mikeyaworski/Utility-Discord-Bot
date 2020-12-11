@@ -1,9 +1,9 @@
-import type { ModelGetter } from 'src/types';
+import type { ModelDefinition } from 'src/types';
 import Sequelize from 'sequelize';
 
 // We use snake case for database information
 // since Postgres has issues with case sensitivity.
-const StreamerRules: ModelGetter = sequelize => {
+const StreamerRules: ModelDefinition = sequelize => {
   const tableName = 'streamer_rules';
   return [
     tableName,
