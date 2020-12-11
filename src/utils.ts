@@ -17,3 +17,11 @@ export function getIntersection<T>(
     });
   });
 }
+
+/**
+ * Cuts text to a certain length and if the text exceeds the length, appends an ellipsis to the end.
+ */
+export function shorten(msg: string, length: number): string {
+  if (msg.length <= length) return msg;
+  return `${msg.substring(0, length)}...`;
+}
