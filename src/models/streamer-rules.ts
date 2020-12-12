@@ -10,22 +10,18 @@ const StreamerRules: ModelDefinition = sequelize => {
     sequelize.define(tableName, {
       guild_id: {
         type: Sequelize.STRING,
+        primaryKey: true,
         allowNull: false,
       },
       role_id: {
         type: Sequelize.STRING,
+        primaryKey: true,
         allowNull: false,
       },
       add: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
       },
-    }, {
-      indexes: [{
-        name: 'streamer_rules_unique_guild_and_role',
-        fields: ['guild_id', 'role_id'],
-        unique: true,
-      }],
     }),
   ];
 };
