@@ -45,20 +45,21 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
       attributes: ['role_id'],
     }),
   ]);
-  const roleIds = rules.map(rule => rule.role_id);
-  roleIds.forEach(async roleId => {
-    try {
-      if (!member.roles.cache.has(roleId)) member.roles.add(roleId);
-    } catch (err) {
-      // likely to happen if the role trying to be given is higher than the bot's role
-      error(err);
-    }
-  });
+  const roleIds: string[] = rules.map(rule => rule.role_id);
+  try {
+    await member.roles.add(roleIds);
+  } catch (err) {
+    // likely to happen if the role trying to be given is higher than the bot's role
+    error(err);
+  }
+  // TODO: This is beyond too slow / rate limited. Dealing with the cache here is miserable
+  // because it NEVER seems to be up-to-date for some reason..
+  // but this needs to be improved.
   if (uniqueRule?.unique) {
     const otherReactions = messageReaction.message.reactions.cache.filter(reaction => reaction.emoji.toString() !== messageReaction.emoji.toString());
-    otherReactions.forEach(otherReaction => {
+    otherReactions.forEach(async otherReaction => {
       try {
-        if (otherReaction.users.cache.has(user.id)) otherReaction.users.remove(user);
+        await otherReaction.users.remove(user);
       } catch (err) {
         error(err);
       }
@@ -83,15 +84,13 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
     },
     attributes: ['role_id'],
   });
-  const roleIds = rules.map(rule => rule.role_id);
-  roleIds.forEach(async roleId => {
-    try {
-      if (member.roles.cache.has(roleId)) member.roles.remove(roleId);
-    } catch (err) {
-      // likely to happen if the role trying to be removed is higher than the bot's role
-      error(err);
-    }
-  });
+  const roleIds: string[] = rules.map(rule => rule.role_id);
+  try {
+    await member.roles.remove(roleIds);
+  } catch (err) {
+    // likely to happen if the role trying to be removed is higher than the bot's role
+    error(err);
+  }
 }];
 
 const MessageDeleteEvent: EventTrigger = ['messageDelete', async (message: Message): Promise<void> => {
