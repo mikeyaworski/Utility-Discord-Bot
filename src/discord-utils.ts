@@ -99,9 +99,13 @@ export function getLetterEmoji(offset: number): string {
 export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageId: string, givenChannel?: TextChannel): Promise<Message | null> {
   await guild.fetch();
   if (givenChannel) {
-    await givenChannel.fetch(true);
-    const message = givenChannel.messages.fetch(messageId, false, true);
-    if (message) return message;
+    try {
+      await givenChannel.fetch(true);
+      const message = givenChannel.messages.fetch(messageId, false, true);
+      if (message) return message;
+    } catch (err) {
+      // intentionally left blank
+    }
   }
   // do this with a vanilla loop so we can do it in order and make as little API calls as necessary
   let foundMessage = null;
