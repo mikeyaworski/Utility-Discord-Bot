@@ -5,8 +5,9 @@ import type {
   User,
   PermissionString,
   EmojiIdentifierResolvable,
+  Guild,
 } from 'discord.js';
-import type { CommandoMessage } from 'discord.js-commando';
+import type { CommandoMessage, CommandoGuild } from 'discord.js-commando';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import { getIntersection } from 'src/utils';
@@ -93,4 +94,30 @@ export function getLetterEmoji(offset: number): string {
   //   '🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '🇬', '🇭', '🇮', '🇯', '🇰', '🇱', '🇲',
   //   '🇳', '🇴', '🇵', '🇶', '🇷', '🇸', '🇹', '🇺', '🇻', '🇼', '🇽', '🇾', '🇿',
   // ][offset];
+}
+
+export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageId: string, givenChannel?: TextChannel): Promise<Message | null> {
+  await guild.fetch();
+  if (givenChannel) {
+    await givenChannel.fetch(true);
+    const message = givenChannel.messages.fetch(messageId, false, true);
+    if (message) return message;
+  }
+  // do this with a vanilla loop so we can do it in order and make as little API calls as necessary
+  let foundMessage = null;
+  const channels = guild.channels.cache.array().filter(channel => channel.isText()) as TextChannel[];
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const message = await channel.messages.fetch(messageId, false, true);
+      if (message) {
+        foundMessage = message;
+        break;
+      }
+    } catch (err) {
+      // intentionally left blank
+    }
+  }
+  return foundMessage;
 }
