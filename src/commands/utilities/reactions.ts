@@ -168,6 +168,7 @@ export default class ReactionsCommand extends Command {
           },
         };
       } catch (err) {
+        error(err);
         return acc;
       }
     }, {});
