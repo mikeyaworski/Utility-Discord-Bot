@@ -101,7 +101,7 @@ export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageI
   if (givenChannel) {
     try {
       await givenChannel.fetch(true);
-      const message = givenChannel.messages.fetch(messageId, false, true);
+      const message = await givenChannel.messages.fetch(messageId, false, true);
       if (message) return message;
     } catch (err) {
       // intentionally left blank
