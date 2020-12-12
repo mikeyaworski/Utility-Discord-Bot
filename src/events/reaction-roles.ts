@@ -45,7 +45,7 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
     try {
-      if (!member.roles.cache.has(roleId)) member.roles.add(roleId);
+      member.roles.add(roleId);
     } catch (err) {
       // likely to happen if the role trying to be given is higher than the bot's role
       error(err);
@@ -55,7 +55,7 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
     const otherReactions = messageReaction.message.reactions.cache.filter(reaction => reaction.emoji.toString() !== messageReaction.emoji.toString());
     otherReactions.forEach(otherReaction => {
       try {
-        if (otherReaction.users.cache.has(user.id)) otherReaction.users.remove(user);
+        otherReaction.users.remove(user);
       } catch (err) {
         error(err);
       }
@@ -80,7 +80,7 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
     try {
-      if (member.roles.cache.has(roleId)) member.roles.remove(roleId);
+      member.roles.remove(roleId);
     } catch (err) {
       // likely to happen if the role trying to be removed is higher than the bot's role
       error(err);
