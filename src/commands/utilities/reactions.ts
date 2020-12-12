@@ -151,10 +151,11 @@ export default class ReactionsCommand extends Command {
     } = await rules.reduce(async (accPromise, rule) => {
       const acc = await accPromise;
       try {
-        const fetchedMessage = messageCache[rule.message_id]
-          || await fetchMessageInGuild(commandoMsg.guild, rule.message_id, commandoMsg.channel as TextChannel);
-        if (!fetchedMessage) return acc;
+        const fetchedMessage = messageCache[rule.message_id] !== undefined
+          ? messageCache[rule.message_id]
+          : await fetchMessageInGuild(commandoMsg.guild, rule.message_id, commandoMsg.channel as TextChannel);
         messageCache[rule.message_id] = fetchedMessage;
+        if (!fetchedMessage) return acc;
         return {
           ...acc,
           [rule.message_id]: {
