@@ -25,7 +25,10 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
   if (!(await reactionReady(messageReaction))) return;
   const guildId = messageReaction.message.guild.id;
   const messageId = messageReaction.message.id;
-  const member = await messageReaction.message.guild.members.fetch(user);
+  const member = await messageReaction.message.guild.members.fetch({
+    user,
+    force: true,
+  });
   const [uniqueRule, rules] = await Promise.all([
     getModels().reaction_messages_unique.findOne({
       where: {
@@ -45,7 +48,7 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
     try {
-      member.roles.add(roleId);
+      if (!member.roles.cache.has(roleId)) member.roles.add(roleId);
     } catch (err) {
       // likely to happen if the role trying to be given is higher than the bot's role
       error(err);
@@ -55,7 +58,7 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
     const otherReactions = messageReaction.message.reactions.cache.filter(reaction => reaction.emoji.toString() !== messageReaction.emoji.toString());
     otherReactions.forEach(otherReaction => {
       try {
-        otherReaction.users.remove(user);
+        if (otherReaction.users.cache.has(user.id)) otherReaction.users.remove(user);
       } catch (err) {
         error(err);
       }
@@ -68,7 +71,10 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
   if (!(await reactionReady(messageReaction))) return;
   const guildId = messageReaction.message.guild.id;
   const messageId = messageReaction.message.id;
-  const member = await messageReaction.message.guild.members.fetch(user);
+  const member = await messageReaction.message.guild.members.fetch({
+    user,
+    force: true,
+  });
   const rules = await getModels().reaction_roles.findAll({
     where: {
       guild_id: guildId,
@@ -80,7 +86,7 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
     try {
-      member.roles.remove(roleId);
+      if (member.roles.cache.has(roleId)) member.roles.remove(roleId);
     } catch (err) {
       // likely to happen if the role trying to be removed is higher than the bot's role
       error(err);
