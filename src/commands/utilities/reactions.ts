@@ -41,7 +41,7 @@ export default class ReactionsCommand extends Command {
   constructor(client: ClientType) {
     super(client, {
       name: 'reactions',
-      aliases: ['rxns'],
+      aliases: ['rxns', 'rr'],
       group: 'utilities',
       memberName: 'reactions',
       description:
