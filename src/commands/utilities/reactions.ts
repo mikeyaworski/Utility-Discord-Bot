@@ -136,6 +136,10 @@ export default class ReactionsCommand extends Command {
       });
     }, {});
 
+    const messageCache: {
+      [messageId: string]: Message;
+    } = {};
+
     const responseMapping: {
       [messageId: string]: {
         unique: boolean;
@@ -147,8 +151,10 @@ export default class ReactionsCommand extends Command {
     } = await rules.reduce(async (accPromise, rule) => {
       const acc = await accPromise;
       try {
-        const fetchedMessage = await fetchMessageInGuild(commandoMsg.guild, rule.message_id, commandoMsg.channel as TextChannel);
+        const fetchedMessage = messageCache[rule.message_id]
+          || await fetchMessageInGuild(commandoMsg.guild, rule.message_id, commandoMsg.channel as TextChannel);
         if (!fetchedMessage) return acc;
+        messageCache[rule.message_id] = fetchedMessage;
         return {
           ...acc,
           [rule.message_id]: {
