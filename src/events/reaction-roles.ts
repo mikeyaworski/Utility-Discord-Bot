@@ -44,12 +44,21 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
   ]);
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
-    member.roles.add(roleId);
+    try {
+      member.roles.add(roleId);
+    } catch (err) {
+      // likely to happen if the role trying to be given is higher than the bot's role
+      error(err);
+    }
   });
   if (uniqueRule?.unique) {
     const otherReactions = messageReaction.message.reactions.cache.filter(reaction => reaction.emoji.toString() !== messageReaction.emoji.toString());
     otherReactions.forEach(otherReaction => {
-      otherReaction.users.remove(user);
+      try {
+        otherReaction.users.remove(user);
+      } catch (err) {
+        error(err);
+      }
     });
   }
 }];
@@ -70,7 +79,12 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
   });
   const roleIds = rules.map(rule => rule.role_id);
   roleIds.forEach(async roleId => {
-    member.roles.remove(roleId);
+    try {
+      member.roles.remove(roleId);
+    } catch (err) {
+      // likely to happen if the role trying to be removed is higher than the bot's role
+      error(err);
+    }
   });
 }];
 
