@@ -172,6 +172,8 @@ export default class ReactionsCommand extends Command {
       }
     }, {});
 
+    console.log('responseMapping', responseMapping); // TODO: remove
+
     const response = Object.keys(responseMapping).reduce((acc, messageId) => {
       const messageMapping = responseMapping[messageId];
       acc = `${acc}__${messageId}__\nMessage text: ${messageMapping.messageText}\nUnique reactions? ${messageMapping.unique ? 'Yes' : 'No'}\n`;
@@ -180,6 +182,8 @@ export default class ReactionsCommand extends Command {
       }, '');
       return `${acc}${emojiResponse}\n`;
     }, '');
+
+    console.log('response', response); // TODO: remove
 
     return responseMsg.edit(response);
   }
