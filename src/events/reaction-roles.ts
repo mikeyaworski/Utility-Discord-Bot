@@ -52,14 +52,11 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
     // likely to happen if the role trying to be given is higher than the bot's role
     error(err);
   }
-  // TODO: This is beyond too slow / rate limited. Dealing with the cache here is miserable
-  // because it NEVER seems to be up-to-date for some reason..
-  // but this needs to be improved.
   if (uniqueRule?.unique) {
     const otherReactions = messageReaction.message.reactions.cache.filter(reaction => reaction.emoji.toString() !== messageReaction.emoji.toString());
-    otherReactions.forEach(async otherReaction => {
+    otherReactions.forEach(otherReaction => {
       try {
-        await otherReaction.users.remove(user);
+        if (otherReaction.users.cache.has(user.id)) otherReaction.users.remove(user);
       } catch (err) {
         error(err);
       }
