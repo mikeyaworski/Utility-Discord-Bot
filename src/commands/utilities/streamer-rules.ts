@@ -1,4 +1,4 @@
-import type { ClientType, CommandRunMethod, Mutable } from 'src/types';
+import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
 
 import { Command } from 'discord.js-commando';
 import { Role } from 'discord.js';
@@ -15,10 +15,14 @@ const OPERATIONS = [
   'clear', // clear the relationship altogether (NOT the same as remove/delete)
 ] as const;
 
+const model = getModels().streamer_rules;
+
 interface Args {
   operation: typeof OPERATIONS[number];
   role: Role | '',
 }
+
+type OperationHandler = CommandOperationHandler<Args>;
 
 /**
  * !streamer_rules <operation> <role>
@@ -63,10 +67,73 @@ export default class StreamerRulesCommand extends Command {
     });
   }
 
+  static handleAdd: OperationHandler = async (msg, { role }) => {
+    const guildId = msg.guild.id;
+    const roleId = (role as Role).id;
+    await model.create({
+      guild_id: guildId,
+      role_id: roleId,
+      add: true,
+    });
+    return msg.say(`Users who are streaming will now be given the <@&${roleId}> role.`);
+  }
+
+  static handleRemove: OperationHandler = async (msg, { role }) => {
+    const guildId = msg.guild.id;
+    const roleId = (role as Role).id;
+    await model.create({
+      guild_id: guildId,
+      role_id: roleId,
+      add: false,
+    });
+    return msg.say(`Users who are streaming will now have the <@&${roleId}> role removed.`);
+  }
+
+  static handleList: OperationHandler = async (msg, args) => {
+    const guildId = msg.guild.id;
+    const rules = await model.findAll({
+      where: {
+        guild_id: guildId,
+      },
+      attributes: ['role_id', 'add'],
+    });
+    if (!rules.length) return msg.say('There are no streamer roles being added or removed!');
+
+    const rolesToAdd = rules.filter(row => row.add).map(row => row.role_id);
+    const rolesToRemove = rules.filter(row => !row.add).map(row => row.role_id);
+    const addStr = rolesToAdd.length ? rolesToAdd.reduce(
+      (acc, roleId) => `${acc}\n<@&${roleId}>`,
+      'The following roles will be added to members who are streaming:',
+    ) : 'There are no roles being added to members who are streaming.';
+    const removeStr = rolesToRemove.length ? rolesToRemove.reduce(
+      (acc, roleId) => `${acc}\n<@&${roleId}>`,
+      'The following roles will be removed from members who are streaming:',
+    ) : 'There are no roles being removed from members who are streaming.';
+
+    return msg.say(`${addStr}\n${removeStr}`);
+  }
+
+  static handleClear: OperationHandler = async (msg, { role }) => {
+    const guildId = msg.guild.id;
+    if (!role) {
+      await model.destroy({
+        where: {
+          guild_id: guildId,
+        },
+      });
+      return msg.say('All streaming role relationships were removed!');
+    }
+    await model.destroy({
+      where: {
+        guild_id: guildId,
+        role_id: role.id,
+      },
+    });
+    return msg.say(`Streaming role relationship for <@&${role.id}> was removed.`);
+  }
+
   run: CommandRunMethod<Args> = async (msg, args) => {
     const { operation, role } = args;
-    const guildId = msg.guild.id;
-    const model = getModels().streamer_rules;
 
     // @ts-expect-error These TS errors are useless. Same goes for rest of ts-expect-errors below.
     if (!role && ADD_OPERATIONS.concat(REMOVE_OPERATIONS).includes(operation)) return msg.reply('A role is required!');
@@ -74,63 +141,22 @@ export default class StreamerRulesCommand extends Command {
     try {
       // @ts-expect-error
       if (ADD_OPERATIONS.includes(operation)) {
-        const roleId = (role as Role).id;
-        await model.create({
-          guild_id: guildId,
-          role_id: roleId,
-          add: true,
-        });
-        return msg.say(`Users who are streaming will now be given the <@&${roleId}> role.`);
+        await StreamerRulesCommand.handleAdd(msg, args);
+        return null;
       }
       // @ts-expect-error
       if (REMOVE_OPERATIONS.includes(operation)) {
-        const roleId = (role as Role).id;
-        await model.create({
-          guild_id: guildId,
-          role_id: roleId,
-          add: false,
-        });
-        return msg.say(`Users who are streaming will now have the <@&${roleId}> role removed.`);
+        await StreamerRulesCommand.handleRemove(msg, args);
+        return null;
       }
       // @ts-expect-error
       if (LIST_OPERATIONS.includes(operation)) {
-        const rules = await model.findAll({
-          where: {
-            guild_id: guildId,
-          },
-          attributes: ['role_id', 'add'],
-        });
-        if (!rules.length) return msg.say('There are no streamer roles being added or removed!');
-
-        const rolesToAdd = rules.filter(row => row.add).map(row => row.role_id);
-        const rolesToRemove = rules.filter(row => !row.add).map(row => row.role_id);
-        const addStr = rolesToAdd.length ? rolesToAdd.reduce(
-          (acc, roleId) => `${acc}\n<@&${roleId}>`,
-          'The following roles will be added to members who are streaming:',
-        ) : 'There are no roles being added to members who are streaming.';
-        const removeStr = rolesToRemove.length ? rolesToRemove.reduce(
-          (acc, roleId) => `${acc}\n<@&${roleId}>`,
-          'The following roles will be removed from members who are streaming:',
-        ) : 'There are no roles being removed from members who are streaming.';
-
-        return msg.say(`${addStr}\n${removeStr}`);
+        await StreamerRulesCommand.handleList(msg, args);
+        return null;
       }
       if (operation === 'clear') {
-        if (!role) {
-          await model.destroy({
-            where: {
-              guild_id: guildId,
-            },
-          });
-          return msg.say('All streaming role relationships were removed!');
-        }
-        await model.destroy({
-          where: {
-            guild_id: guildId,
-            role_id: role.id,
-          },
-        });
-        return msg.say(`Streaming role relationship for <@&${role.id}> was removed.`);
+        await StreamerRulesCommand.handleClear(msg, args);
+        return null;
       }
     } catch (err) {
       if (err.name === 'SequelizeUniqueConstraintError') {

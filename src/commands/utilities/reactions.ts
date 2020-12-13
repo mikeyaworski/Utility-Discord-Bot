@@ -1,6 +1,6 @@
 import type { CommandoMessage } from 'discord.js-commando';
 import type { Message } from 'discord.js';
-import type { ClientType, CommandRunMethod, Mutable } from 'src/types';
+import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
 
 import get from 'lodash.get';
 import { Command } from 'discord.js-commando';
@@ -32,7 +32,7 @@ interface Args {
   role: Role | '';
 }
 
-type OperationHandler = (commandoMsg: CommandoMessage, args: Args) => Promise<Message | Message[]>;
+type OperationHandler = CommandOperationHandler<Args>;
 
 /**
  * !reactions <operation> [message_id] [emoji | boolean] [role]
@@ -100,8 +100,8 @@ export default class ReactionsCommand extends Command {
     });
   }
 
-  static handleList: OperationHandler = async commandoMsg => {
-    const guildId = commandoMsg.guild.id;
+  static handleList: OperationHandler = async commandMsg => {
+    const guildId = commandMsg.guild.id;
 
     /* eslint-disable camelcase */
     const rules: {
@@ -127,8 +127,8 @@ export default class ReactionsCommand extends Command {
     });
     /* eslint-enable camelcase */
 
-    if (!rules.length) return commandoMsg.say('There are no role reactions assigned!');
-    const responseMsg = await commandoMsg.say('Fetching...\nThis may take a minute.') as Message;
+    if (!rules.length) return commandMsg.say('There are no role reactions assigned!');
+    const responseMsg = await commandMsg.say('Fetching...\nThis may take a minute.') as Message;
 
     const uniqueMapping = uniqueRules.reduce((acc, rule) => {
       return Object.assign(acc, {
@@ -153,7 +153,7 @@ export default class ReactionsCommand extends Command {
       try {
         const fetchedMessage = messageCache[rule.message_id] !== undefined
           ? messageCache[rule.message_id]
-          : await fetchMessageInGuild(commandoMsg.guild, rule.message_id, commandoMsg.channel as TextChannel);
+          : await fetchMessageInGuild(commandMsg.guild, rule.message_id, commandMsg.channel as TextChannel);
         messageCache[rule.message_id] = fetchedMessage;
         if (!fetchedMessage) return acc;
         return {
@@ -186,14 +186,14 @@ export default class ReactionsCommand extends Command {
     return responseMsg.edit(response);
   }
 
-  static handleAdd: OperationHandler = async (commandoMsg, args) => {
-    const guildId = commandoMsg.guild.id;
+  static handleAdd: OperationHandler = async (commandMsg, args) => {
+    const guildId = commandMsg.guild.id;
     const { emojiOrUnique, messageId, role } = args;
-    if (!emojiOrUnique) return commandoMsg.reply('Specify an emoji.');
-    if (!role) return commandoMsg.reply('Specify a role.');
-    if (!messageId) return commandoMsg.reply('Specify a message.');
-    const message = await fetchMessageInGuild(commandoMsg.guild, messageId);
-    if (!message) return commandoMsg.reply('Could not find message!');
+    if (!emojiOrUnique) return commandMsg.reply('Specify an emoji.');
+    if (!role) return commandMsg.reply('Specify a role.');
+    if (!messageId) return commandMsg.reply('Specify a message.');
+    const message = await fetchMessageInGuild(commandMsg.guild, messageId);
+    if (!message) return commandMsg.reply('Could not find message!');
     await message.react(emojiOrUnique);
     await reactionRoles.create({
       guild_id: guildId,
@@ -201,13 +201,13 @@ export default class ReactionsCommand extends Command {
       emoji: emojiOrUnique,
       message_id: messageId,
     });
-    return commandoMsg.say(`Role <@&${role.id}> will be added when reacting with emoji ${emojiOrUnique}!`);
+    return commandMsg.say(`Role <@&${role.id}> will be added when reacting with emoji ${emojiOrUnique}!`);
   }
 
-  static handleRemove: OperationHandler = async (commandoMsg, args) => {
+  static handleRemove: OperationHandler = async (commandMsg, args) => {
     const { emojiOrUnique, messageId } = args;
-    const guildId = commandoMsg.guild.id;
-    if (!emojiOrUnique) return commandoMsg.reply('Specify an emoji.');
+    const guildId = commandMsg.guild.id;
+    if (!emojiOrUnique) return commandMsg.reply('Specify an emoji.');
     await reactionRoles.destroy({
       where: {
         guild_id: guildId,
@@ -215,12 +215,12 @@ export default class ReactionsCommand extends Command {
         emoji: emojiOrUnique,
       },
     });
-    return commandoMsg.say(`Roles for emoji ${emojiOrUnique} have been removed from the message.`);
+    return commandMsg.say(`Roles for emoji ${emojiOrUnique} have been removed from the message.`);
   }
 
-  static handleUnique: OperationHandler = async (commandoMsg, { emojiOrUnique, messageId }) => {
-    const guildId = commandoMsg.guild.id;
-    if (!['true', 'false'].includes(emojiOrUnique)) return commandoMsg.reply('Specify \'true\' or \'false\'.');
+  static handleUnique: OperationHandler = async (commandMsg, { emojiOrUnique, messageId }) => {
+    const guildId = commandMsg.guild.id;
+    if (!['true', 'false'].includes(emojiOrUnique)) return commandMsg.reply('Specify \'true\' or \'false\'.');
     const unique = emojiOrUnique === 'true';
     await reactionMessagesUnique.upsert({
       guild_id: guildId,
@@ -230,11 +230,11 @@ export default class ReactionsCommand extends Command {
     const response = unique
       ? 'Members may only react to a single emoji on that message now!'
       : 'Members may react to as many emojis as they want now!';
-    return commandoMsg.reply(response);
+    return commandMsg.reply(response);
   }
 
-  static handleClear: OperationHandler = async (commandoMsg, { messageId }) => {
-    const guildId = commandoMsg.guild.id;
+  static handleClear: OperationHandler = async (commandMsg, { messageId }) => {
+    const guildId = commandMsg.guild.id;
     await Promise.all([
       reactionRoles.destroy({
         where: {
@@ -249,15 +249,15 @@ export default class ReactionsCommand extends Command {
         },
       }),
     ]);
-    return commandoMsg.say('Role reactions have been removed from the message.');
+    return commandMsg.say('Role reactions have been removed from the message.');
   }
 
-  run: CommandRunMethod<Args> = async (commandoMsg, args) => {
+  run: CommandRunMethod<Args> = async (commandMsg, args) => {
     const { operation, messageId } = args;
 
     // @ts-expect-error These TS errors are useless. Same goes for rest of ts-expect-errors below.
     if (!messageId && OPERATIONS.filter(op => !LIST_OPERATIONS.includes(op)).includes(operation)) {
-      return commandoMsg.reply('A message ID is required!');
+      return commandMsg.reply('A message ID is required!');
     }
 
     // use await... and return null instead of return ...
@@ -265,34 +265,34 @@ export default class ReactionsCommand extends Command {
     try {
       // @ts-expect-error
       if (LIST_OPERATIONS.includes(operation)) {
-        await ReactionsCommand.handleList(commandoMsg, args);
+        await ReactionsCommand.handleList(commandMsg, args);
         return null;
       }
       if (operation === 'unique') {
-        await ReactionsCommand.handleUnique(commandoMsg, args);
+        await ReactionsCommand.handleUnique(commandMsg, args);
         return null;
       }
       // @ts-expect-error
       if (ADD_OPERATIONS.includes(operation as string)) {
-        await ReactionsCommand.handleAdd(commandoMsg, args);
+        await ReactionsCommand.handleAdd(commandMsg, args);
         return null;
       }
       // @ts-expect-error
       if (REMOVE_OPERATIONS.includes(operation)) {
-        await ReactionsCommand.handleRemove(commandoMsg, args);
+        await ReactionsCommand.handleRemove(commandMsg, args);
         return null;
       }
       if (operation === 'clear') {
-        await ReactionsCommand.handleClear(commandoMsg, args);
+        await ReactionsCommand.handleClear(commandMsg, args);
         return null;
       }
     } catch (err) {
       if (err.message === 'Unknown Emoji') {
-        return commandoMsg.reply('I\'m not able to use that emoji!');
+        return commandMsg.reply('I\'m not able to use that emoji!');
       }
-      return handleError(err, commandoMsg);
+      return handleError(err, commandMsg);
     }
 
-    return commandoMsg.reply('What?');
+    return commandMsg.reply('What?');
   }
 }

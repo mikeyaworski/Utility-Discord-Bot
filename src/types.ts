@@ -76,3 +76,5 @@ export type ModelDefinition = (sequelize: Sequelize) => [
   Model,
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */
+
+export type CommandOperationHandler<Args> = (commandMsg: CommandoMessage, args: Args) => Promise<Message | Message[]>;
