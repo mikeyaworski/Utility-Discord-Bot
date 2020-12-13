@@ -10,10 +10,29 @@ import type {
 import type { CommandoMessage, CommandoGuild } from 'discord.js-commando';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
+import get from 'lodash.get';
 import { getIntersection } from 'src/utils';
 import { BULK_MESSAGES_LIMIT } from 'src/constants';
+import { error } from 'src/logging';
 
 type EitherMessage = Message | CommandoMessage;
+
+/**
+ * Provides generic error handing for dealing with database operations or Discord API requests.
+ * This can be used as a fallback after any custom error handling for the use case.
+ */
+export function handleError(err: unknown, commandMsg: EitherMessage): Promise<Message | Message[]> {
+  const name = get(err, 'name');
+  const message = get(err, 'message');
+  if (name === 'SequelizeUniqueConstraintError') {
+    return commandMsg.reply('That is a duplicate entry in our database!');
+  }
+  if (message === 'Unknown Emoji') {
+    return commandMsg.reply('I\'m not able to use that emoji!');
+  }
+  error(err);
+  return commandMsg.reply(message || 'Something went wrong...');
+}
 
 /**
  * It would be awesome to just provide

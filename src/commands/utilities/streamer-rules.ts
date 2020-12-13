@@ -3,7 +3,7 @@ import type { ClientType, CommandRunMethod, Mutable } from 'src/types';
 import { Command } from 'discord.js-commando';
 import { Role } from 'discord.js';
 import { getModels } from 'src/models';
-import { error } from 'src/logging';
+import { handleError } from 'src/discord-utils';
 
 const LIST_OPERATIONS = ['list', 'ls'] as const;
 const ADD_OPERATIONS = ['add'] as const; // add the role when streaming
@@ -136,8 +136,7 @@ export default class StreamerRulesCommand extends Command {
       if (err.name === 'SequelizeUniqueConstraintError') {
         return msg.reply('That role is already in the database!');
       }
-      error(err);
-      return msg.reply('Something went wrong...');
+      return handleError(err, msg);
     }
 
     return msg.reply('What?');

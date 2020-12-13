@@ -6,7 +6,7 @@ import get from 'lodash.get';
 import { Command } from 'discord.js-commando';
 import { Role, TextChannel } from 'discord.js';
 import { shorten } from 'src/utils';
-import { fetchMessageInGuild } from 'src/discord-utils';
+import { fetchMessageInGuild, handleError } from 'src/discord-utils';
 import { getModels } from 'src/models';
 import { error } from 'src/logging';
 import { MESSAGE_PREVIEW_LENGTH } from 'src/constants';
@@ -287,14 +287,10 @@ export default class ReactionsCommand extends Command {
         return null;
       }
     } catch (err) {
-      if (err.name === 'SequelizeUniqueConstraintError') {
-        return commandoMsg.reply('That role is already in the database!');
-      }
       if (err.message === 'Unknown Emoji') {
         return commandoMsg.reply('I\'m not able to use that emoji!');
       }
-      error(err);
-      return commandoMsg.reply('Something went wrong...');
+      return handleError(err, commandoMsg);
     }
 
     return commandoMsg.reply('What?');
