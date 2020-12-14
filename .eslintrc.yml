@@ -17,6 +17,7 @@ overrides:
   - files: ['*.ts']
     rules:
       '@typescript-eslint/explicit-module-boundary-types': error
+      camelcase: off # conflicts with our db column names and defining response types
 rules:
   # Rules which will be overriden (see overrides).
   '@typescript-eslint/explicit-module-boundary-types': off
@@ -35,6 +36,28 @@ rules:
 
   # Rules that conflict with Discord API
   class-methods-use-this: off
+
+  # https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/naming-convention.md
+  "@typescript-eslint/naming-convention":
+    - error
+    - selector: default
+      format:
+        - strictCamelCase
+        - StrictPascalCase
+        - UPPER_CASE
+    - selector:
+        - property
+        - typeProperty
+      format:
+        - strictCamelCase
+        - snake_case
+
+  # camelcase:
+  #   allow:
+  #     - role_id
+  #     - guild_id
+  #     - role_id
+  #     - user_id
 
   linebreak-style: off # convenience for Windows
   import/prefer-default-export: off # this is stupid to be made a general rule. should be case by case

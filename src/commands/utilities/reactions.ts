@@ -103,7 +103,6 @@ export default class ReactionsCommand extends Command {
   static handleList: OperationHandler = async commandMsg => {
     const guildId = commandMsg.guild.id;
 
-    /* eslint-disable camelcase */
     const rules: {
       role_id: string;
       emoji: string;
@@ -125,7 +124,6 @@ export default class ReactionsCommand extends Command {
       },
       attributes: ['unique', 'message_id'],
     });
-    /* eslint-enable camelcase */
 
     if (!rules.length) return commandMsg.say('There are no role reactions assigned!');
     const responseMsg = await commandMsg.say('Fetching...\nThis may take a minute.') as Message;
