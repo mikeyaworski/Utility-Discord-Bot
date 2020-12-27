@@ -63,7 +63,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
       role_id: string;
       add: boolean;
     }[] = await getModels().streamer_rollback_roles.findAll(rollbacksQuery);
-    const rolesToAdd = rollbacks.filter(rollback => !rollback.add).map(rollback => rollback.role_id);
+    const rolesToAdd = rollbacks.filter(rollback => rollback.add).map(rollback => rollback.role_id);
     const rolesToRemove = rollbacks.filter(rollback => !rollback.add).map(rollback => rollback.role_id);
     await Promise.all([member.roles.add(rolesToAdd), member.roles.remove(rolesToRemove)]);
     await getModels().streamer_rollback_roles.destroy(rollbacksQuery);
