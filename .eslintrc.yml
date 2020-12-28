@@ -51,6 +51,7 @@ rules:
       format:
         - strictCamelCase
         - snake_case
+        - UPPER_CASE
 
   # camelcase:
   #   allow:
@@ -81,3 +82,4 @@ rules:
     - js: never
       ts: never
   arrow-body-style: off # this often leads to difficult-to-read inline functions
+  lines-between-class-members: off # this can be a lot less clean for instance variables and such
