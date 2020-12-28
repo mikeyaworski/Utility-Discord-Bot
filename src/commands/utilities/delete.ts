@@ -14,7 +14,7 @@ interface Args {
 type IntermediateResult = EitherMessage[];
 
 /**
- * !delete <start_msg> [end_msg]
+ * !delete <start_msg> [end_msg] [old]
  */
 export default class DeleteCommand extends ConfirmationCommand<IntermediateResult> {
   constructor(client: ClientType) {
