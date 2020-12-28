@@ -12,8 +12,7 @@ import type { EitherMessage } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
-import { getIntersection } from 'src/utils';
-import { BULK_MESSAGES_LIMIT } from 'src/constants';
+import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH } from 'src/constants';
 import { error } from 'src/logging';
 
 /**
@@ -34,26 +33,15 @@ export function handleError(err: unknown, commandMsg: EitherMessage): Promise<Me
 }
 
 /**
- * It would be awesome to just provide
- * { after: start.id, before: end.id } to the fetch,
- * but the API apparently does not support simultaneous options (lol).
- * So instead, we will fetch X messages after the start and X messages before the end,
- * and then take the intersection as the messages within the range.
- * If the intersection is empty, then there are more messages between the range than our limit allows us to find.
- * So just move all of the messages found after the start.
+ * Fetch all messages between `start` and `end`, but stop fetching after reaching the `MAX_MESSAGES_FETCH` limit as a precaution.
+ * If fetching was stopped due to reaching the limit, the second value in return tuple will be true.
+ * Return type is of the form [msgs, stoppedFetchingEarly].
  */
 export async function getMessagesInRange(
   channel: TextChannel | DMChannel,
-  start: CommandoMessage,
-  end: CommandoMessage,
-): Promise<(EitherMessage)[]> {
-  // this would be nice...
-  // return (await channel.messages.fetch({
-  //   after: start.id,
-  //   before: end.id,
-  //   limit: BULK_MESSAGES_LIMIT,
-  // })).array();
-
+  start: EitherMessage,
+  end: EitherMessage,
+): Promise<[EitherMessage[], boolean]> {
   // swap them if start > end
   if (start.createdTimestamp > end.createdTimestamp) {
     const temp = start;
@@ -61,26 +49,30 @@ export async function getMessagesInRange(
     end = temp;
   }
 
-  const afterStartMsgs: (EitherMessage)[] = (await channel.messages.fetch({
-    after: start.id,
-    limit: BULK_MESSAGES_LIMIT,
-  })).array().reverse(); // reverse so the messages are ordered chronologically
-  afterStartMsgs.unshift(start);
+  let stoppedEarly = true;
+  const msgs = [start];
+  while (msgs.length < MAX_MESSAGES_FETCH) {
+    // eslint-disable-next-line no-await-in-loop
+    const fetchedMsgs: (Message)[] = (await channel.messages.fetch({
+      // cannot also provide the "before: end.id" option since multiple options are not supported by the API
+      after: start.id,
+      limit: BULK_MESSAGES_LIMIT,
+    })).array().reverse(); // reverse so the messages are ordered chronologically
 
-  const beforeEndMsgs: (EitherMessage)[] = (await channel.messages.fetch({
-    before: end.id,
-    limit: BULK_MESSAGES_LIMIT,
-  })).array();
-  beforeEndMsgs.push(end);
+    const indexOfEndMsg = fetchedMsgs.findIndex(msg => msg.id === end.id);
 
-  const intersection = getIntersection<EitherMessage>(
-    afterStartMsgs,
-    beforeEndMsgs,
-    (a, b) => a.id === b.id,
-  );
-
-  if (intersection.length === 0) return [...afterStartMsgs];
-  return intersection;
+    if (indexOfEndMsg === -1) {
+      // haven't reached the end message yet, so add messages and keep fetching for more
+      msgs.push(...fetchedMsgs);
+      start = fetchedMsgs[fetchedMsgs.length - 1];
+    } else {
+      // found the end message, so add messages (ignoring ones after end message) and stop fetching
+      msgs.push(...fetchedMsgs.slice(0, indexOfEndMsg + 1));
+      stoppedEarly = false;
+      break;
+    }
+  }
+  return [msgs, stoppedEarly];
 }
 
 export function userHasPermission(

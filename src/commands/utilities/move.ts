@@ -97,9 +97,11 @@ export default class MoveCommand extends ConfirmationCommand<IntermediateResult>
       return null;
     }
 
-    const msgs = await getMessagesInRange(fromChannel, start, end);
-
-    return [msgs, `Are you sure you want to move ${msgs.length} messages to <#${toChannel.id}>`];
+    const [msgs, stoppedEarly] = await getMessagesInRange(fromChannel, start, end);
+    const confirmPrompt = `Are you sure you want to move ${msgs.length} messages to <#${toChannel.id}>?${
+      stoppedEarly ? '\nNote: Some messages in the range were not included due to a rate limit precaution.' : ''
+    }`;
+    return [msgs, confirmPrompt];
   }
 
   afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult> = async (msgs, commandMsg, args) => {

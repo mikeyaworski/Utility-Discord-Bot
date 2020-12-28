@@ -2,6 +2,9 @@ import type { CommandoMessage } from 'discord.js-commando';
 import type { TextChannel } from 'discord.js';
 import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
 
+import chunk from 'lodash.chunk';
+
+import { BULK_MESSAGES_LIMIT } from 'src/constants';
 import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 import { getMessagesInRange } from 'src/discord-utils';
 
@@ -74,8 +77,11 @@ export default class DeleteCommand extends ConfirmationCommand<IntermediateResul
       return null;
     }
 
-    const msgs = await getMessagesInRange(channel, start, end);
-    return [msgs, `Are you sure you want to delete ${msgs.length} messages?`];
+    const [msgs, stoppedEarly] = await getMessagesInRange(channel, start, end);
+    const confirmPrompt = `Are you sure you want to delete ${msgs.length} messages?${
+      stoppedEarly ? '\nNote: Some messages in the range were not included due to a rate limit precaution.' : ''
+    }`;
+    return [msgs, confirmPrompt];
   }
 
   afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult> = async (msgs, commandMsg, args) => {
@@ -85,7 +91,12 @@ export default class DeleteCommand extends ConfirmationCommand<IntermediateResul
     if (!old) {
       const msgIds = msgs.map(msg => msg.id);
       // we know it is a text channel since it otherwise would not have passed beforeConfirm
-      numDeletedMessages = (await (channel as TextChannel).bulkDelete(msgIds)).size;
+      const textChannel = channel as TextChannel;
+      const chunkedMsgIds = chunk(msgIds, BULK_MESSAGES_LIMIT);
+      numDeletedMessages = 0;
+      await Promise.all(chunkedMsgIds.map(async msgIdsChunk => {
+        numDeletedMessages += (await textChannel.bulkDelete(msgIdsChunk)).size;
+      }));
     } else {
       await Promise.all(msgs.map(msg => msg.delete()));
     }
