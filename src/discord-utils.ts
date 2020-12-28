@@ -8,14 +8,13 @@ import type {
   Guild,
 } from 'discord.js';
 import type { CommandoMessage, CommandoGuild } from 'discord.js-commando';
+import type { EitherMessage } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
 import { getIntersection } from 'src/utils';
 import { BULK_MESSAGES_LIMIT } from 'src/constants';
 import { error } from 'src/logging';
-
-type EitherMessage = Message | CommandoMessage;
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.

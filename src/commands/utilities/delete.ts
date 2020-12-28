@@ -1,7 +1,8 @@
-import type { ClientType, CommandRunMethod } from 'src/types';
 import type { CommandoMessage } from 'discord.js-commando';
+import type { TextChannel } from 'discord.js';
+import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
 
-import { Command } from 'discord.js-commando';
+import ConfirmationCommand from 'src/commands/confirmation-command';
 import { getMessagesInRange } from 'src/discord-utils';
 
 interface Args {
@@ -10,10 +11,12 @@ interface Args {
   old: boolean;
 }
 
+type IntermediateResult = EitherMessage[];
+
 /**
  * !delete <start_msg> [end_msg]
  */
-export default class DeleteCommand extends Command {
+export default class DeleteCommand extends ConfirmationCommand<IntermediateResult> {
   constructor(client: ClientType) {
     super(client, {
       name: 'delete',
@@ -51,8 +54,8 @@ export default class DeleteCommand extends Command {
     });
   }
 
-  run: CommandRunMethod<Args> = async (commandMsg, args) => {
-    const { start, end, old } = args;
+  beforeConfirm: CommandBeforeConfirmMethod<Args, IntermediateResult> = async (commandMsg, args) => {
+    const { start, end } = args;
     const { channel } = start;
 
     if (channel.type === 'dm') return null;
@@ -60,17 +63,25 @@ export default class DeleteCommand extends Command {
     // single message; not a range
     if (!end) {
       await start.delete();
-      return commandMsg.delete();
+      await commandMsg.delete();
+      return null;
     }
 
     const msgs = await getMessagesInRange(channel, start, end);
+    return [msgs, `Are you sure you want to delete ${msgs.length} messages?`];
+  }
+
+  afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult> = async (msgs, commandMsg, args) => {
+    const { start, old } = args;
+    const { channel } = start;
+    let numDeletedMessages: number = msgs.length;
     if (old) {
       const msgIds = msgs.map(msg => msg.id);
-      await channel.bulkDelete?.(msgIds);
+      // we know it is a text channel since it otherwise would not have passed beforeConfirm
+      numDeletedMessages = (await (channel as TextChannel).bulkDelete(msgIds)).size;
     } else {
       await Promise.all(msgs.map(msg => msg.delete()));
     }
-
-    return commandMsg.delete();
+    return `${numDeletedMessages} messages have been deleted.`;
   }
 }

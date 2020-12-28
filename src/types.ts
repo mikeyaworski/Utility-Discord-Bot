@@ -24,6 +24,8 @@ export type GenericMapping<T1, T2 extends string = string> = {
 export type StringMapping = GenericMapping<string>;
 export type UnknownMapping = GenericMapping<unknown>;
 
+export type EitherMessage = Message | CommandoMessage;
+
 export type ClientType = CommandoClient;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +40,21 @@ export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
   fromPattern: boolean,
   result?: ArgumentCollectorResult,
 ) => Promise<Message | Message[] | null> | null;
+
+export type CommandBeforeConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
+  message: CommandoMessage,
+  args: T1,
+  fromPattern: boolean,
+  result?: ArgumentCollectorResult,
+) => Promise<[T2, string]> | Promise<[T2]> | Promise<null>;
+
+export type CommandAfterConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
+  beforeResult: T2,
+  message: CommandoMessage,
+  args: T1,
+  fromPattern: boolean,
+  result?: ArgumentCollectorResult,
+) => Promise<string>;
 
 // TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:
 // export type EventTrigger = Parameters<typeof CommandoClient.prototype.on>
