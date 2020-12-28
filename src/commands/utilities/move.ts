@@ -4,7 +4,7 @@ import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod,
 
 import Discord from 'discord.js';
 import { getMessagesInRange, userHasPermission } from 'src/discord-utils';
-import ConfirmationCommand from 'src/commands/confirmation-command';
+import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 
 interface Args {
   channel: TextChannel,
@@ -32,6 +32,10 @@ export default class MoveCommand extends ConfirmationCommand<IntermediateResult>
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
       guildOnly: true,
+      throttling: {
+        usages: 2,
+        duration: 10,
+      },
       args: [
         {
           key: 'channel',
@@ -51,6 +55,9 @@ export default class MoveCommand extends ConfirmationCommand<IntermediateResult>
           default: false,
         },
       ],
+    }, {
+      ...DEFAULT_CONFIRMATION_INFO,
+      workingMessage: 'Fetching...\nThis may take a minute',
     });
   }
 

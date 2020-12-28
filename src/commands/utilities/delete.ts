@@ -2,7 +2,7 @@ import type { CommandoMessage } from 'discord.js-commando';
 import type { TextChannel } from 'discord.js';
 import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
 
-import ConfirmationCommand from 'src/commands/confirmation-command';
+import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 import { getMessagesInRange } from 'src/discord-utils';
 
 interface Args {
@@ -31,6 +31,10 @@ export default class DeleteCommand extends ConfirmationCommand<IntermediateResul
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
       guildOnly: true,
+      throttling: {
+        usages: 2,
+        duration: 10,
+      },
       args: [
         {
           key: 'start',
@@ -51,6 +55,9 @@ export default class DeleteCommand extends ConfirmationCommand<IntermediateResul
           default: false,
         },
       ],
+    }, {
+      ...DEFAULT_CONFIRMATION_INFO,
+      workingMessage: 'Fetching...\nThis may take a minute',
     });
   }
 
@@ -75,7 +82,7 @@ export default class DeleteCommand extends ConfirmationCommand<IntermediateResul
     const { start, old } = args;
     const { channel } = start;
     let numDeletedMessages: number = msgs.length;
-    if (old) {
+    if (!old) {
       const msgIds = msgs.map(msg => msg.id);
       // we know it is a text channel since it otherwise would not have passed beforeConfirm
       numDeletedMessages = (await (channel as TextChannel).bulkDelete(msgIds)).size;

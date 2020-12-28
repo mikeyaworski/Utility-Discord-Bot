@@ -11,8 +11,13 @@ import { reactMulitple } from 'src/discord-utils';
 
 interface ConfirmationInfo {
   timeout: number;
-  message?: string;
+  workingMessage?: string;
+  confirmPrompt?: string;
 }
+
+export const DEFAULT_CONFIRMATION_INFO = {
+  timeout: CONFIRMATION_DEFAULT_TIMEOUT,
+};
 
 /**
  * Shows an embeded message with reaction options to confirm/deny the continuation of a command.
@@ -25,7 +30,7 @@ interface ConfirmationInfo {
 export default abstract class ConfirmationCommand<IntermediateResult> extends Command {
   public readonly confirmationInfo: ConfirmationInfo;
 
-  constructor(client: ClientType, commandInfo: CommandInfo, confirmationInfo: ConfirmationInfo = { timeout: CONFIRMATION_DEFAULT_TIMEOUT }) {
+  constructor(client: ClientType, commandInfo: CommandInfo, confirmationInfo: ConfirmationInfo = DEFAULT_CONFIRMATION_INFO) {
     super(client, commandInfo);
     this.confirmationInfo = confirmationInfo;
   }
@@ -34,13 +39,17 @@ export default abstract class ConfirmationCommand<IntermediateResult> extends Co
   abstract afterConfirm: CommandAfterConfirmMethod<unknown, IntermediateResult>;
 
   run: CommandRunMethod<unknown> = async (...args) => {
+    const [commandMsg] = args;
+    const workingMessage = this.confirmationInfo.workingMessage
+      ? await commandMsg.say('Fetching...\nThis may take a minute.') as Message
+      : null;
     const beforeConfirmResult = await this.beforeConfirm(...args);
+    if (workingMessage) await workingMessage.delete();
     if (!beforeConfirmResult) return null; // no confirmation required
 
     const [intermediateResult, confirmPrompt] = beforeConfirmResult;
-    const [commandMsg] = args;
 
-    const embedDescription = confirmPrompt || this.confirmationInfo.message || 'Please confirm.';
+    const embedDescription = confirmPrompt || this.confirmationInfo.confirmPrompt || 'Please confirm.';
     const confirmationMessageEmbed = new Discord.MessageEmbed()
       .setTitle('Confirmation')
       .setDescription(embedDescription)
