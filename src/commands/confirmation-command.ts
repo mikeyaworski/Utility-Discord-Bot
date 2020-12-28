@@ -73,7 +73,7 @@ export default abstract class ConfirmationCommand<IntermediateResult> extends Co
           await confirmationMessage.edit(confirmationMessageEmbed);
         } catch (err) {
           confirmationMessageEmbed.setColor(Colors.DANGER);
-          confirmationMessageEmbed.setDescription(get(err, 'message', 'Something went wrong.'));
+          confirmationMessageEmbed.setDescription(`Error: ${get(err, 'message', 'Something went wrong.')}\n${embedDescription}`);
           await confirmationMessage.edit(confirmationMessageEmbed);
         }
       }
