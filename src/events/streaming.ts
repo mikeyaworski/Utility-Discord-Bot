@@ -22,6 +22,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   if (isStreaming) {
     // they've started streaming
     log('Now streaming:', member.user.username);
+    log('Member has roles:', member.roles.cache.array().map(role => role.id).toString());
     const rules = await getModels().streamer_rules.findAll({
       where: {
         guild_id: guild.id,
@@ -45,6 +46,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
           user_id: member.id,
           add: !add,
         });
+        log(`Rollback role ${roleId} added for member ${member.user.username}`);
       }
     });
   }
@@ -52,6 +54,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   if (wasStreaming) {
     // they've stopped streaming
     log('Stopped streaming:', member.user.username);
+    log('Member has roles:', member.roles.cache.array().map(role => role.id).toString());
     const rollbacksQuery = {
       where: {
         guild_id: guild.id,
@@ -65,6 +68,8 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     }[] = await getModels().streamer_rollback_roles.findAll(rollbacksQuery);
     const rolesToAdd = rollbacks.filter(rollback => rollback.add).map(rollback => rollback.role_id);
     const rolesToRemove = rollbacks.filter(rollback => !rollback.add).map(rollback => rollback.role_id);
+    log('Adding roles:', rolesToAdd.toString());
+    log('Removing roles:', rolesToRemove.toString());
     await Promise.all([member.roles.add(rolesToAdd), member.roles.remove(rolesToRemove)]);
     await getModels().streamer_rollback_roles.destroy(rollbacksQuery);
   }
