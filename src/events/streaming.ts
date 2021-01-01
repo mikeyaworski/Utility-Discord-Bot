@@ -31,8 +31,8 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     });
     rules.forEach(async ({ role_id: roleId, add }) => {
       if (add !== member.roles.cache.has(roleId)) {
-        if (!add) await member.roles.remove(roleId);
-        else await member.roles.add(roleId);
+        if (!add) await member.roles.remove(roleId, 'Role removed once stream was started.');
+        else await member.roles.add(roleId, 'Role added once stream was started.');
         await getModels().streamer_rollback_roles.destroy({
           where: {
             guild_id: guild.id,
@@ -70,7 +70,9 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     const rolesToRemove = rollbacks.filter(rollback => !rollback.add).map(rollback => rollback.role_id);
     log('Adding roles:', rolesToAdd.toString());
     log('Removing roles:', rolesToRemove.toString());
-    await Promise.all([member.roles.add(rolesToAdd), member.roles.remove(rolesToRemove)]);
+    // apparently these cannot be done in parallel?
+    await member.roles.add(rolesToAdd, 'Role added back once stream was stopped.');
+    await member.roles.remove(rolesToRemove, 'Role removed once stream was stopped.');
     await getModels().streamer_rollback_roles.destroy(rollbacksQuery);
   }
 }];
