@@ -1,8 +1,22 @@
-import type { Presence } from 'discord.js';
+import type { Presence, Collection, Role } from 'discord.js';
 import type { EventTrigger } from 'src/types';
 
 import { getModels } from 'src/models';
 import { log } from 'src/logging';
+
+type Rule = {
+  role_id: string;
+  add: boolean;
+};
+
+function getNewRoles(existingRoles: Collection<string, Role>, rules: Rule[]): string[] {
+  const rolesToAdd = rules.filter(rule => rule.add).map(rule => rule.role_id);
+  const rolesToRemove = rules.filter(rule => !rule.add).map(rule => rule.role_id);
+  return existingRoles
+    .map(role => role.id)
+    .filter(roleId => !rolesToRemove.includes(roleId))
+    .concat(rolesToAdd);
+}
 
 const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Presence, newPresence: Presence): Promise<void> => {
   const wasStreaming = oldPresence?.activities.some(activity => activity.type === 'STREAMING');
@@ -22,17 +36,18 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   if (isStreaming) {
     // they've started streaming
     log('Now streaming:', member.user.username);
-    log('Member has roles:', member.roles.cache.array().map(role => role.id).toString());
-    const rules = await getModels().streamer_rules.findAll({
+    log('Member has roles:', member.roles.cache.map(role => role.id).toString());
+    const rules: Rule[] = await getModels().streamer_rules.findAll({
       where: {
         guild_id: guild.id,
       },
       attributes: ['role_id', 'add'],
     });
+    const existingRoles = member.roles.cache;
+    const newRoles = getNewRoles(existingRoles, rules);
+    await member.roles.set(newRoles, 'Roles added/removed once stream was started.');
     rules.forEach(async ({ role_id: roleId, add }) => {
-      if (add !== member.roles.cache.has(roleId)) {
-        if (!add) await member.roles.remove(roleId, 'Role removed once stream was started.');
-        else await member.roles.add(roleId, 'Role added once stream was started.');
+      if (add !== existingRoles.has(roleId)) {
         await getModels().streamer_rollback_roles.destroy({
           where: {
             guild_id: guild.id,
@@ -54,7 +69,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   if (wasStreaming) {
     // they've stopped streaming
     log('Stopped streaming:', member.user.username);
-    log('Member has roles:', member.roles.cache.array().map(role => role.id).toString());
+    log('Member has roles:', member.roles.cache.map(role => role.id).toString());
     const rollbacksQuery = {
       where: {
         guild_id: guild.id,
@@ -62,17 +77,12 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
       },
       attributes: ['role_id', 'add'],
     };
-    const rollbacks: {
-      role_id: string;
-      add: boolean;
-    }[] = await getModels().streamer_rollback_roles.findAll(rollbacksQuery);
-    const rolesToAdd = rollbacks.filter(rollback => rollback.add).map(rollback => rollback.role_id);
-    const rolesToRemove = rollbacks.filter(rollback => !rollback.add).map(rollback => rollback.role_id);
-    log('Adding roles:', rolesToAdd.toString());
-    log('Removing roles:', rolesToRemove.toString());
-    // apparently these cannot be done in parallel?
-    await member.roles.add(rolesToAdd, 'Role added back once stream was stopped.');
-    await member.roles.remove(rolesToRemove, 'Role removed once stream was stopped.');
+    const rollbacks: Rule[] = await getModels().streamer_rollback_roles.findAll(rollbacksQuery);
+    // Manually calculate the new roles and use `roles.set` instead of simply using `roles.add` and `roles.remove`
+    // because the Discord API has super weird behavior where the API calls will clobber one another.
+    const newRoles = getNewRoles(member.roles.cache, rollbacks);
+    log(`New roles set for member ${member.user.username}:`, newRoles.toString());
+    await member.roles.set(newRoles, 'Roles rolled back after stream was stopped.');
     await getModels().streamer_rollback_roles.destroy(rollbacksQuery);
   }
 }];
