@@ -2,6 +2,6 @@
   "legacyWatch": true,
   "watch": ["src"],
   "ext": "ts,json",
-  "ignore": ["src/**/*.spec.ts"],
+  "ignore": ["src/**/*.test.ts"],
   "exec": "npm start"
 }
