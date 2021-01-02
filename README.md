@@ -65,7 +65,7 @@ However, this is a private bot. This bot does not have measures in place to hand
 Fill in your own `DISCORD_BOT_TOKEN` and `OWNER_ID` for development / your bot deployment.
 
 ```
-ENVIRONMENT='development'
+ENVIRONMENT=development
 
 DISCORD_BOT_TOKEN=...
 DATABASE_URL=postgres://user:password@utility_discord_bot_db:5432/utility_discord_bot_db
