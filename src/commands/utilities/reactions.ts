@@ -228,7 +228,7 @@ export default class ReactionsCommand extends Command {
     const response = unique
       ? 'Members may only react to a single emoji on that message now!'
       : 'Members may react to as many emojis as they want now!';
-    return commandMsg.reply(response);
+    return commandMsg.say(response);
   }
 
   static handleClear: OperationHandler = async (commandMsg, { messageId }) => {
