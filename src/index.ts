@@ -11,6 +11,7 @@ dotenv.config();
 
 function preventSleep() {
   const host = process.env.PING_HOST;
+  if (!host) return;
   log('Pinging', host, 'on timeout', WAKE_INTERVAL);
   setTimeout(async () => {
     try {

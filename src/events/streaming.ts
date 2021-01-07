@@ -28,8 +28,9 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
   if (wasStreaming === isStreaming) return;
 
   const { guild } = newPresence;
-  const member = await guild.members.fetch({
-    user: newPresence.member.id,
+  const guildId = guild!.id;
+  const member = await guild!.members.fetch({
+    user: newPresence.member!.id,
     force: true,
   });
 
@@ -39,7 +40,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     log('Member has roles:', member.roles.cache.map(role => role.id).toString());
     const rules: Rule[] = await getModels().streamer_rules.findAll({
       where: {
-        guild_id: guild.id,
+        guild_id: guildId,
       },
       attributes: ['role_id', 'add'],
     });
@@ -50,13 +51,13 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
       if (add !== existingRoles.has(roleId)) {
         await getModels().streamer_rollback_roles.destroy({
           where: {
-            guild_id: guild.id,
+            guild_id: guildId,
             role_id: roleId,
             user_id: member.id,
           },
         });
         await getModels().streamer_rollback_roles.create({
-          guild_id: guild.id,
+          guild_id: guildId,
           role_id: roleId,
           user_id: member.id,
           add: !add,
@@ -72,7 +73,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     log('Member has roles:', member.roles.cache.map(role => role.id).toString());
     const rollbacksQuery = {
       where: {
-        guild_id: guild.id,
+        guild_id: guildId,
         user_id: member.id,
       },
       attributes: ['role_id', 'add'],

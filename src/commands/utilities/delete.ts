@@ -8,18 +8,18 @@ import { BULK_MESSAGES_LIMIT } from 'src/constants';
 import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 import { getMessagesInRange } from 'src/discord-utils';
 
-interface Args {
+type Args = {
   start: CommandoMessage,
   end: CommandoMessage | false,
   old: boolean;
-}
+};
 
 type IntermediateResult = EitherMessage[];
 
 /**
  * !delete <start_msg> [end_msg] [old]
  */
-export default class DeleteCommand extends ConfirmationCommand<IntermediateResult> {
+export default class DeleteCommand extends ConfirmationCommand<Args, IntermediateResult> {
   constructor(client: ClientType) {
     super(client, {
       name: 'delete',

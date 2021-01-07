@@ -38,7 +38,7 @@ export default class PollCommand extends Command {
     if (!options.length) return commandMsg.reply('Please provide some options!');
 
     let indicatorCount = 0;
-    const reactionsAndText: [string, string][] = options.reduce((acc, option, idx) => {
+    const reactionsAndText = options.reduce((acc, option, idx) => {
       if (!isEmoji(option) && (idx === 0 || !isEmoji(options[idx - 1]))) {
         indicatorCount += 1;
         return acc.concat([[
@@ -53,7 +53,7 @@ export default class PollCommand extends Command {
         ]]);
       }
       return acc;
-    }, []);
+    }, [] as [string, string][]);
 
     const pollBody = reactionsAndText.reduce((acc, [reaction, option]) => {
       return `${acc}${reaction} ${option}\n`;

@@ -1,6 +1,6 @@
 import type { Message, MessageReaction, User } from 'discord.js';
 import type { CommandInfo } from 'discord.js-commando';
-import type { ClientType, CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
+import type { ClientType, CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, UnknownMapping } from 'src/types';
 
 import Discord from 'discord.js';
 import { Command } from 'discord.js-commando';
@@ -27,7 +27,7 @@ export const DEFAULT_CONFIRMATION_INFO = {
  * If a falsey value is returned from `beforeConfirm` (instead of a tuple), then there will be no confirmation and
  * `beforeConfirm` will be assumed to have run to completion.
  */
-export default abstract class ConfirmationCommand<IntermediateResult> extends Command {
+export default abstract class ConfirmationCommand<Args extends UnknownMapping, IntermediateResult> extends Command {
   public readonly confirmationInfo: ConfirmationInfo;
 
   constructor(client: ClientType, commandInfo: CommandInfo, confirmationInfo: ConfirmationInfo = DEFAULT_CONFIRMATION_INFO) {
@@ -35,10 +35,10 @@ export default abstract class ConfirmationCommand<IntermediateResult> extends Co
     this.confirmationInfo = confirmationInfo;
   }
 
-  abstract beforeConfirm: CommandBeforeConfirmMethod<unknown, IntermediateResult>;
-  abstract afterConfirm: CommandAfterConfirmMethod<unknown, IntermediateResult>;
+  abstract beforeConfirm: CommandBeforeConfirmMethod<Args, IntermediateResult>;
+  abstract afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult>;
 
-  run: CommandRunMethod<unknown> = async (...args) => {
+  run: CommandRunMethod<Args> = async (...args) => {
     const [commandMsg] = args;
     const workingMessage = this.confirmationInfo.workingMessage
       ? await commandMsg.say('Fetching...\nThis may take a minute.') as Message
@@ -58,7 +58,7 @@ export default abstract class ConfirmationCommand<IntermediateResult> extends Co
     const confirmationMessage = await commandMsg.say(confirmationMessageEmbed) as Message;
     await reactMulitple(confirmationMessage as Message, [CONFIRM_REACTION, DECLINE_REACTION]);
 
-    let timeout;
+    let timeout: NodeJS.Timeout;
     const listener = async (reaction: MessageReaction, user: User): Promise<void> => {
       if (commandMsg.member.id !== user.id || confirmationMessage.id !== reaction.message.id) return;
       const emoji = reaction.emoji.toString();

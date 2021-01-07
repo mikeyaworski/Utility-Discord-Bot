@@ -1,4 +1,4 @@
-import type { ModelMapping } from 'src/types';
+import type { ModelKey, ModelMapping } from 'src/types';
 
 import fs from 'fs';
 import path from 'path';
@@ -24,7 +24,7 @@ if (process.env.ENVIRONMENT === 'production') {
   });
 }
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, sequelizeOpts);
+const sequelize = new Sequelize(process.env.DATABASE_URL!, sequelizeOpts);
 
 const modelDefinitions = fs
   .readdirSync(__dirname)
@@ -35,7 +35,7 @@ const modelDefinitions = fs
   });
 
 export const getModels = ((): () => ModelMapping => {
-  let modelsMapping;
+  let modelsMapping: ModelMapping;
   return (): ModelMapping => {
     if (modelsMapping) return modelsMapping;
     modelsMapping = modelDefinitions.reduce((acc, modelDefinition) => {
@@ -56,6 +56,6 @@ export function syncModels(): void {
   });
   // sync models
   Object.keys(modelsMapping).forEach(modelKey => {
-    modelsMapping[modelKey].sync();
+    modelsMapping[modelKey as ModelKey].sync();
   });
 }

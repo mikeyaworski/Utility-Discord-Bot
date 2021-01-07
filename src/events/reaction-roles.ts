@@ -23,9 +23,9 @@ async function reactionReady(messageReaction: MessageReaction): Promise<boolean>
 const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReaction: MessageReaction, user: User): Promise<void> => {
   if (user.bot) return;
   if (!(await reactionReady(messageReaction))) return;
-  const guildId = messageReaction.message.guild.id;
+  const guildId = messageReaction.message.guild!.id;
   const messageId = messageReaction.message.id;
-  const member = await messageReaction.message.guild.members.fetch({
+  const member = await messageReaction.message.guild!.members.fetch({
     user,
     force: true,
   });
@@ -67,9 +67,9 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
 const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messageReaction: MessageReaction, user: User): Promise<void> => {
   if (user.bot) return;
   if (!(await reactionReady(messageReaction))) return;
-  const guildId = messageReaction.message.guild.id;
+  const guildId = messageReaction.message.guild!.id;
   const messageId = messageReaction.message.id;
-  const member = await messageReaction.message.guild.members.fetch({
+  const member = await messageReaction.message.guild!.members.fetch({
     user,
     force: true,
   });
@@ -94,13 +94,13 @@ const MessageDeleteEvent: EventTrigger = ['messageDelete', async (message: Messa
   await Promise.all([
     getModels().reaction_roles.destroy({
       where: {
-        guild_id: message.guild.id,
+        guild_id: message.guild?.id,
         message_id: message.id,
       },
     }),
     getModels().reaction_messages_unique.destroy({
       where: {
-        guild_id: message.guild.id,
+        guild_id: message.guild?.id,
         message_id: message.id,
       },
     }),

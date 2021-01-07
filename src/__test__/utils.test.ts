@@ -5,7 +5,7 @@ import {
 
 describe('utils', () => {
   describe('getIntersection', () => {
-    const comparator = (el1, el2) => el1 === el2;
+    const comparator = (el1: number, el2: number) => el1 === el2;
     it('returns the intersection', () => {
       const a = [1, 2, 3];
       const b = [2, 3, 4];

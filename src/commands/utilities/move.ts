@@ -6,18 +6,18 @@ import Discord from 'discord.js';
 import { getMessagesInRange, userHasPermission } from 'src/discord-utils';
 import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 
-interface Args {
+type Args = {
   channel: TextChannel,
   start: CommandoMessage,
   end: CommandoMessage | false,
-}
+};
 
 type IntermediateResult = EitherMessage[];
 
 /**
  * !move <channel> <start_msg> [end_msg]
  */
-export default class MoveCommand extends ConfirmationCommand<IntermediateResult> {
+export default class MoveCommand extends ConfirmationCommand<Args, IntermediateResult> {
   constructor(client: ClientType) {
     super(client, {
       name: 'move',
@@ -65,7 +65,7 @@ export default class MoveCommand extends ConfirmationCommand<IntermediateResult>
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
     const { author } = msg;
     const newMessage = new Discord.MessageEmbed()
-      .setAuthor(author.username, author.avatarURL())
+      .setAuthor(author.username, author.avatarURL() || undefined)
       .setDescription(msg.content)
       .attachFiles(msg.attachments.array());
     await channel.send(newMessage);

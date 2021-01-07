@@ -18,10 +18,11 @@ export type Mutable<T> = { -readonly [P in keyof T]: T[P] };
 export type DeepMutable<T> = { -readonly [P in keyof T]: DeepMutable<T[P]> };
 
 export type GenericMapping<T1, T2 extends string = string> = {
-  [key in T2]?: T1;
+  [key in T2]: T1;
 }
 
 export type StringMapping = GenericMapping<string>;
+export type BooleanMapping = GenericMapping<boolean>;
 export type UnknownMapping = GenericMapping<unknown>;
 
 export type EitherMessage = Message | CommandoMessage;
@@ -46,7 +47,7 @@ export type CommandBeforeConfirmMethod<T1 = UnknownMapping | string | string[], 
   args: T1,
   fromPattern: boolean,
   result?: ArgumentCollectorResult,
-) => Promise<[T2, string]> | Promise<[T2]> | Promise<null>;
+) => Promise<[T2, string] | [T2] | null>;
 
 export type CommandAfterConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
   beforeResult: T2,

@@ -41,7 +41,7 @@ export function initClient(): Promise<void> {
     });
 
     client.on('ready', () => {
-      log(`Logged in as ${client.user.tag}! (${client.user.id})`);
+      log(`Logged in as ${client.user?.tag} (${client.user?.id})`);
       resolve();
     });
     client.on('warn', warn);

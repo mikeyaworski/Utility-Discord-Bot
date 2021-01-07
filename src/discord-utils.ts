@@ -7,9 +7,10 @@ import type {
   EmojiIdentifierResolvable,
   Guild,
 } from 'discord.js';
-import type { CommandoMessage, CommandoGuild } from 'discord.js-commando';
+import type { CommandoGuild } from 'discord.js-commando';
 import type { EitherMessage } from 'src/types';
 
+// @ts-ignore
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
 import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH } from 'src/constants';
@@ -80,7 +81,7 @@ export function userHasPermission(
   user: User,
   permission: PermissionString | PermissionString[],
 ): boolean {
-  return channel.permissionsFor(user).has(permission);
+  return Boolean(channel.permissionsFor(user)?.has(permission));
 }
 
 export function isEmoji(arg: string): boolean {

@@ -1,8 +1,8 @@
-import type { CommandoMessage } from 'discord.js-commando';
 import type { Message } from 'discord.js';
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler, GenericMapping, BooleanMapping } from 'src/types';
 
 import get from 'lodash.get';
+import removeDuplicates from 'lodash.uniq';
 import { Command } from 'discord.js-commando';
 import { Role, TextChannel } from 'discord.js';
 import { shorten } from 'src/utils';
@@ -132,13 +132,28 @@ export default class ReactionsCommand extends Command {
       return Object.assign(acc, {
         [rule.message_id]: rule.unique,
       });
-    }, {});
+    }, {} as BooleanMapping);
 
-    const messageCache: {
-      [messageId: string]: Message;
-    } = {};
+    const messageMapping: GenericMapping<Message | null | undefined> = {};
+    const messageIds = removeDuplicates(rules.map(rule => rule.message_id));
+    await Promise.all(messageIds.map(messageId => {
+      return fetchMessageInGuild(commandMsg.guild, messageId, commandMsg.channel as TextChannel);
+    }));
 
-    const responseMapping: {
+    const responseMapping = rules.reduce((acc, rule) => {
+      return {
+        ...acc,
+        [rule.message_id]: {
+          ...acc[rule.message_id],
+          unique: uniqueMapping[rule.message_id] || false,
+          messageText: shorten(messageMapping[rule.message_id]?.content || '', MESSAGE_PREVIEW_LENGTH),
+          emojis: {
+            ...get(acc, [rule.message_id, 'emojis']),
+            [rule.emoji]: [...get(acc, [rule.message_id, 'emojis', rule.emoji], []), rule.role_id],
+          },
+        },
+      };
+    }, {} as {
       [messageId: string]: {
         unique: boolean;
         messageText: string;
@@ -146,37 +161,13 @@ export default class ReactionsCommand extends Command {
           [emoji: string]: string[];
         };
       };
-    } = await rules.reduce(async (accPromise, rule) => {
-      const acc = await accPromise;
-      try {
-        const fetchedMessage = messageCache[rule.message_id] !== undefined
-          ? messageCache[rule.message_id]
-          : await fetchMessageInGuild(commandMsg.guild, rule.message_id, commandMsg.channel as TextChannel);
-        messageCache[rule.message_id] = fetchedMessage;
-        if (!fetchedMessage) return acc;
-        return {
-          ...acc,
-          [rule.message_id]: {
-            ...acc[rule.message_id],
-            unique: uniqueMapping[rule.message_id] || false,
-            messageText: shorten(fetchedMessage.content, MESSAGE_PREVIEW_LENGTH),
-            emojis: {
-              ...get(acc, [rule.message_id, 'emojis']),
-              [rule.emoji]: [...get(acc, [rule.message_id, 'emojis', rule.emoji], []), rule.role_id],
-            },
-          },
-        };
-      } catch (err) {
-        error(err);
-        return acc;
-      }
-    }, {});
+    });
 
     const response = Object.keys(responseMapping).reduce((acc, messageId) => {
-      const messageMapping = responseMapping[messageId];
-      acc = `${acc}__${messageId}__\nMessage text: ${messageMapping.messageText}\nUnique reactions? ${messageMapping.unique ? 'Yes' : 'No'}\n`;
-      const emojiResponse = Object.keys(messageMapping.emojis).reduce((emojiAcc, emoji) => {
-        return `${emojiAcc}${emoji} - ${messageMapping.emojis[emoji].map(roleId => `<@&${roleId}>`).join(' ')}\n`;
+      const messageInfo = responseMapping[messageId];
+      acc = `${acc}__${messageId}__\nMessage text: ${messageInfo.messageText}\nUnique reactions? ${messageInfo.unique ? 'Yes' : 'No'}\n`;
+      const emojiResponse = Object.keys(messageInfo.emojis).reduce((emojiAcc, emoji) => {
+        return `${emojiAcc}${emoji} - ${messageInfo.emojis[emoji].map(roleId => `<@&${roleId}>`).join(' ')}\n`;
       }, '');
       return `${acc}${emojiResponse}\n`;
     }, '');
