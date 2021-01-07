@@ -10,6 +10,7 @@ import type {
   User,
   Collection,
   Snowflake,
+  GuildMember,
 } from 'discord.js';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
 
@@ -78,12 +79,15 @@ export type EventTrigger = [
 ] | [
   'messageDeleteBulk',
   (messages: Collection<Snowflake, Message>) => void
+] | [
+  'guildMemberAdd',
+  (member: GuildMember) => void
 ];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // TODO: type this better than "any"
 type Model = ModelCtor<any>;
-export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique';
+export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique' | 'base_roles';
 export type ModelMapping = GenericMapping<Model, ModelKey>;
 export type ModelDefinition = (sequelize: Sequelize) => [
   ModelKey,
