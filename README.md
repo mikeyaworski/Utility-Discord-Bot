@@ -13,7 +13,7 @@ However, this is a private bot. This bot does not have measures in place to hand
 
 ## Using the bot in your server
 
-1. Create an application on the Discord Developer Portal and add a bot to that application: https://discord.com/developers/applications
+1. Create an application on the Discord Developer Portal and add a bot to that application: https://discord.com/developers/applications. Make sure to enable the `PRESENCE INTENT` and `SERVER_MEMBERS_INTENT` in the bot settings.
 
 1. Take note of your application client ID and bot token. The client ID will let you form an invite:
     ```
