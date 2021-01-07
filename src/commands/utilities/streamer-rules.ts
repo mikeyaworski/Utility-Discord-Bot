@@ -8,18 +8,19 @@ import { handleError } from 'src/discord-utils';
 const LIST_OPERATIONS = ['list', 'ls'] as const;
 const ADD_OPERATIONS = ['add'] as const; // add the role when streaming
 const REMOVE_OPERATIONS = ['remove', 'delete'] as const; // remove the role when streaming
+const CLEAR_OPERATIONS = ['clear'] as const; // clear the relationship altogether (NOT the same as remove/delete)
 const OPERATIONS = [
   ...LIST_OPERATIONS,
   ...ADD_OPERATIONS,
   ...REMOVE_OPERATIONS,
-  'clear', // clear the relationship altogether (NOT the same as remove/delete)
+  ...CLEAR_OPERATIONS,
 ] as const;
 
 const model = getModels().streamer_rules;
 
 interface Args {
   operation: typeof OPERATIONS[number];
-  role: Role | '',
+  role: Role | '';
 }
 
 type OperationHandler = CommandOperationHandler<Args>;
@@ -154,7 +155,8 @@ export default class StreamerRulesCommand extends Command {
         await StreamerRulesCommand.handleList(msg, args);
         return null;
       }
-      if (operation === 'clear') {
+      // @ts-expect-error
+      if (CLEAR_OPERATIONS.includes(operation)) {
         await StreamerRulesCommand.handleClear(msg, args);
         return null;
       }
