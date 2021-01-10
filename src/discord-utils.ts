@@ -84,8 +84,25 @@ export function userHasPermission(
   return Boolean(channel.permissionsFor(user)?.has(permission));
 }
 
+export function isCustomEmoji(arg: string): boolean {
+  return /^<a?:.+:\d+>$/.test(arg);
+}
+
 export function isEmoji(arg: string): boolean {
-  return /^<a?:.+:\d+>$/.test(arg) || emojiRegex().test(arg);
+  return isCustomEmoji(arg) || emojiRegex().test(arg);
+}
+
+/**
+ * For custom emojis of the form <a:some_name:1234>, return 1234 (the ID). This is what's resolvable for message reactions.
+ * For default, unicode emojis, just return the emoji string itself.
+ */
+export function getResolvableEmoji(emoji: string): string {
+  if (isCustomEmoji(emoji)) {
+    const matches = emoji.match(/^(<a?:.+:)(\d+)>$/);
+    if (!matches?.length) throw new Error('Regex broken for finding emoji ID.');
+    return matches[matches.length - 1];
+  }
+  return emoji;
 }
 
 /**

@@ -3,6 +3,7 @@ import type { EventTrigger } from 'src/types';
 
 import { getModels } from 'src/models';
 import { error } from 'src/logging';
+import { getResolvableEmoji } from 'src/discord-utils';
 
 // https://discordjs.guide/popular-topics/reactions.html#listening-for-reactions-on-old-messages
 async function reactionReady(messageReaction: MessageReaction): Promise<boolean> {
@@ -78,8 +79,11 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
     }));
 
     emojisToUnreact.forEach(emoji => {
-      const reaction = messageReaction.message.reactions.resolve(emoji);
-      if (!reaction) return;
+      const reaction = messageReaction.message.reactions.resolve(getResolvableEmoji(emoji));
+      if (!reaction) {
+        error('Could not resolve emoji', emoji);
+        return;
+      }
       try {
         // If the cache is populated, let's reduce API calls by comparing against the cache.
         // The cache should be populated since we populate it above.
