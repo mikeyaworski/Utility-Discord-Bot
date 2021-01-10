@@ -58,38 +58,35 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
     const confirmationMessage = await commandMsg.say(confirmationMessageEmbed) as Message;
     await reactMulitple(confirmationMessage as Message, [CONFIRM_REACTION, DECLINE_REACTION]);
 
-    let timeout: NodeJS.Timeout;
-    const listener = async (reaction: MessageReaction, user: User): Promise<void> => {
-      if (commandMsg.member.id !== user.id || confirmationMessage.id !== reaction.message.id) return;
+    const confirmationFilter = (reaction: MessageReaction, user: User): boolean => {
       const emoji = reaction.emoji.toString();
-      if (![CONFIRM_REACTION, DECLINE_REACTION].includes(emoji)) return;
-      this.client.removeListener('messageReactionAdd', listener);
-      clearTimeout(timeout);
-      if (emoji === CONFIRM_REACTION) {
-        try {
-          const responseMessage = await this.afterConfirm(intermediateResult, ...args);
-          confirmationMessageEmbed.setColor(Colors.SUCCESS);
-          confirmationMessageEmbed.setDescription(responseMessage);
-          await confirmationMessage.edit(confirmationMessageEmbed);
-        } catch (err) {
-          confirmationMessageEmbed.setColor(Colors.DANGER);
-          confirmationMessageEmbed.setDescription(`Error: ${get(err, 'message', 'Something went wrong.')}\n${embedDescription}`);
-          await confirmationMessage.edit(confirmationMessageEmbed);
-        }
-      }
-      if (emoji === DECLINE_REACTION) {
+      return commandMsg.member.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
+    };
+    try {
+      const reactions = await confirmationMessage.awaitReactions(confirmationFilter, {
+        max: 1,
+        time: this.confirmationInfo.timeout,
+      });
+      const emoji = reactions.first()?.emoji.toString();
+      if (!emoji) {
+        confirmationMessageEmbed.setColor(Colors.DANGER);
+        confirmationMessageEmbed.setDescription(`Confirmation timed out after ${this.confirmationInfo.timeout / 1000} seconds:\n${embedDescription}`);
+        await confirmationMessage.edit(confirmationMessageEmbed);
+      } else if (emoji === CONFIRM_REACTION) {
+        const responseMessage = await this.afterConfirm(intermediateResult, ...args);
+        confirmationMessageEmbed.setColor(Colors.SUCCESS);
+        confirmationMessageEmbed.setDescription(responseMessage);
+        await confirmationMessage.edit(confirmationMessageEmbed);
+      } else if (emoji === DECLINE_REACTION) {
         confirmationMessageEmbed.setColor(Colors.DANGER);
         confirmationMessageEmbed.setDescription(`Declined confirmation:\n${embedDescription}`);
         await confirmationMessage.edit(confirmationMessageEmbed);
       }
-    };
-    timeout = setTimeout(async () => {
-      this.client.removeListener('messageReactionAdd', listener);
+    } catch (err) {
       confirmationMessageEmbed.setColor(Colors.DANGER);
-      confirmationMessageEmbed.setDescription(`Confirmation timed out after ${this.confirmationInfo.timeout / 1000} seconds:\n${embedDescription}`);
+      confirmationMessageEmbed.setDescription(`Error: ${get(err, 'message', 'Something went wrong.')}\n${embedDescription}`);
       await confirmationMessage.edit(confirmationMessageEmbed);
-    }, this.confirmationInfo.timeout);
-    this.client.on('messageReactionAdd', listener);
+    }
 
     return null;
   }
