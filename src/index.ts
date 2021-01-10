@@ -6,6 +6,7 @@ import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
 import { initClient } from 'src/client';
 import { syncModels } from 'src/models';
+import jobs from 'src/jobs';
 
 dotenv.config();
 
@@ -29,4 +30,8 @@ const app = express();
 app.get('/', (req, res) => res.send('Healthy!'));
 app.listen(process.env.PORT || 3000, preventSleep);
 
-initClient().then(syncModels);
+(async () => {
+  await syncModels();
+  await initClient();
+  await Promise.all(jobs.map(job => job()));
+})();

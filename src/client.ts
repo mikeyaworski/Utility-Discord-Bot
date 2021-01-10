@@ -9,7 +9,7 @@ import events from 'src/events';
 
 dotenv.config();
 
-const client = new CommandoClient({
+export const client = new CommandoClient({
   commandPrefix: COMMAND_PREFIX,
   owner: process.env.OWNER_ID,
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
