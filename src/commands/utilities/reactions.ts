@@ -77,8 +77,7 @@ export default class ReactionsCommand extends Command {
           key: 'messageId',
           prompt: 'The message for the reactions to be on.',
           // Can't use type: 'message' unfortunately.
-          // It would be super convenient, but this type will not allow message IDs from other channels,
-          // which is a requirement here. This command framework is missing a lot of basic stuff.
+          // It would be super convenient, but this type will not allow message IDs from other channels, which is a requirement here.
           type: 'string',
           default: '',
         },
