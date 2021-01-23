@@ -4,7 +4,7 @@ import axios from 'axios';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
-import { initClient } from 'src/client';
+import { initClient, destroyClient } from 'src/client';
 import { syncModels } from 'src/models';
 import jobs from 'src/jobs';
 
@@ -35,3 +35,5 @@ app.listen(process.env.PORT || 3000, preventSleep);
   await initClient();
   await Promise.all(jobs.map(job => job()));
 })();
+
+process.on('SIGTERM', destroyClient);

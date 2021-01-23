@@ -50,3 +50,8 @@ export function initClient(): Promise<void> {
     client.login(process.env.DISCORD_BOT_TOKEN);
   });
 }
+
+export function destroyClient(): void {
+  log('Tearing down client connection');
+  client.destroy();
+}
