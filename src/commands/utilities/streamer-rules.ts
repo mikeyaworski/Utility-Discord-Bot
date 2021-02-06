@@ -32,7 +32,7 @@ export default class StreamerRulesCommand extends Command {
   constructor(client: ClientType) {
     super(client, {
       name: 'streamer_rules',
-      aliases: ['streamer_roles', 'streaming_rules', 'streaming_roles'],
+      aliases: ['streamer_roles', 'streaming_rules', 'streaming_roles', 'streamer-rules', 'streaming-rules', 'streaming-roles'],
       group: 'utilities',
       memberName: 'streamer_rules',
       description:
