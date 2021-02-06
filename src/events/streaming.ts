@@ -27,6 +27,10 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
 
   if (wasStreaming === isStreaming) return;
 
+  // Debugging logs
+  log('Old presence activities:', JSON.stringify(oldPresence?.activities));
+  log('New presence activities:', JSON.stringify(newPresence?.activities));
+
   const { guild } = newPresence;
   const guildId = guild!.id;
   const member = await guild!.members.fetch({
