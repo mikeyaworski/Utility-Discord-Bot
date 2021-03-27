@@ -82,7 +82,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
 
     // It would be nice to use the hasPermission instance function, but that does not give us access to the resolved arguments
     // (we get strings instead of the resolved message/channel objects). So we check it here, in the run operation.
-    if (!userHasPermission(toChannel, start.author, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
+    if (!userHasPermission(toChannel, commandMsg.author, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
       await commandMsg.reply(`You do not have access to send messages in <#${toChannel.id}>`);
       return null;
     }
