@@ -63,9 +63,8 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
 
   static async moveMessage(channel: TextChannel, msg: Message | CommandoMessage): Promise<void> {
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
-    const { author } = msg;
     const newMessage = new Discord.MessageEmbed()
-      .setAuthor(author.username, author.avatarURL() || undefined)
+      .setAuthor(msg.author.username, msg.author.avatarURL() || undefined)
       .setDescription(msg.content)
       .attachFiles(msg.attachments.array());
     await channel.send(newMessage);
@@ -80,7 +79,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
       return null;
     }
 
-    // It would be nice to use the hasPermission instance function, but that does not give us access to the resolved arguments
+    // It would be nice to use the hasPermission method, but that does not give us access to the resolved arguments
     // (we get strings instead of the resolved message/channel objects). So we check it here, in the run operation.
     if (!userHasPermission(toChannel, commandMsg.author, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
       await commandMsg.reply(`You do not have access to send messages in <#${toChannel.id}>`);
