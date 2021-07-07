@@ -60,7 +60,7 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
 
     const confirmationFilter = (reaction: MessageReaction, user: User): boolean => {
       const emoji = reaction.emoji.toString();
-      return commandMsg.member.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
+      return commandMsg.member?.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
     };
     try {
       const reactions = await confirmationMessage.awaitReactions(confirmationFilter, {

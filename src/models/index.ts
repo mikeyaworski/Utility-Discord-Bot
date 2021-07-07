@@ -1,4 +1,4 @@
-import type { ModelKey, ModelMapping } from 'src/types';
+import type { ModelKey, ModelMapping, ModelDefinition } from 'src/types';
 
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +26,7 @@ if (process.env.ENVIRONMENT === 'production') {
 
 const sequelize = new Sequelize(process.env.DATABASE_URL!, sequelizeOpts);
 
-const modelDefinitions = fs
+const modelDefinitions: ReturnType<ModelDefinition>[] = fs
   .readdirSync(__dirname)
   .filter(file => file.endsWith('.ts') && file !== 'index.ts')
   .map(file => {
@@ -43,7 +43,7 @@ export const getModels = ((): () => ModelMapping => {
       return Object.assign(acc, {
         [modelKey]: model,
       });
-    }, {});
+    }, {} as ModelMapping);
     return modelsMapping;
   };
 })();
@@ -52,7 +52,7 @@ export function syncModels(): void {
   const modelsMapping = getModels();
   // associations between models
   modelDefinitions.forEach(modelDefinition => {
-    modelDefinition[2]?.(modelsMapping);
+    if (modelDefinition[2]) modelDefinition[2](modelsMapping);
   });
   // sync models
   Object.keys(modelsMapping).forEach(modelKey => {

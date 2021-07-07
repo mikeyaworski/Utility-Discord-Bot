@@ -1,6 +1,7 @@
 import type {
   TextChannel,
   DMChannel,
+  NewsChannel,
   Message,
   User,
   PermissionString,
@@ -39,7 +40,7 @@ export function handleError(err: unknown, commandMsg: EitherMessage): Promise<Me
  * Return type is of the form [msgs, stoppedFetchingEarly].
  */
 export async function getMessagesInRange(
-  channel: TextChannel | DMChannel,
+  channel: TextChannel | DMChannel | NewsChannel,
   start: EitherMessage,
   end: EitherMessage,
 ): Promise<[EitherMessage[], boolean]> {

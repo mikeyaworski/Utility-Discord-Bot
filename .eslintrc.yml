@@ -83,3 +83,6 @@ rules:
       ts: never
   arrow-body-style: off # this often leads to difficult-to-read inline functions
   lines-between-class-members: off # this can be a lot less clean for instance variables and such
+  import/no-extraneous-dependencies: # this makes zero sense for TS imports
+    - error
+    - devDependencies: true

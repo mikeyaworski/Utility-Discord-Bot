@@ -9,6 +9,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "noEmit": true,
     "paths": {
       "src/*": [
         "*",
@@ -19,4 +20,7 @@
   "include": [
     "src",
   ],
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -37,6 +37,7 @@ export function initClient(): Promise<void> {
     // .registerCommandsIn(path.join(__dirname, 'commands'));
 
     events.forEach(([trigger, cb]) => {
+      // @ts-ignore It's really hard to enforce correct types here. Just trust that the EventTrigger type is written correctly.
       client.on(trigger, cb);
     });
 

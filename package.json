@@ -5,11 +5,11 @@
   "main": "src/index.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "npm run lint && jest",
+    "test": "npm run lint && jest && tsc",
     "shell:bot": "docker exec -it utility_discord_bot sh",
     "shell:db": "docker exec -it utility_discord_bot_db sh -c \"psql -d utility_discord_bot_db -U user\"",
     "dev": "nodemon",
-    "start": "ts-node -r tsconfig-paths/register src/index.ts"
+    "start": "ts-node --transpile-only --require tsconfig-paths/register src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -45,19 +45,21 @@
     "@types/lodash.uniq": "^4.5.6",
     "@types/node": "^14.14.10",
     "@types/sequelize": "^4.28.9",
+    "@types/ws": "^7.4.6",
     "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.9.0",
-    "eslint": "^7.14.0",
+    "eslint": "^7.27.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-import-resolver-typescript": "^2.3.0",
-    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-import": "^2.23.3",
     "jest": "^26.6.3",
     "nodemon": "^2.0.6",
     "pre-commit": "^1.2.2",
     "ts-jest": "^26.4.4",
     "ts-node": "^9.0.0",
+    "tsc": "^2.0.3",
     "tsconfig-paths": "^3.9.0",
-    "typescript": "^4.1.2"
+    "typescript": "^4.3.5"
   },
   "pre-commit": [
     "test"
