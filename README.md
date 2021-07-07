@@ -6,7 +6,7 @@ This is a private bot. This bot does not have measures in place to handle scalin
 
 1. Create an application on the Discord Developer Portal and add a bot to that application: https://discord.com/developers/applications. Make sure to enable the `PRESENCE INTENT` and `SERVER MEMBERS INTENT` in the bot settings.
 
-1. Take note of your application client ID and bot token. The client ID will let you form an invite:
+1. Take note of your application client ID (Application ID) and bot token. The client ID will let you form an invite:
     ```
     https://discord.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&permissions=1573383287&scope=bot
     ```
