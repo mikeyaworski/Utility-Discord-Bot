@@ -1,17 +1,8 @@
-# Invites
+# Adding this bot to your server
 
-### Production
-https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot
+This is a private bot. This bot does not have measures in place to handle scaling properly, since that would require expensive servers. To get this bot in your server, please host this yourself. It is very easy to do so - you just need to deploy this repository code to your own Heroku app!
 
-### Development
-https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=1573383287&scope=bot
-
-# Contributing / Adding this bot to your server
-This repository is linked to a Heroku app which automatically deploys updates to the bot when commits are made to `master`.
-
-However, this is a private bot. This bot does not have measures in place to handle scaling properly, since that would require expensive servers. To get this bot in your server, please host this yourself. It is very easy to do so - you just need to deploy this repository code to your own Heroku app!
-
-## Using the bot in your server
+## Hosting it on Heroku
 
 1. Create an application on the Discord Developer Portal and add a bot to that application: https://discord.com/developers/applications. Make sure to enable the `PRESENCE INTENT` and `SERVER MEMBERS INTENT` in the bot settings.
 
@@ -47,7 +38,7 @@ However, this is a private bot. This bot does not have measures in place to hand
 
 1. If you just want to use the bot on your server, you're done! Just invite it with the link I provided in step 2. Otherwise, continue reading the next steps.
 
-## Contributing to the code
+# Contributing to the code
 
 1. If you want to contribute to the code, you will need to create a `.env` file in the root of the repository and use the template listed below.
 
@@ -61,7 +52,7 @@ However, this is a private bot. This bot does not have measures in place to hand
 
 1. You can opt to not use Docker and instead run `npm run dev`. By doing this, Docker will no longer deploy Postgres for you, so you will have errors connecting to a database. To solve this, you can easily use your production database instead by following step 3.
 
-# Environment Variables
+## Environment Variables
 Fill in your own `DISCORD_BOT_TOKEN` and `OWNER_ID` for development / your bot deployment.
 
 ```
@@ -74,3 +65,13 @@ OWNER_ID=...
 PORT=8080
 PING_HOST=http://localhost:8080
 ```
+
+# [Private Access] Invites
+
+This repository is linked to a Heroku app which automatically deploys updates to the privately hosted bot when commits are made to `master`. The following invites will only work for myself and whitelisted members.
+
+### Production
+https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot
+
+### Development
+https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=1573383287&scope=bot
