@@ -4,6 +4,9 @@ import {
   getResolvableEmoji,
 } from '../discord-utils';
 
+// Mock this so the DB doesn't get initialized from importing the client in discord-utils
+jest.mock('src/client', () => 'foobar');
+
 describe('discord-utils', () => {
   describe('isCustomEmoji', () => {
     it('works for regular', () => {
