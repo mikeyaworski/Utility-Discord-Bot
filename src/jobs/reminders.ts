@@ -20,7 +20,7 @@ export async function removeReminder(id: string): Promise<void> {
 }
 
 async function handleReminder(reminder: Reminder, destroy: boolean) {
-  const channel = await getChannel(reminder.channel_id, reminder.guild_id);
+  const channel = await getChannel(reminder.channel_id);
   if (!channel) {
     log(`Could not find channel ${reminder.channel_id} in guild ${reminder.guild_id} for reminder ${reminder.id}`);
   }

@@ -2,7 +2,7 @@ import type {
   TextChannel,
   DMChannel,
   NewsChannel,
-  GuildChannel,
+  Channel,
   Message,
   User,
   PermissionString,
@@ -89,20 +89,19 @@ export function getChannelIdFromArg(channelArg: string): string | null {
   return null;
 }
 
-export async function getChannel(channelArg: string, guildId: string): Promise<GuildChannel | null> {
-  const guild = await client.guilds.fetch(guildId);
-  if (!guild) return null;
+export async function getChannel(channelArg: string): Promise<Channel | null> {
   const channelId = getChannelIdFromArg(channelArg);
   if (!channelId) return null;
-  const channel = await guild.channels.cache.get(channelId);
+  const channel = await client.channels.fetch(channelId);
   return channel || null;
 }
 
 export function userHasPermission(
-  channel: TextChannel | NewsChannel | GuildChannel,
+  channel: TextChannel | NewsChannel | DMChannel | Channel,
   user: User,
   permission: PermissionString | PermissionString[],
 ): boolean {
+  if (!('permissionsFor' in channel)) return true;
   return Boolean(channel.permissionsFor(user)?.has(permission));
 }
 

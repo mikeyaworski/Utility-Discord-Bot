@@ -74,7 +74,6 @@ export default class RemindersCommand extends Command {
         '!reminders list',
         '!reminders list #other',
       ],
-      guildOnly: true,
       args: [
         {
           key: 'operation',
@@ -120,7 +119,7 @@ export default class RemindersCommand extends Command {
     if (!userHasPermission(channel, msg.author, ['SEND_MESSAGES'])) {
       return msg.reply(`You do not have access to send messages in <#${channel.id}>`);
     }
-    const guildId = msg.guild.id;
+    const guildId = msg.guild?.id;
     const reminder: Reminder = await model.create({
       guild_id: guildId,
       channel_id: channel.id,
@@ -142,7 +141,7 @@ export default class RemindersCommand extends Command {
     if (!reminder) {
       return msg.reply('Reminder does not exist!');
     }
-    const channel = await getChannel(reminder.channel_id, reminder.guild_id);
+    const channel = await getChannel(reminder.channel_id);
     if (!channel) {
       await removeReminder(id);
       return msg.say('Reminder deleted.');
@@ -161,7 +160,7 @@ export default class RemindersCommand extends Command {
     if (!userHasPermission(channel, msg.author, ['VIEW_CHANNEL'])) {
       return msg.reply('You do not have permission to view that channel!');
     }
-    const guildId = msg.guild.id;
+    const guildId = msg.guild?.id ?? null;
     const reminders: Reminder[] = await model.findAll({
       where: {
         guild_id: guildId,
@@ -229,7 +228,7 @@ export default class RemindersCommand extends Command {
           }
           if (!channel && CHANNEL_ARG_REGEX.test(arg)) {
             // eslint-disable-next-line no-await-in-loop
-            const resolvedChannel = await getChannel(arg, msg.guild.id);
+            const resolvedChannel = await getChannel(arg);
             if (resolvedChannel && resolvedChannel.isText()) {
               channel = resolvedChannel as TextChannel;
             }
@@ -265,7 +264,7 @@ export default class RemindersCommand extends Command {
       if (LIST_OPERATIONS.includes(operation)) {
         let channel = msg.channel as TextChannel | NewsChannel;
         if (timeOrIdOrChannel) {
-          const resolvedChannel = await getChannel(timeOrIdOrChannel, msg.guild.id);
+          const resolvedChannel = await getChannel(timeOrIdOrChannel);
           if (resolvedChannel && resolvedChannel.isText()) {
             channel = resolvedChannel as TextChannel;
           }

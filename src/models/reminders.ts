@@ -5,7 +5,7 @@ import { MIN_REMINDER_INTERVAL } from 'src/constants';
 
 export interface Reminder {
   id: string;
-  guild_id: string;
+  guild_id: string | null;
   channel_id: string;
   owner_id: string;
   time: number;
@@ -25,7 +25,8 @@ const Reminders: ModelDefinition = sequelize => {
       },
       guild_id: {
         type: Sequelize.STRING,
-        allowNull: false,
+        // Null if DM conversation
+        allowNull: true,
       },
       channel_id: {
         type: Sequelize.STRING,
