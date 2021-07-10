@@ -22,7 +22,9 @@
   },
   "homepage": "https://github.com/mikeyaworski/utility-discord-bot#readme",
   "dependencies": {
+    "@vvo/tzdb": "^6.7.0",
     "axios": "^0.21.1",
+    "chrono-node": "^2.3.0",
     "discord.js": "^12.5.1",
     "discord.js-commando": "github:discordjs/Commando",
     "dotenv": "^8.2.0",

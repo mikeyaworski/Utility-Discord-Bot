@@ -2,6 +2,7 @@ import type {
   TextChannel,
   DMChannel,
   NewsChannel,
+  GuildChannel,
   Message,
   User,
   PermissionString,
@@ -14,8 +15,9 @@ import type { EitherMessage } from 'src/types';
 // @ts-ignore
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
-import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH } from 'src/constants';
+import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX } from 'src/constants';
 import { error } from 'src/logging';
+import { client } from 'src/client';
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
@@ -77,8 +79,27 @@ export async function getMessagesInRange(
   return [msgs, stoppedEarly];
 }
 
+export function getChannelIdFromArg(channelArg: string): string | null {
+  if (DIGITS_REGEX.test(channelArg)) {
+    return channelArg;
+  }
+  if (CHANNEL_ARG_REGEX.test(channelArg)) {
+    return channelArg.match(/\d+/)?.[0] || null;
+  }
+  return null;
+}
+
+export async function getChannel(channelArg: string, guildId: string): Promise<GuildChannel | null> {
+  const guild = await client.guilds.fetch(guildId);
+  if (!guild) return null;
+  const channelId = getChannelIdFromArg(channelArg);
+  if (!channelId) return null;
+  const channel = await guild.channels.cache.get(channelId);
+  return channel || null;
+}
+
 export function userHasPermission(
-  channel: TextChannel,
+  channel: TextChannel | NewsChannel | GuildChannel,
   user: User,
   permission: PermissionString | PermissionString[],
 ): boolean {

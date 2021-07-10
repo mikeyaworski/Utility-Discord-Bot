@@ -1,3 +1,5 @@
+import { getTimeZones } from '@vvo/tzdb';
+
 /**
  * Returns the intersection of two arrays (in the order of a)
  * @param a An array
@@ -66,4 +68,27 @@ export function parseDelay(arg: string): number {
     throw new Error(`Could not parse delay: ${arg}`);
   }
   return numericalPart * unitMultiplier;
+}
+
+/**
+ * Finds the current time zone offset (account for daylight savings time) by abbreviation.
+ * If there are multiple abbreviations, the preferredName arg will be used to figure out which abbreviation to prefer.
+ */
+export function getTimezoneOffsetFromAbbreviation(abbreviation: string, preferredName?: string): number | null {
+  const timeZones = getTimeZones();
+  const filteredZones = timeZones
+    .filter(tz => tz.abbreviation.toLowerCase() === abbreviation.toLowerCase());
+  let tzOffset: number | undefined = filteredZones[0]?.currentTimeOffsetInMinutes;
+  if (preferredName) {
+    tzOffset = filteredZones.find(tz => tz.name === preferredName || tz.group.includes(preferredName))?.currentTimeOffsetInMinutes || tzOffset;
+  }
+  if (!tzOffset) return null;
+  return tzOffset - new Date().getTimezoneOffset();
+}
+
+/**
+ * Accepts epochTime in seconds
+ */
+export function getDateString(epochTime: number): string {
+  return new Date(epochTime * 1000).toISOString();
 }

@@ -87,7 +87,7 @@ export type EventTrigger = [
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // TODO: type this better than "any"
 type Model = ModelCtor<any>;
-export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique' | 'base_roles';
+export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique' | 'base_roles' | 'reminders';
 export type ModelMapping = GenericMapping<Model, ModelKey>;
 export type ModelDefinition = (sequelize: Sequelize) => [
   ModelKey,
