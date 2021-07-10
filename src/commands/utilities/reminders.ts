@@ -8,7 +8,7 @@ import { getModels } from 'src/models';
 import { handleError, userHasPermission, getChannel } from 'src/discord-utils';
 import { getTimezoneOffsetFromAbbreviation, getDateString, parseDelay } from 'src/utils';
 import { CHANNEL_ARG_REGEX, MIN_REMINDER_INTERVAL } from 'src/constants';
-import { setNewReminder, removeTimer } from 'src/jobs/reminders';
+import { setNewReminder, removeReminder } from 'src/jobs/reminders';
 
 const LIST_OPERATIONS = ['list', 'ls'] as const;
 const ADD_OPERATIONS = ['add', 'create', 'set'] as const;
@@ -143,10 +143,17 @@ export default class RemindersCommand extends Command {
       return msg.reply('Reminder does not exist!');
     }
     const channel = await getChannel(reminder.channel_id, reminder.guild_id);
-    if (channel && !userHasPermission(channel, msg.author, ['SEND_MESSAGES'])) {
+    if (!channel) {
+      await removeReminder(id);
+      return msg.say('Reminder deleted.');
+    }
+    if (reminder.owner_id !== msg.author.id && !userHasPermission(channel, msg.author, ['MANAGE_MESSAGES'])) {
+      return msg.reply('You cannot delete a reminder that you don\'t own.');
+    }
+    if (!userHasPermission(channel, msg.author, ['SEND_MESSAGES'])) {
       return msg.reply(`You do not have access to send messages in <#${channel.id}>`);
     }
-    await removeTimer(id);
+    await removeReminder(id);
     return msg.say('Reminder deleted.');
   }
 

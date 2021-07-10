@@ -13,7 +13,7 @@ type Timeouts = {
 const timeouts: Timeouts = {};
 const intervals: Timeouts = {};
 
-export async function removeTimer(id: string): Promise<void> {
+export async function removeReminder(id: string): Promise<void> {
   await model.destroy({ where: { id } });
   if (timeouts[id]) clearTimeout(timeouts[id]);
   if (intervals[id]) clearInterval(intervals[id]);
@@ -28,7 +28,7 @@ async function handleReminder(reminder: Reminder, destroy: boolean) {
     await channel!.send(reminder.message || 'Timer is up!');
   }
   if (destroy) {
-    await removeTimer(reminder.id);
+    await removeReminder(reminder.id);
   }
 }
 
