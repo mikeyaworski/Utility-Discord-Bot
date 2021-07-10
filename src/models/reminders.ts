@@ -7,6 +7,7 @@ export interface Reminder {
   id: string;
   guild_id: string;
   channel_id: string;
+  owner_id: string;
   time: number;
   interval: number | null;
   message: string | null;
@@ -27,6 +28,10 @@ const Reminders: ModelDefinition = sequelize => {
         allowNull: false,
       },
       channel_id: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      owner_id: {
         type: Sequelize.STRING,
         allowNull: false,
       },

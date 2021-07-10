@@ -124,6 +124,7 @@ export default class RemindersCommand extends Command {
     const reminder: Reminder = await model.create({
       guild_id: guildId,
       channel_id: channel.id,
+      owner_id: msg.author.id,
       time,
       message,
       interval,
