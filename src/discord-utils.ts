@@ -56,7 +56,6 @@ export async function getMessagesInRange(
   let stoppedEarly = true;
   const msgs = [start];
   while (msgs.length < MAX_MESSAGES_FETCH) {
-    // eslint-disable-next-line no-await-in-loop
     const fetchedMsgs: (Message)[] = (await channel.messages.fetch({
       // cannot also provide the "before: end.id" option since multiple options are not supported by the API
       after: start.id,
@@ -131,7 +130,6 @@ export function getResolvableEmoji(emoji: string): string {
  */
 export async function reactMulitple(msg: Message, reactions: EmojiIdentifierResolvable[]): Promise<void> {
   for (let i = 0; i < reactions.length; i++) {
-    // eslint-disable-next-line no-await-in-loop
     await msg.react(reactions[i]);
   }
 }
@@ -162,7 +160,6 @@ export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageI
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
     try {
-      // eslint-disable-next-line no-await-in-loop
       const message = await channel.messages.fetch(messageId, false, true);
       if (message) {
         foundMessage = message;

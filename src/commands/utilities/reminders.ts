@@ -181,7 +181,6 @@ export default class RemindersCommand extends Command {
             message = arg;
           }
           if (!channel && CHANNEL_ARG_REGEX.test(arg)) {
-            // eslint-disable-next-line no-await-in-loop
             const resolvedChannel = await getChannel(arg);
             if (resolvedChannel && resolvedChannel.isText()) {
               channel = resolvedChannel as TextChannel;

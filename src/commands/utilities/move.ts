@@ -113,7 +113,6 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
 
     // do these in order
     for (let i = 0; i < msgs.length; i++) {
-      // eslint-disable-next-line no-await-in-loop
       await MoveCommand.moveMessage(toChannel, msgs[i]);
     }
 
