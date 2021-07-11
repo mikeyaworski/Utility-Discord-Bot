@@ -19,7 +19,7 @@ type IntermediateResult = {
 };
 
 /**
- * !delete <start_msg> [end_msg] [isOld]
+ * !delete <start_msg_id> [end_msg_id] [isOld]
  */
 export default class DeleteCommand extends ConfirmationCommand<Args, IntermediateResult> {
   constructor(client: ClientType) {

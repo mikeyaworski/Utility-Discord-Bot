@@ -1,21 +1,24 @@
-import type { Message, TextChannel } from 'discord.js';
+import type { Message, NewsChannel, TextChannel } from 'discord.js';
 import type { CommandoMessage } from 'discord.js-commando';
 import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
 
 import Discord from 'discord.js';
-import { getMessagesInRange, userHasPermission } from 'src/discord-utils';
+import { findMessageInGuild, getMessagesInRange, userHasPermission } from 'src/discord-utils';
 import ConfirmationCommand, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
 
 type Args = {
   channel: TextChannel,
-  start: CommandoMessage,
-  end: CommandoMessage | false,
+  startId: string,
+  endId: string,
 };
 
-type IntermediateResult = EitherMessage[];
+type IntermediateResult = {
+  msgs: EitherMessage[],
+  channel: TextChannel | NewsChannel,
+};
 
 /**
- * !move <channel> <start_msg> [end_msg]
+ * !move <channel> <start_msg_id> [end_msg_id]
  */
 export default class MoveCommand extends ConfirmationCommand<Args, IntermediateResult> {
   constructor(client: ClientType) {
@@ -29,9 +32,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
         '!move #other 784702649324929054 784702678847455242',
         '!move #other 784702649324929054',
       ],
-      format: '!move <channel> <start_msg> [end_msg]',
-      userPermissions: ['MANAGE_MESSAGES'],
-      clientPermissions: ['MANAGE_MESSAGES'],
+      format: '!move <channel> <start_msg_id> [end_msg_id]',
       guildOnly: true,
       throttling: {
         usages: 2,
@@ -44,16 +45,15 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
           type: 'channel',
         },
         {
-          key: 'start',
+          key: 'startId',
           prompt: 'Message ID for the starting message.',
-          type: 'message',
+          type: 'string',
         },
         {
-          key: 'end',
+          key: 'endId',
           prompt: '(Optional) Message ID for the ending message (creates a range). Leave blank to only move the starting message.',
-          type: 'message',
-          // you can't do null... LOL
-          default: false,
+          type: 'string',
+          default: '',
         },
       ],
     }, {
@@ -73,40 +73,62 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
   }
 
   beforeConfirm: CommandBeforeConfirmMethod<Args, IntermediateResult> = async (commandMsg, args) => {
-    const { channel: toChannel, start, end } = args;
-    const fromChannel = start.channel;
+    const { channel: toChannel, startId, endId } = args;
+    const [startMsg, fromChannel] = await findMessageInGuild(
+      startId,
+      commandMsg.guild,
+      // We know it's a text channel since this is a guild-only command
+      commandMsg.channel as TextChannel | NewsChannel,
+    );
+
+    if (!startMsg || !fromChannel) {
+      await commandMsg.reply('Could not find starting message.');
+      return null;
+    }
+
     if (toChannel.id === fromChannel.id) {
       await commandMsg.reply('You\'re moving messages to the same channel??');
       return null;
     }
 
-    // It would be nice to use the hasPermission method, but that does not give us access to the resolved arguments
-    // (we get strings instead of the resolved message/channel objects). So we check it here, in the run operation.
     if (!userHasPermission(toChannel, commandMsg.author, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
       await commandMsg.reply(`You do not have access to send messages in <#${toChannel.id}>`);
       return null;
     }
 
+    if (!userHasPermission(fromChannel, commandMsg.author, ['MANAGE_MESSAGES', 'VIEW_CHANNEL'])) {
+      await commandMsg.reply(`You do not have access to delete messages in <#${fromChannel.id}>`);
+      return null;
+    }
+
     // single message; not a range
-    if (!end) {
+    if (!endId) {
       toChannel.startTyping();
       await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);
-      await MoveCommand.moveMessage(toChannel, start);
+      await MoveCommand.moveMessage(toChannel, startMsg);
       toChannel.stopTyping(true);
       await commandMsg.delete();
       return null;
     }
 
-    const [msgs, stoppedEarly] = await getMessagesInRange(fromChannel, start, end);
+    let endMsg: Message;
+    try {
+      endMsg = await fromChannel.messages.fetch(endId);
+    } catch (err) {
+      await commandMsg.reply('End message is not in the same channel as start message.');
+      return null;
+    }
+
+    const [msgs, stoppedEarly] = await getMessagesInRange(fromChannel, startMsg, endMsg);
     const confirmPrompt = `Are you sure you want to move ${msgs.length} messages to <#${toChannel.id}>?${
       stoppedEarly ? '\nNote: Some messages in the range were not included due to a rate limit precaution.' : ''
     }`;
-    return [msgs, confirmPrompt];
+    return [{ msgs, channel: fromChannel }, confirmPrompt];
   }
 
-  afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult> = async (msgs, commandMsg, args) => {
-    const { channel: toChannel, start } = args;
-    const fromChannel = start.channel;
+  afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult> = async (result, commandMsg, args) => {
+    const { msgs, channel: fromChannel } = result;
+    const { channel: toChannel } = args;
 
     toChannel.startTyping();
     await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);
