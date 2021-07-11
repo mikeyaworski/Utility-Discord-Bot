@@ -36,6 +36,35 @@ export function handleError(err: unknown, commandMsg: EitherMessage): Promise<Me
   return commandMsg.reply(message || 'Something went wrong...');
 }
 
+export async function findMessageInGuild(
+  messageId: string,
+  guild: CommandoGuild,
+  startingChannel?: TextChannel | NewsChannel,
+): Promise<[EitherMessage, TextChannel | NewsChannel] | []> {
+  if (startingChannel) {
+    try {
+      const foundMsg = await startingChannel.messages.fetch(messageId);
+      return [foundMsg, startingChannel];
+    } catch (err) {
+      // Do nothing
+    }
+  }
+  const channels = guild.channels.cache
+    .filter(channel => channel.isText())
+    // assert based on the isText() filter
+    .array() as (TextChannel | NewsChannel)[];
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    try {
+      const foundMsg = await channel.messages.fetch(messageId);
+      return [foundMsg, channel];
+    } catch (err) {
+      // Do nothing
+    }
+  }
+  return [];
+}
+
 /**
  * Fetch all messages between `start` and `end`, but stop fetching after reaching the `MAX_MESSAGES_FETCH` limit as a precaution.
  * If fetching was stopped due to reaching the limit, the second value in return tuple will be true.
