@@ -24,8 +24,10 @@ export default class PollCommand extends Command {
         '!poll "Question" "Option 1" "Option 2"',
         '!poll "Question" 👍 "Option 1" 👎 "Option 2"',
       ],
+      format: '<question> [emoji_1] <option_1> [emoji_2] <option_2> ...',
       argsType: 'multiple',
       argsCount: 10,
+      argsPromptLimit: 0,
       guildOnly: true,
     });
   }

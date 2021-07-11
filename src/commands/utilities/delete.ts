@@ -17,7 +17,7 @@ type Args = {
 type IntermediateResult = EitherMessage[];
 
 /**
- * !delete <start_msg> [end_msg] [old]
+ * !delete <start_msg> [end_msg] [isOld]
  */
 export default class DeleteCommand extends ConfirmationCommand<Args, IntermediateResult> {
   constructor(client: ClientType) {
@@ -31,6 +31,7 @@ export default class DeleteCommand extends ConfirmationCommand<Args, Intermediat
         '!delete 784701167241658380 784701171147341834',
         '!delete 784701167241658380',
       ],
+      format: '<start_msg> [end_msg] [isOld]',
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
       guildOnly: true,
@@ -41,12 +42,12 @@ export default class DeleteCommand extends ConfirmationCommand<Args, Intermediat
       args: [
         {
           key: 'start',
-          prompt: 'Start message in the range.',
+          prompt: 'Message ID for the starting message.',
           type: 'message',
         },
         {
           key: 'end',
-          prompt: '(Optional) End message in the range. Leave blank to only move the starting message.',
+          prompt: '(Optional) Message ID for the ending message (creates a range). Leave blank to only delete the starting message.',
           type: 'message',
           // you can't do null... LOL
           default: false,

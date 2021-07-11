@@ -27,7 +27,9 @@ interface Args {
 type OperationHandler = CommandOperationHandler<Args>;
 
 /**
- * !base_roles <operation> <role> [timeout]
+ * !base_roles add <role> [timeout]
+ * !base_roles clear <role>
+ * !base_roles list
  */
 export default class StreamerRulesCommand extends Command {
   constructor(client: ClientType) {
@@ -47,6 +49,7 @@ export default class StreamerRulesCommand extends Command {
         '!base_roles clear @noob',
         '!base_roles list',
       ],
+      format: 'add/remove <role> [timeout]',
       userPermissions: ['MANAGE_ROLES'],
       clientPermissions: ['MANAGE_ROLES'],
       guildOnly: true,
@@ -70,6 +73,7 @@ export default class StreamerRulesCommand extends Command {
           default: '',
         },
       ],
+      argsPromptLimit: 0,
     });
   }
 

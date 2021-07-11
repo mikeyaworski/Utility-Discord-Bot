@@ -67,7 +67,7 @@ export default class RemindersCommand extends Command {
         + 'If a time zone is not provided, EST will be used by default. The time zone provided must be an abbreviation.\n'
         + 'If a channel is not provided, the message will be sent in the channel used to invoke this command.',
       examples: [
-        '!reminders create "Dec 25th" "It\'s Christmas!" #holidays',
+        '!reminders create "Dec 25th" "It\'s Christmas!" #holidays "365 days"',
         '!timer set "5 mins"',
         '!timer create "Saturday at 8pm" "EST" "Something is happending."',
         '!reminders delete "some-id"',

@@ -26,7 +26,9 @@ interface Args {
 type OperationHandler = CommandOperationHandler<Args>;
 
 /**
- * !streamer_rules <operation> <role>
+ * !streamer_rules add <role>
+ * !streamer_rules remove <role>
+ * !streamer_rules list
  */
 export default class StreamerRulesCommand extends Command {
   constructor(client: ClientType) {
@@ -65,6 +67,7 @@ export default class StreamerRulesCommand extends Command {
           default: '',
         },
       ],
+      argsPromptLimit: 0,
     });
   }
 

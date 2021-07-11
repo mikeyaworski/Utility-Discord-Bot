@@ -29,6 +29,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
         '!move #other 784702649324929054 784702678847455242',
         '!move #other 784702649324929054',
       ],
+      format: '!move <channel> <start_msg> [end_msg]',
       userPermissions: ['MANAGE_MESSAGES'],
       clientPermissions: ['MANAGE_MESSAGES'],
       guildOnly: true,
@@ -44,12 +45,12 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
         },
         {
           key: 'start',
-          prompt: 'Start message in the range.',
+          prompt: 'Message ID for the starting message.',
           type: 'message',
         },
         {
           key: 'end',
-          prompt: '(Optional) End message in the range. Leave blank to only move the starting message.',
+          prompt: '(Optional) Message ID for the ending message (creates a range). Leave blank to only move the starting message.',
           type: 'message',
           // you can't do null... LOL
           default: false,

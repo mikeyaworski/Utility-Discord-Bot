@@ -8,7 +8,6 @@ import { Role, TextChannel } from 'discord.js';
 import { shorten } from 'src/utils';
 import { fetchMessageInGuild, handleError } from 'src/discord-utils';
 import { getModels } from 'src/models';
-import { error } from 'src/logging';
 import { MESSAGE_PREVIEW_LENGTH } from 'src/constants';
 
 const reactionMessagesUnique = getModels().reaction_messages_unique;
@@ -35,7 +34,11 @@ interface Args {
 type OperationHandler = CommandOperationHandler<Args>;
 
 /**
- * !reactions <operation> [message_id] [emoji | boolean] [role]
+ * !reactions add <message_id> <emoji> <role>
+ * !reactions remove <message_id> <emoji>
+ * !reactions clear <message_id>
+ * !reactions unique <message_id> <boolean>
+ * !reaction list [message_id]
  */
 export default class ReactionsCommand extends Command {
   constructor(client: ClientType) {
@@ -96,6 +99,7 @@ export default class ReactionsCommand extends Command {
           default: '',
         },
       ],
+      argsPromptLimit: 0,
     });
   }
 
