@@ -21,14 +21,7 @@ const OPERATIONS = [
 
 const model = getModels().reminders;
 
-interface Args {
-  operation: string;
-  timeOrIdOrChannel: string;
-  timeZoneOrMessageOrChannelOrInterval: string;
-  messageOrChannelOrInterval: string;
-  channelOrInterval: string;
-  interval: string;
-}
+type Args = string[];
 
 interface AddArgs {
   time: number;
@@ -74,44 +67,10 @@ export default class RemindersCommand extends Command {
         '!reminders list',
         '!reminders list #other',
       ],
-      args: [
-        {
-          key: 'operation',
-          prompt: 'Whether to add/remove a reminder or list reminders.',
-          type: 'string',
-          oneOf: OPERATIONS as Mutable<typeof OPERATIONS>,
-        },
-        {
-          key: 'timeOrIdOrChannel',
-          prompt: 'If adding a reminder, the time to set it for. If removing a reminder, the reminder ID. If listing reminders, the channel.',
-          type: 'string',
-          default: '',
-        },
-        {
-          key: 'timeZoneOrMessageOrChannelOrInterval',
-          prompt: 'time zone OR message OR channel OR interval.',
-          type: 'string',
-          default: '',
-        },
-        {
-          key: 'messageOrChannelOrInterval',
-          prompt: 'message OR channel OR interval.',
-          type: 'string',
-          default: '',
-        },
-        {
-          key: 'channelOrInterval',
-          prompt: 'channel OR interval.',
-          type: 'string',
-          default: '',
-        },
-        {
-          key: 'interval',
-          prompt: 'interval',
-          type: 'string',
-          default: '',
-        },
-      ],
+      format: 'add <time> [timeZone] [message] [channel] [interval]',
+      argsType: 'multiple',
+      argsCount: 6,
+      argsPromptLimit: 0,
     });
   }
 
@@ -185,16 +144,15 @@ export default class RemindersCommand extends Command {
   }
 
   run: CommandRunMethod<Args> = async (msg, args) => {
-    const {
-      operation,
-      timeOrIdOrChannel,
-      timeZoneOrMessageOrChannelOrInterval,
-    } = args;
+    if (args.length === 0) {
+      return msg.reply('You must specify an operation: add/remove/list.');
+    }
+    const [operation, timeOrIdOrChannel, ...restArgs] = args;
 
     // @ts-expect-error These TS errors are useless. Same goes for rest of ts-expect-errors below.
-    if (!timeOrIdOrChannel && ADD_OPERATIONS.includes(operation)) return msg.reply('A time is required!');
+    if (!timeOrIdOrChannel && ADD_OPERATIONS.includes(operation)) return msg.reply('You must specify a time for the reminder.');
     // @ts-expect-error
-    if (!timeOrIdOrChannel && REMOVE_OPERATIONS.includes(operation)) return msg.reply('A reminder ID is required!');
+    if (!timeOrIdOrChannel && REMOVE_OPERATIONS.includes(operation)) return msg.reply('You must specify a reminder ID.');
 
     try {
       // @ts-expect-error
@@ -202,7 +160,9 @@ export default class RemindersCommand extends Command {
         let channel: TextChannel | NewsChannel | undefined;
         let interval: number | undefined;
         let message: string | undefined;
-        const foundTzOffset = getTimezoneOffsetFromAbbreviation(timeZoneOrMessageOrChannelOrInterval);
+        const potentialTimeZone = restArgs[0];
+        const foundTzOffset = getTimezoneOffsetFromAbbreviation(potentialTimeZone || '');
+        if (foundTzOffset) restArgs.shift();
         const tzOffset = foundTzOffset
           || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
         let date = parseDate(timeOrIdOrChannel, {
@@ -215,14 +175,8 @@ export default class RemindersCommand extends Command {
             return msg.reply('Could not parse reminder time');
           }
         }
-        const argsToParse = [
-          args.timeZoneOrMessageOrChannelOrInterval,
-          args.messageOrChannelOrInterval,
-          args.channelOrInterval,
-          args.interval,
-        ];
-        for (let i = 0; i < argsToParse.length; i++) {
-          const arg = argsToParse[i];
+        for (let i = 0; i < restArgs.length; i++) {
+          const arg = restArgs[i];
           if (!message && !CHANNEL_ARG_REGEX.test(arg)) {
             message = arg;
           }
@@ -256,7 +210,7 @@ export default class RemindersCommand extends Command {
       // @ts-expect-error
       if (REMOVE_OPERATIONS.includes(operation)) {
         await RemindersCommand.handleRemove(msg, {
-          id: args.timeOrIdOrChannel,
+          id: timeOrIdOrChannel,
         });
         return null;
       }
