@@ -10,9 +10,9 @@ import { getTimezoneOffsetFromAbbreviation, getDateString, parseDelay } from 'sr
 import { CHANNEL_ARG_REGEX, MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setNewReminder, removeReminder } from 'src/jobs/reminders';
 
-const LIST_OPERATIONS = ['list', 'ls'] as const;
-const ADD_OPERATIONS = ['add', 'create', 'set'] as const;
-const REMOVE_OPERATIONS = ['remove', 'delete'] as const;
+const LIST_OPERATIONS = ['list', 'ls', 'l'] as const;
+const ADD_OPERATIONS = ['add', 'a', 'create', 'set', 's'] as const;
+const REMOVE_OPERATIONS = ['remove', 'rm', 'delete', 'del', 'd'] as const;
 const OPERATIONS = [
   ...LIST_OPERATIONS,
   ...ADD_OPERATIONS,
@@ -58,7 +58,10 @@ export default class RemindersCommand extends Command {
         'Creates a reminder/timer (they are the same thing).\n'
         + 'You may optionally provide a description, time zone, channel and interval.\n'
         + 'If a time zone is not provided, EST will be used by default. The time zone provided must be an abbreviation.\n'
-        + 'If a channel is not provided, the message will be sent in the channel used to invoke this command.',
+        + 'If a channel is not provided, the message will be sent in the channel used to invoke this command.\n'
+        + '!reminders add <time> [timeZone] [message] [channel] [interval]\n'
+        + '!reminders remove <id>\n'
+        + '!reminders list [channel]',
       examples: [
         '!reminders create "Dec 25th" "It\'s Christmas!" #holidays "365 days"',
         '!timer set "5 mins"',
