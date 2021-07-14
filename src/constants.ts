@@ -18,7 +18,7 @@ export const Colors = Object.freeze({
 export const BULK_MESSAGES_LIMIT = 100;
 export const MAX_MESSAGES_FETCH = 500;
 
-export const MIN_REMINDER_INTERVAL = 60 * 60;
+export const MIN_REMINDER_INTERVAL = 10 * 60;
 export const WAKE_INTERVAL = 10 * 60 * 1000;
 export const COMMAND_PREFIX = process.env.ENVIRONMENT === 'production' ? '!' : '/';
 export const MESSAGE_PREVIEW_LENGTH = 50;
