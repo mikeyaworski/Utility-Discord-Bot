@@ -8,6 +8,7 @@ import type {
   PermissionString,
   EmojiIdentifierResolvable,
   Guild,
+  Role,
 } from 'discord.js';
 import type { CommandoGuild } from 'discord.js-commando';
 import type { EitherMessage } from 'src/types';
@@ -122,6 +123,21 @@ export async function getChannel(channelArg: string): Promise<Channel | null> {
   if (!channelId) return null;
   const channel = await client.channels.fetch(channelId);
   return channel || null;
+}
+
+export function checkMentionsEveryone(msg: string): boolean {
+  return msg.includes('@everyone') || msg.includes('@here');
+}
+
+export function getRoleMentions(msg: string, guild: Guild): Role[] {
+  const matches = msg.match(/<@&\d+>/g);
+  if (!matches) return [];
+  return matches
+    .map(roleString => {
+      const id = roleString.match(/<@&(\d+)>/)![1];
+      return guild.roles.cache.get(id);
+    })
+    .filter(role => Boolean(role)) as Role[];
 }
 
 export function userHasPermission(
