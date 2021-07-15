@@ -49,6 +49,12 @@ function getNextInvocationTime(time: number, interval: number | null): number {
 
 export function setNewReminder(reminder: Reminder): void {
   const timeUntilInvocation = getNextInvocationTime(reminder.time, reminder.interval);
+
+  // Temporary workaround
+  const MAX_TIMEOUT = 2 ** 31 - 1;
+  if (timeUntilInvocation > MAX_TIMEOUT) return;
+  if (reminder.interval && reminder.interval * 1000 > MAX_TIMEOUT) return;
+
   timeouts[reminder.id] = setTimeout(async () => {
     // Don't handle missed reminders if it's on an interval
     if (timeUntilInvocation >= 0 || !reminder.interval) {
