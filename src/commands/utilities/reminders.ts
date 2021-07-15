@@ -8,7 +8,7 @@ import { getModels } from 'src/models';
 import { handleError, userHasPermission, getChannel } from 'src/discord-utils';
 import { getTimezoneOffsetFromAbbreviation, getDateString, parseDelay } from 'src/utils';
 import { CHANNEL_ARG_REGEX, MIN_REMINDER_INTERVAL } from 'src/constants';
-import { setNewReminder, removeReminder } from 'src/jobs/reminders';
+import { setReminder, removeReminder } from 'src/jobs/reminders';
 
 const LIST_OPERATIONS = ['list', 'ls', 'l'] as const;
 const ADD_OPERATIONS = ['add', 'a', 'create', 'set', 's'] as const;
@@ -90,7 +90,7 @@ export default class RemindersCommand extends Command {
       message,
       interval,
     });
-    setNewReminder(reminder);
+    setReminder(reminder);
     return msg.say(`Reminder (ID: ${reminder.id}) created for ${getDateString(time)} in channel <#${channel.id}>`);
   }
 
