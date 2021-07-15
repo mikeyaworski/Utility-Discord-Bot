@@ -5,7 +5,7 @@ import { parseDate } from 'chrono-node';
 import { Command } from 'discord.js-commando';
 import { TextChannel, NewsChannel } from 'discord.js';
 import { getModels } from 'src/models';
-import { handleError, userHasPermission, getChannel } from 'src/discord-utils';
+import { handleError, userHasPermission, getChannel, checkMentionsEveryone, getRoleMentions } from 'src/discord-utils';
 import { getTimezoneOffsetFromAbbreviation, getDateString, parseDelay } from 'src/utils';
 import { CHANNEL_ARG_REGEX, MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder } from 'src/jobs/reminders';
@@ -13,34 +13,22 @@ import { setReminder, removeReminder } from 'src/jobs/reminders';
 const LIST_OPERATIONS = ['list', 'ls', 'l'] as const;
 const ADD_OPERATIONS = ['add', 'a', 'create', 'set', 's'] as const;
 const REMOVE_OPERATIONS = ['remove', 'rm', 'delete', 'del', 'd'] as const;
-const OPERATIONS = [
-  ...LIST_OPERATIONS,
-  ...ADD_OPERATIONS,
-  ...REMOVE_OPERATIONS,
-] as const;
 
 const model = getModels().reminders;
 
 type Args = string[];
-
-interface AddArgs {
+type AddOperationHandler = CommandOperationHandler<{
   time: number;
   message?: string;
   channel: TextChannel | NewsChannel,
   interval?: number;
-}
-
-interface RemoveArgs {
+}>;
+type RemoveOperationHandler = CommandOperationHandler<{
   id: string;
-}
-
-interface ListArgs {
+}>;
+type ListOperationHandler = CommandOperationHandler<{
   channel: TextChannel | NewsChannel;
-}
-
-type AddOperationHandler = CommandOperationHandler<AddArgs>;
-type RemoveOperationHandler = CommandOperationHandler<RemoveArgs>;
-type ListOperationHandler = CommandOperationHandler<ListArgs>;
+}>;
 
 /**
  * !reminders add <time> [timeZone] [message] [channel] [interval]
@@ -78,12 +66,28 @@ export default class RemindersCommand extends Command {
   }
 
   static handleAdd: AddOperationHandler = async (msg, { time, message, channel, interval }) => {
-    if (!userHasPermission(channel, msg.author, ['SEND_MESSAGES'])) {
+    if (!userHasPermission(channel, msg.author, 'SEND_MESSAGES')) {
       return msg.reply(`You do not have access to send messages in <#${channel.id}>`);
     }
-    const guildId = msg.guild?.id;
+
+    // Do not check against msg.mentions since putting the mentions like
+    // @everyone or <@&786840067103653931> won't register as a mention
+    // if the user does not have permission, but will register as a mention
+    // when the bot (with permission) posts the reminder.
+
+    if (message && msg.guild) {
+      if (checkMentionsEveryone(message) && !userHasPermission(channel, msg.author, 'MENTION_EVERYONE')) {
+        return msg.reply(`You do not have permission to mention everyone in <#${channel.id}>`);
+      }
+
+      const unmentionableRoleMention = getRoleMentions(message, msg.guild).find(role => !role.mentionable);
+      if (unmentionableRoleMention && !userHasPermission(channel, msg.author, 'MENTION_EVERYONE')) {
+        return msg.reply(`You do not have permission to mention the role: ${unmentionableRoleMention.name}`);
+      }
+    }
+
     const reminder: Reminder = await model.create({
-      guild_id: guildId,
+      guild_id: msg.guild?.id,
       channel_id: channel.id,
       owner_id: msg.author.id,
       time,
@@ -108,10 +112,10 @@ export default class RemindersCommand extends Command {
       await removeReminder(id);
       return msg.say('Reminder deleted.');
     }
-    if (reminder.owner_id !== msg.author.id && !userHasPermission(channel, msg.author, ['MANAGE_MESSAGES'])) {
+    if (reminder.owner_id !== msg.author.id && !userHasPermission(channel, msg.author, 'MANAGE_MESSAGES')) {
       return msg.reply('You cannot delete a reminder that you don\'t own.');
     }
-    if (!userHasPermission(channel, msg.author, ['SEND_MESSAGES'])) {
+    if (!userHasPermission(channel, msg.author, 'SEND_MESSAGES')) {
       return msg.reply(`You do not have access to send messages in <#${channel.id}>`);
     }
     await removeReminder(id);
@@ -119,7 +123,7 @@ export default class RemindersCommand extends Command {
   }
 
   static handleList: ListOperationHandler = async (msg, { channel }) => {
-    if (!userHasPermission(channel, msg.author, ['VIEW_CHANNEL'])) {
+    if (!userHasPermission(channel, msg.author, 'VIEW_CHANNEL')) {
       return msg.reply('You do not have permission to view that channel!');
     }
     const guildId = msg.guild?.id ?? null;
