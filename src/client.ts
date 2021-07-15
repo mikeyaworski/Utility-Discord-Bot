@@ -20,7 +20,7 @@ export function initClient(): Promise<void> {
     client.registry
       .registerDefaultTypes()
       .registerGroups([
-        ['utilities', 'All Commands'],
+        ['utilities', 'Utilities'],
       ])
       .registerDefaultGroups()
       .registerDefaultCommands()
