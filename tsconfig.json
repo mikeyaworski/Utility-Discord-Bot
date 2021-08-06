@@ -15,6 +15,7 @@
         "*",
       ],
     },
+    "skipLibCheck": true,
     "baseUrl": "./src",
   },
   "include": [

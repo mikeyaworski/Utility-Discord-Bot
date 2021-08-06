@@ -87,3 +87,4 @@ rules:
     - error
     - devDependencies: true
   no-await-in-loop: off # we need to do this pretty often
+  no-continue: off # this can be clean

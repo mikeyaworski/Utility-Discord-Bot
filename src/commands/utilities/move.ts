@@ -27,7 +27,9 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
       aliases: ['mv'],
       group: 'utilities',
       memberName: 'move',
-      description: 'Moves a range of messages to another channel.',
+      description: 'Moves a range of messages to another channel.\n'
+        + 'Use !move #to-channel <message_id> to move a single message.\n'
+        + 'Use !move #to-channel <start_message_id> <end_message_id> to move a range of messages.',
       examples: [
         '!move #other 784702649324929054 784702678847455242',
         '!move #other 784702649324929054',
@@ -64,11 +66,14 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
 
   static async moveMessage(channel: TextChannel, msg: Message | CommandoMessage): Promise<void> {
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
+    await channel.sendTyping();
     const newMessage = new Discord.MessageEmbed()
       .setAuthor(msg.author.username, msg.author.avatarURL() || undefined)
-      .setDescription(msg.content)
-      .attachFiles(msg.attachments.array());
-    await channel.send(newMessage);
+      .setDescription(msg.content);
+    await channel.send({
+      embeds: [newMessage],
+      files: Array.from(msg.attachments.values()),
+    });
     await msg.delete();
   }
 
@@ -103,10 +108,9 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
 
     // single message; not a range
     if (!endId) {
-      toChannel.startTyping();
+      await toChannel.sendTyping();
       await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);
       await MoveCommand.moveMessage(toChannel, startMsg);
-      toChannel.stopTyping(true);
       await commandMsg.delete();
       return null;
     }
@@ -130,7 +134,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
     const { msgs, channel: fromChannel } = result;
     const { channel: toChannel } = args;
 
-    toChannel.startTyping();
+    toChannel.sendTyping();
     await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);
 
     // do these in order
@@ -138,7 +142,6 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
       await MoveCommand.moveMessage(toChannel, msgs[i]);
     }
 
-    toChannel.stopTyping(true);
     return `${msgs.length} messages have been moved to <#${toChannel.id}>`;
   }
 }

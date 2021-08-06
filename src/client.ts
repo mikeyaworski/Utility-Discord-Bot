@@ -13,6 +13,12 @@ export const client = new CommandoClient({
   commandPrefix: COMMAND_PREFIX,
   owner: process.env.OWNER_ID,
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  intents: [
+    'GUILD_MEMBERS',
+    'GUILD_PRESENCES',
+    'GUILD_MESSAGE_REACTIONS',
+    'GUILD_BANS',
+  ],
 });
 
 export function initClient(): Promise<void> {

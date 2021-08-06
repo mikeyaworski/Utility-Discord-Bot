@@ -17,9 +17,11 @@ export default class PollCommand extends Command {
       aliases: ['ask'],
       group: 'utilities',
       memberName: 'poll',
-      description: 'Creates an embedded poll in chat.'
-        + 'Add custom emojis to the left of any options.'
-        + 'Provide quotes around questions/options with spaces.',
+      description: 'Creates an embedded poll in chat.\n'
+        + 'Add custom emojis to the left of any options.\n'
+        + 'Provide quotes around questions/options with spaces.\n'
+        + 'Example: !poll "Question" 👍 "Option 1" 👎 "Option 2"\n'
+        + 'Example: !poll "Question" "Option 1" "Option 2"',
       examples: [
         '!poll "Question" "Option 1" "Option 2"',
         '!poll "Question" 👍 "Option 1" 👎 "Option 2"',
@@ -66,7 +68,7 @@ export default class PollCommand extends Command {
       .setTitle(`:bar_chart: ${question}`)
       .setDescription(pollBody);
 
-    const pollMsg = await commandMsg.say(poll);
+    const pollMsg = await commandMsg.say({ embeds: [poll] });
 
     try {
       await reactMulitple(pollMsg as Message, reactions);

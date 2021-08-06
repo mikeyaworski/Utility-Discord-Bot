@@ -50,12 +50,11 @@ export async function findMessageInGuild(
       // Do nothing
     }
   }
-  const channels = guild.channels.cache
-    .filter(channel => channel.isText())
-    // assert based on the isText() filter
-    .array() as (TextChannel | NewsChannel)[];
+  // TODO: Search threads as well
+  const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel.isText() || channel === startingChannel) continue;
     try {
       const foundMsg = await channel.messages.fetch(messageId);
       return [foundMsg, channel];
@@ -86,11 +85,11 @@ export async function getMessagesInRange(
   let stoppedEarly = true;
   const msgs = [start];
   while (msgs.length < MAX_MESSAGES_FETCH) {
-    const fetchedMsgs: (Message)[] = (await channel.messages.fetch({
+    const fetchedMsgs: (Message)[] = Array.from((await channel.messages.fetch({
       // cannot also provide the "before: end.id" option since multiple options are not supported by the API
       after: start.id,
       limit: BULK_MESSAGES_LIMIT,
-    })).array().reverse(); // reverse so the messages are ordered chronologically
+    })).values()).reverse(); // reverse so the messages are ordered chronologically
 
     const indexOfEndMsg = fetchedMsgs.findIndex(msg => msg.id === end.id);
 
@@ -193,19 +192,27 @@ export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageI
   if (givenChannel) {
     try {
       await givenChannel.fetch(true);
-      const message = await givenChannel.messages.fetch(messageId, false, true);
+      const message = await givenChannel.messages.fetch(messageId, {
+        cache: false,
+        force: true,
+      });
       if (message) return message;
     } catch (err) {
       // intentionally left blank
     }
   }
-  // do this with a vanilla loop so we can do it in order and make as little API calls as necessary
+  // do this with a vanilla loop so we can do it sequentially and make as little API calls as necessary
   let foundMessage = null;
-  const channels = guild.channels.cache.array().filter(channel => channel.isText()) as TextChannel[];
+  // TODO: Search threads as well
+  const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel.isText() || channel === givenChannel) continue;
     try {
-      const message = await channel.messages.fetch(messageId, false, true);
+      const message = await channel.messages.fetch(messageId, {
+        cache: false,
+        force: true,
+      });
       if (message) {
         foundMessage = message;
         break;

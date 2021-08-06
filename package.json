@@ -1,10 +1,14 @@
 {
   "name": "utility-discord-bot",
   "version": "1.0.0",
+  "engines": {
+    "node": "16.x"
+  },
   "description": "https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot",
   "main": "src/index.js",
   "scripts": {
     "lint": "eslint .",
+    "test:unit": "jest",
     "test": "npm run lint && jest && tsc",
     "shell:bot": "docker exec -it utility_discord_bot sh",
     "shell:db": "docker exec -it utility_discord_bot_db sh -c \"psql -d utility_discord_bot_db -U user\"",
@@ -26,8 +30,8 @@
     "axios": "^0.21.1",
     "chrono-node": "^2.3.0",
     "cron": "^1.8.2",
-    "discord.js": "^12.5.1",
-    "discord.js-commando": "github:discordjs/Commando",
+    "discord.js": "^13.0.0",
+    "discord.js-commando": "^0.12.3",
     "dotenv": "^8.2.0",
     "emoji-regex": "^9.2.0",
     "express": "^4.17.1",

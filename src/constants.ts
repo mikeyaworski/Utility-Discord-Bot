@@ -13,7 +13,7 @@ export const Colors = Object.freeze({
   SUCCESS: '#8bc34a',
   WARN: '#ffc107',
   DANGER: '#f44336',
-});
+} as const);
 
 export const BULK_MESSAGES_LIMIT = 100;
 export const MAX_MESSAGES_FETCH = 500;

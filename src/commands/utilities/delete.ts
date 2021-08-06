@@ -28,10 +28,14 @@ export default class DeleteCommand extends ConfirmationCommand<Args, Intermediat
       aliases: ['del', 'rm', 'remove'],
       group: 'utilities',
       memberName: 'delete',
-      description: 'Deletes a range of messages.',
+      description: 'Deletes a range of messages.\n'
+        + 'Use !delete <message_id> to delete a single message.\n'
+        + 'Use !delete <start_message_id> <end_message_id> to delete a range of messages.\n'
+        + 'Use !delete <start_message_id> <end_message_id> to delete messages that are older than 14 days.',
       examples: [
         '!delete 784701167241658380 784701171147341834',
         '!delete 784701167241658380',
+        '!delete 784701167241658380 784701171147341834 true',
       ],
       format: '<start_msg_id> [end_msg_id] [isOld]',
       guildOnly: true,

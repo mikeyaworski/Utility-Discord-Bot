@@ -55,7 +55,7 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
       .setDescription(embedDescription)
       .setColor(Colors.WARN);
 
-    const confirmationMessage = await commandMsg.say(confirmationMessageEmbed) as Message;
+    const confirmationMessage = await commandMsg.say({ embeds: [confirmationMessageEmbed] }) as Message;
     await reactMulitple(confirmationMessage as Message, [CONFIRM_REACTION, DECLINE_REACTION]);
 
     const confirmationFilter = (reaction: MessageReaction, user: User): boolean => {
@@ -63,7 +63,8 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
       return commandMsg.member?.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
     };
     try {
-      const reactions = await confirmationMessage.awaitReactions(confirmationFilter, {
+      const reactions = await confirmationMessage.awaitReactions({
+        filter: confirmationFilter,
         max: 1,
         time: this.confirmationInfo.timeout,
       });
@@ -71,21 +72,21 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
       if (!emoji) {
         confirmationMessageEmbed.setColor(Colors.DANGER);
         confirmationMessageEmbed.setDescription(`Confirmation timed out after ${this.confirmationInfo.timeout / 1000} seconds:\n${embedDescription}`);
-        await confirmationMessage.edit(confirmationMessageEmbed);
+        await confirmationMessage.edit({ embeds: [confirmationMessageEmbed] });
       } else if (emoji === CONFIRM_REACTION) {
         const responseMessage = await this.afterConfirm(intermediateResult, ...args);
         confirmationMessageEmbed.setColor(Colors.SUCCESS);
         confirmationMessageEmbed.setDescription(responseMessage);
-        await confirmationMessage.edit(confirmationMessageEmbed);
+        await confirmationMessage.edit({ embeds: [confirmationMessageEmbed] });
       } else if (emoji === DECLINE_REACTION) {
         confirmationMessageEmbed.setColor(Colors.DANGER);
         confirmationMessageEmbed.setDescription(`Declined confirmation:\n${embedDescription}`);
-        await confirmationMessage.edit(confirmationMessageEmbed);
+        await confirmationMessage.edit({ embeds: [confirmationMessageEmbed] });
       }
     } catch (err) {
       confirmationMessageEmbed.setColor(Colors.DANGER);
       confirmationMessageEmbed.setDescription(`Error: ${get(err, 'message', 'Something went wrong.')}\n${embedDescription}`);
-      await confirmationMessage.edit(confirmationMessageEmbed);
+      await confirmationMessage.edit({ embeds: [confirmationMessageEmbed] });
     }
 
     return null;
