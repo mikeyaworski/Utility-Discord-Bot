@@ -1,6 +1,6 @@
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { Command, PieceContext } from '@sapphire/framework';
 
-import { Command } from 'discord.js-commando';
 import { Role } from 'discord.js';
 import { error } from 'src/logging';
 import { getModels } from 'src/models';
@@ -31,9 +31,9 @@ type OperationHandler = CommandOperationHandler<Args>;
  * !base_roles clear <role>
  * !base_roles list
  */
-export default class StreamerRulesCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
+export default class StreamerRulesCommand extends Command<Args> {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'base_roles',
       aliases: ['noob_roles'],
       group: 'utilities',

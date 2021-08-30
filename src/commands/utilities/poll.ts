@@ -1,4 +1,4 @@
-import type { ClientType, CommandRunMethod } from 'src/types';
+import type { CommandRunMethod } from 'src/types';
 import type { Message } from 'discord.js';
 
 import Discord from 'discord.js';
@@ -11,8 +11,8 @@ type Args = string[];
  * !poll <question> [emoji_1] <option_1> [emoji_2] <option_2> ...
  */
 export default class PollCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'poll',
       aliases: ['ask'],
       group: 'utilities',

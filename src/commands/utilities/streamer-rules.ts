@@ -1,4 +1,4 @@
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
 
 import { Command } from 'discord.js-commando';
 import { Role } from 'discord.js';
@@ -31,8 +31,8 @@ type OperationHandler = CommandOperationHandler<Args>;
  * !streamer_rules list
  */
 export default class StreamerRulesCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'streamer_rules',
       aliases: ['streamer_roles', 'streaming_rules', 'streaming_roles', 'streamer-rules', 'streaming-rules', 'streaming-roles'],
       group: 'utilities',

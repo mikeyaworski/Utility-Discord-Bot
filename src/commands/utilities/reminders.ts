@@ -1,4 +1,4 @@
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
 import type { Reminder } from 'models/reminders';
 
 import { parseDate } from 'chrono-node';
@@ -36,8 +36,8 @@ type ListOperationHandler = CommandOperationHandler<{
  * !reminders list [channel]
  */
 export default class RemindersCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'reminders',
       aliases: ['reminder', 'timer', 'timers'],
       group: 'utilities',

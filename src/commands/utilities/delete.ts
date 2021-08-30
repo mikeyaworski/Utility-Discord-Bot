@@ -1,5 +1,6 @@
 import type { Message, NewsChannel, TextChannel } from 'discord.js';
-import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
+import type { PieceContext } from '@sapphire/framework';
+import type { CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
 import chunk from 'lodash.chunk';
 
@@ -14,7 +15,7 @@ type Args = {
 };
 
 type IntermediateResult = {
-  msgs: EitherMessage[],
+  msgs: Message[],
   channel: TextChannel | NewsChannel,
 };
 
@@ -22,8 +23,8 @@ type IntermediateResult = {
  * !delete <start_msg_id> [end_msg_id] [isOld]
  */
 export default class DeleteCommand extends ConfirmationCommand<Args, IntermediateResult> {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'delete',
       aliases: ['del', 'rm', 'remove'],
       group: 'utilities',

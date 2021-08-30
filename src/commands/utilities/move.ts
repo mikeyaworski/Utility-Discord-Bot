@@ -1,6 +1,6 @@
 import type { Message, NewsChannel, TextChannel } from 'discord.js';
-import type { CommandoMessage } from 'discord.js-commando';
-import type { ClientType, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, EitherMessage } from 'src/types';
+import type { PieceContext } from '@sapphire/framework';
+import type { CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
 import Discord from 'discord.js';
 import { findMessageInGuild, getMessagesInRange, userHasPermission } from 'src/discord-utils';
@@ -13,7 +13,7 @@ type Args = {
 };
 
 type IntermediateResult = {
-  msgs: EitherMessage[],
+  msgs: Message[],
   channel: TextChannel | NewsChannel,
 };
 
@@ -21,8 +21,8 @@ type IntermediateResult = {
  * !move <channel> <start_msg_id> [end_msg_id]
  */
 export default class MoveCommand extends ConfirmationCommand<Args, IntermediateResult> {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'move',
       aliases: ['mv'],
       group: 'utilities',
@@ -64,7 +64,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
     });
   }
 
-  static async moveMessage(channel: TextChannel, msg: Message | CommandoMessage): Promise<void> {
+  static async moveMessage(channel: TextChannel, msg: Message): Promise<void> {
     // await channel.send(`<@${msg.author.id}> said:\n${msg.content}`);
     await channel.sendTyping();
     const newMessage = new Discord.MessageEmbed()
@@ -81,7 +81,7 @@ export default class MoveCommand extends ConfirmationCommand<Args, IntermediateR
     const { channel: toChannel, startId, endId } = args;
     const [startMsg, fromChannel] = await findMessageInGuild(
       startId,
-      commandMsg.guild,
+      commandMsg.guild!,
       // We know it's a text channel since this is a guild-only command
       commandMsg.channel as TextChannel | NewsChannel,
     );

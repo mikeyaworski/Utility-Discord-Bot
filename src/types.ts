@@ -1,8 +1,4 @@
-import type {
-  CommandoMessage,
-  CommandoClient,
-  ArgumentCollectorResult,
-} from 'discord.js-commando';
+import type { SapphireClient, CommandContext } from '@sapphire/framework';
 import type {
   Message,
   Presence,
@@ -26,9 +22,7 @@ export type StringMapping = GenericMapping<string>;
 export type BooleanMapping = GenericMapping<boolean>;
 export type UnknownMapping = GenericMapping<unknown>;
 
-export type EitherMessage = Message | CommandoMessage;
-
-export type ClientType = CommandoClient;
+export type ClientType = SapphireClient;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogArg = any;
@@ -37,25 +31,22 @@ export type LogArg = any;
 // we define it manually until they fix it.
 // export type CommandRunMethod = typeof Command.prototype.run;
 export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
-  message: CommandoMessage,
+  message: Message,
   args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
+  context: CommandContext,
 ) => Promise<Message | Message[] | null> | null;
 
 export type CommandBeforeConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
-  message: CommandoMessage,
+  message: Message,
   args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
+  context: CommandContext,
 ) => Promise<[T2, string] | [T2] | null>;
 
 export type CommandAfterConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
   beforeResult: T2,
-  message: CommandoMessage,
+  message: Message,
   args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
+  context: CommandContext,
 ) => Promise<string>;
 
 // TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:
@@ -99,4 +90,4 @@ export type ModelDefinition = (sequelize: Sequelize) => [
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export type CommandOperationHandler<Args> = (commandMsg: CommandoMessage, args: Args) => Promise<Message | Message[]>;
+export type CommandOperationHandler<Args> = (commandMsg: Message, args: Args) => Promise<Message | Message[]>;

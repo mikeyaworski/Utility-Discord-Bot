@@ -1,9 +1,10 @@
 import type { Message } from 'discord.js';
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler, GenericMapping, BooleanMapping } from 'src/types';
+import type { CommandRunMethod, Mutable, CommandOperationHandler, GenericMapping, BooleanMapping } from 'src/types';
+import type { PieceContext } from '@sapphire/framework';
 
 import get from 'lodash.get';
 import removeDuplicates from 'lodash.uniq';
-import { Command } from 'discord.js-commando';
+import { Command } from '@sapphire/framework';
 import { Role, TextChannel } from 'discord.js';
 import { shorten } from 'src/utils';
 import { fetchMessageInGuild, handleError } from 'src/discord-utils';
@@ -41,8 +42,8 @@ type OperationHandler = CommandOperationHandler<Args>;
  * !reaction list [message_id]
  */
 export default class ReactionsCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
+  constructor(context: PieceContext) {
+    super(context, {
       name: 'reactions',
       aliases: ['rxns', 'rr'],
       group: 'utilities',
