@@ -1,9 +1,9 @@
 import type { Message, MessageReaction, User } from 'discord.js';
-import type { PieceContext } from '@sapphire/framework';
-import type { CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, UnknownMapping } from 'src/types';
+import type { CommandInfo } from 'discord.js-commando';
+import type { ClientType, CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, UnknownMapping } from 'src/types';
 
 import Discord from 'discord.js';
-import { Command, CommandOptions } from '@sapphire/framework';
+import { Command } from 'discord.js-commando';
 import get from 'lodash.get';
 
 import { Colors, CONFIRM_REACTION, DECLINE_REACTION, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
@@ -27,11 +27,11 @@ export const DEFAULT_CONFIRMATION_INFO = {
  * If a falsey value is returned from `beforeConfirm` (instead of a tuple), then there will be no confirmation and
  * `beforeConfirm` will be assumed to have run to completion.
  */
-export default abstract class ConfirmationCommand<Args extends UnknownMapping, IntermediateResult> extends Command<Args> {
+export default abstract class ConfirmationCommand<Args extends UnknownMapping, IntermediateResult> extends Command {
   public readonly confirmationInfo: ConfirmationInfo;
 
-  constructor(context: PieceContext, commandInfo: CommandOptions, confirmationInfo: ConfirmationInfo = DEFAULT_CONFIRMATION_INFO) {
-    super(context, commandInfo);
+  constructor(client: ClientType, commandInfo: CommandInfo, confirmationInfo: ConfirmationInfo = DEFAULT_CONFIRMATION_INFO) {
+    super(client, commandInfo);
     this.confirmationInfo = confirmationInfo;
   }
 
@@ -39,9 +39,9 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
   abstract afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult>;
 
   run: CommandRunMethod<Args> = async (...args) => {
-    const [msg] = args;
+    const [commandMsg] = args;
     const workingMessage = this.confirmationInfo.workingMessage
-      ? await msg.channel.send('Fetching...\nThis may take a minute.') as Message
+      ? await commandMsg.say('Fetching...\nThis may take a minute.') as Message
       : null;
     const beforeConfirmResult = await this.beforeConfirm(...args);
     if (workingMessage) await workingMessage.delete();
@@ -55,12 +55,12 @@ export default abstract class ConfirmationCommand<Args extends UnknownMapping, I
       .setDescription(embedDescription)
       .setColor(Colors.WARN);
 
-    const confirmationMessage = await msg.channel.send({ embeds: [confirmationMessageEmbed] }) as Message;
+    const confirmationMessage = await commandMsg.say({ embeds: [confirmationMessageEmbed] }) as Message;
     await reactMulitple(confirmationMessage as Message, [CONFIRM_REACTION, DECLINE_REACTION]);
 
     const confirmationFilter = (reaction: MessageReaction, user: User): boolean => {
       const emoji = reaction.emoji.toString();
-      return msg.member?.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
+      return commandMsg.member?.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
     };
     try {
       const reactions = await confirmationMessage.awaitReactions({

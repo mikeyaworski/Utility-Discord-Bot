@@ -1,4 +1,8 @@
-import type { SapphireClient, CommandContext } from '@sapphire/framework';
+import type {
+  CommandoMessage,
+  CommandoClient,
+  ArgumentCollectorResult,
+} from 'discord.js-commando';
 import type {
   Message,
   Presence,
@@ -22,7 +26,9 @@ export type StringMapping = GenericMapping<string>;
 export type BooleanMapping = GenericMapping<boolean>;
 export type UnknownMapping = GenericMapping<unknown>;
 
-export type ClientType = SapphireClient;
+export type EitherMessage = Message | CommandoMessage;
+
+export type ClientType = CommandoClient;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogArg = any;
@@ -31,22 +37,25 @@ export type LogArg = any;
 // we define it manually until they fix it.
 // export type CommandRunMethod = typeof Command.prototype.run;
 export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
-  message: Message,
+  message: CommandoMessage,
   args: T1,
-  context: CommandContext,
+  fromPattern: boolean,
+  result?: ArgumentCollectorResult,
 ) => Promise<Message | Message[] | null> | null;
 
 export type CommandBeforeConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
-  message: Message,
+  message: CommandoMessage,
   args: T1,
-  context: CommandContext,
+  fromPattern: boolean,
+  result?: ArgumentCollectorResult,
 ) => Promise<[T2, string] | [T2] | null>;
 
 export type CommandAfterConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
   beforeResult: T2,
-  message: Message,
+  message: CommandoMessage,
   args: T1,
-  context: CommandContext,
+  fromPattern: boolean,
+  result?: ArgumentCollectorResult,
 ) => Promise<string>;
 
 // TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:
@@ -90,4 +99,4 @@ export type ModelDefinition = (sequelize: Sequelize) => [
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export type CommandOperationHandler<Args> = (commandMsg: Message, args: Args) => Promise<Message | Message[]>;
+export type CommandOperationHandler<Args> = (commandMsg: CommandoMessage, args: Args) => Promise<Message | Message[]>;
