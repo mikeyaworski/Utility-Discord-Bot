@@ -16,7 +16,7 @@ import {
   getRoleMentions,
   findOptionalChannel,
 } from 'src/discord-utils';
-import { getTimezoneOffsetFromAbbreviation, getDateString, parseDelay, filterOutFalsy } from 'src/utils';
+import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder } from 'src/jobs/reminders';
 
@@ -31,7 +31,7 @@ const timeOption = ({ required }: { required: boolean }) => (option: SlashComman
 const timeZoneOption = (option: SlashCommandStringOption) => {
   return option
     .setName('time_zone')
-    .setDescription('[Barely working]: Time zone abbreviation. Example: "UTC". Defaults to Toronto time zone.')
+    .setDescription('Time zone name abbreviation. Examples: "America/New_York" or "EST". Defaults to America/Toronto.')
     .setRequired(false);
 };
 const messageOption = (option: SlashCommandStringOption) => {
@@ -117,9 +117,9 @@ commandBuilder.addSubcommand(subcommand => {
 
 function parseTimesArg(timesArg: string | null, timeZone: string | null): number[] {
   if (!timesArg) return [];
+  const tzOffset = getTimezoneOffsetFromFilter(timeZone || '') || getTimezoneOffsetFromFilter('America/Toronto');
+  console.log('tz offset', tzOffset);
   const times = filterOutFalsy(timesArg.split(/,\s+/).map(timeArg => {
-    const tzOffset = getTimezoneOffsetFromAbbreviation(timeZone || '')
-      || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
     let date = parseDate(timeArg, {
       timezone: tzOffset ?? undefined,
     });

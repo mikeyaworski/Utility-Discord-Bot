@@ -82,17 +82,19 @@ export function parseDelay(arg: string): number {
 }
 
 /**
- * Finds the current time zone offset (account for daylight savings time) by abbreviation.
+ * Finds the current time zone offset (account for daylight savings time) by abbreviation or name.
  * If there are multiple abbreviations, the preferredName arg will be used to figure out which abbreviation to prefer.
  */
-export function getTimezoneOffsetFromAbbreviation(abbreviation: string, preferredName?: string): number | null {
+export function getTimezoneOffsetFromFilter(filter: string): number | null {
   const timeZones = getTimeZones();
-  const filteredZones = timeZones
-    .filter(tz => tz.abbreviation.toLowerCase() === abbreviation.toLowerCase());
-  let tzOffset: number | undefined = filteredZones[0]?.currentTimeOffsetInMinutes;
-  if (preferredName) {
-    tzOffset = filteredZones.find(tz => tz.name === preferredName || tz.group.includes(preferredName))?.currentTimeOffsetInMinutes || tzOffset;
-  }
+  const filteredZones = timeZones.filter(tz => {
+    return (
+      tz.abbreviation.toLowerCase() === filter.toLowerCase()
+      || tz.name.toLowerCase() === filter.toLowerCase()
+      || Boolean(tz.group.find(tzName => tzName.toLowerCase() === filter.toLowerCase()))
+    );
+  });
+  const tzOffset: number | undefined = filteredZones[0]?.currentTimeOffsetInMinutes;
   if (!tzOffset) return null;
   return tzOffset - new Date().getTimezoneOffset();
 }
