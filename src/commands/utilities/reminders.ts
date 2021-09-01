@@ -1,13 +1,12 @@
 import type { CommandInteraction, TextBasedChannels, User } from 'discord.js';
 import type { Command } from 'src/types';
 import type { Reminder } from 'models/reminders';
-
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
+
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
 import { Op } from 'sequelize';
 
-import { IntentionalAny } from 'src/types';
 import { client } from 'src/client';
 import { getModels } from 'src/models';
 import {
@@ -25,8 +24,8 @@ const model = getModels().reminders;
 
 const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
   return option
-    .setName('time')
-    .setDescription('The time of the reminder. Examples: "2 hours" or "December 5th at 5pm"')
+    .setName('times')
+    .setDescription('The time(s) of the reminder. Examples: "2 hours" or "December 5th at 5pm". Can be comma-separated.')
     .setRequired(required);
 };
 const timeZoneOption = (option: SlashCommandStringOption) => {
@@ -53,12 +52,6 @@ const intervalOption = (option: SlashCommandStringOption) => {
     .setDescription('Interval to send reminder on repeat. Examples: "24 hours" or "8640000"')
     .setRequired(false);
 };
-const idOption = (option: SlashCommandStringOption) => {
-  return option
-    .setName('reminder_id')
-    .setDescription('The ID of the reminder (use "/reminders list" to find it).')
-    .setRequired(true);
-};
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -79,7 +72,12 @@ commandBuilder.addSubcommand(subcommand => {
   subcommand
     .setName('edit')
     .setDescription('Edit an existing reminder by its ID.')
-    .addStringOption(idOption)
+    .addStringOption(option => {
+      return option
+        .setName('reminder_id')
+        .setDescription('The ID of the reminder (use "/reminders list" to find it).')
+        .setRequired(true);
+    })
     .addStringOption(timeOption({ required: false }))
     .addStringOption(timeZoneOption)
     .addStringOption(messageOption)
@@ -91,7 +89,12 @@ commandBuilder.addSubcommand(subcommand => {
   subcommand
     .setName('delete')
     .setDescription('Delete a reminder by its ID.')
-    .addStringOption(idOption);
+    .addStringOption(option => {
+      return option
+        .setName('reminder_ids')
+        .setDescription('The ID(s) of the reminder (use "/reminders list" to find it). Can be comma-separated.')
+        .setRequired(true);
+    });
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
@@ -112,8 +115,29 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
+function parseTimesArg(timesArg: string | null, timeZone: string | null): number[] {
+  if (!timesArg) return [];
+  const times = filterOutFalsy(timesArg.split(/,\s+/).map(timeArg => {
+    const tzOffset = getTimezoneOffsetFromAbbreviation(timeZone || '')
+      || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
+    let date = parseDate(timeArg, {
+      timezone: tzOffset ?? undefined,
+    });
+    if (!date) {
+      try {
+        date = new Date(Date.now() + parseDelay(timeArg));
+      } catch (err) {
+        throw new Error('Could not parse reminder time!');
+      }
+    }
+    return Math.floor(date.getTime() / 1000);
+  }));
+  if (!times.length) throw new Error('Could not parse reminder time!');
+  return times;
+}
+
 async function parseReminderOptions(interaction: CommandInteraction, { editing }: { editing: boolean }) {
-  const timeArg = interaction.options.getString('time', false); // Optional for editing
+  const time = interaction.options.getString('times', false); // Optional for editing
   const timeZone = interaction.options.getString('time_zone', false);
   const message = interaction.options.getString('message', false);
   const channelArg = interaction.options.getChannel('channel', false);
@@ -138,26 +162,11 @@ async function parseReminderOptions(interaction: CommandInteraction, { editing }
     throw new Error(`Minimum interval is ${MIN_REMINDER_INTERVAL} seconds.`);
   }
 
-  let time: number | null | undefined;
-  if (timeArg) {
-    const tzOffset = getTimezoneOffsetFromAbbreviation(timeZone || '')
-      || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
-    let date = parseDate(timeArg, {
-      timezone: tzOffset ?? undefined,
-    });
-    if (!date) {
-      try {
-        date = new Date(Date.now() + parseDelay(timeArg));
-      } catch (err) {
-        throw new Error('Could not parse reminder time!');
-      }
-    }
-    time = Math.floor(date.getTime() / 1000);
-  }
+  const times = parseTimesArg(time, timeZone);
 
   return {
     message,
-    time,
+    times,
     interval,
     channel,
     author,
@@ -197,6 +206,94 @@ function checkReminderErrors(interaction: CommandInteraction, {
   }
 }
 
+async function handleUpsert(interaction: CommandInteraction) {
+  const id = interaction.options.getString('reminder_id', false); // Not present in creation
+  const editing = Boolean(id);
+  try {
+    const {
+      message,
+      interval,
+      times,
+      channel,
+      author,
+    } = await parseReminderOptions(interaction, { editing });
+
+    // Throws if there is an issue
+    checkReminderErrors(interaction, {
+      channel,
+      author,
+      message,
+    });
+
+    const existingReminder = id ? await model.findByPk(id) : null;
+    if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
+
+    const reminderPayloads: Partial<Reminder>[] = times.map(time => {
+      const reminderPayload: Partial<Reminder> = {
+        guild_id: existingReminder?.guild_id,
+        channel_id: existingReminder?.channel_id,
+        owner_id: existingReminder?.owner_id,
+        time: existingReminder?.time,
+        message: existingReminder?.message,
+        interval: existingReminder?.interval,
+      };
+      if (interaction.guild?.id) reminderPayload.guild_id = interaction.guild.id;
+      if (channel?.id) reminderPayload.channel_id = channel.id;
+      if (author.id) reminderPayload.owner_id = author.id;
+      if (time) reminderPayload.time = time;
+      if (message) reminderPayload.message = message;
+      if (interval) reminderPayload.interval = interval;
+      return reminderPayload;
+    });
+    if (id) reminderPayloads[0].id = id;
+
+    const reminders = await Promise.all(reminderPayloads.map(async reminderPayload => {
+      const [reminder]: [Reminder, boolean | null] = await model.upsert(reminderPayload, { returning: true });
+      setReminder(reminder);
+      return reminder;
+    }));
+    const response = reminders.reduce((acc, reminder) => {
+      const upsertPart = reminder.id === id ? 'updated' : 'created';
+      const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
+      const newlinePart = acc ? '\n' : '';
+      return `${acc}${newlinePart}Reminder (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`;
+    }, '');
+    return interaction.editReply(response);
+  } catch (err) {
+    return interaction.editReply(err.message);
+  }
+}
+
+async function handleDelete(interaction: CommandInteraction) {
+  const idsArg = interaction.options.getString('reminder_ids', true);
+  const ids = idsArg.split(/[\s,]+/);
+  const reminders: Reminder[] = await model.findAll({
+    where: {
+      id: ids,
+    },
+  });
+  if (!reminders.length) return interaction.editReply('Reminder does not exist!');
+
+  const messageResponse = await reminders.reduce(async (accPromise, reminder) => {
+    const acc = await accPromise;
+    const channel = await getChannel(reminder.channel_id);
+    let res: string;
+    if (
+      !channel || !channel.isText()
+      || reminder.owner_id === interaction.user.id
+      || usersHavePermission(channel, interaction.user, 'MANAGE_MESSAGES')
+    ) {
+      await removeReminder(reminder.id);
+      res = `Reminder deleted: ${reminder.id}`;
+    } else {
+      res = `You cannot delete a reminder that you don't own: ${reminder.id}`;
+    }
+    return acc ? `${acc}\n${res}` : res;
+  }, Promise.resolve(''));
+
+  return interaction.editReply(messageResponse);
+}
+
 async function handleList(interaction: CommandInteraction) {
   const channelArg = interaction.options.getChannel('channel', false);
   const filter = interaction.options.getString('filter', false);
@@ -207,7 +304,7 @@ async function handleList(interaction: CommandInteraction) {
 
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES'])) {
+  if (!usersHavePermission(channel, authorAndBot, 'VIEW_CHANNEL')) {
     return interaction.editReply(`One of us does not have access to channel <#${channel.id}>!`);
   }
 
@@ -247,84 +344,6 @@ async function handleList(interaction: CommandInteraction) {
   }, `__Reminders for <#${channel.id}>__${filterPart}\n`);
 
   return interaction.editReply(response);
-}
-
-async function handleUpsert(interaction: CommandInteraction) {
-  const id = interaction.options.getString('reminder_id', false); // Not present in creation
-  const editing = Boolean(id);
-  try {
-    const {
-      message,
-      interval,
-      time,
-      channel,
-      author,
-    } = await parseReminderOptions(interaction, { editing });
-
-    // Throws if there is an issue
-    checkReminderErrors(interaction, {
-      channel,
-      author,
-      message,
-    });
-
-    const reminderPayload: Partial<Reminder> = {};
-
-    if (id) {
-      const existingReminder: Reminder | null = await model.findByPk(id);
-      if (!existingReminder) return interaction.editReply('Reminder does not exist!');
-
-      reminderPayload.id = id;
-      reminderPayload.guild_id = existingReminder.guild_id;
-      reminderPayload.channel_id = existingReminder.channel_id;
-      reminderPayload.owner_id = existingReminder.owner_id;
-      reminderPayload.time = existingReminder.time;
-      reminderPayload.message = existingReminder.message;
-      reminderPayload.interval = existingReminder.interval;
-    }
-
-    if (interaction.guild?.id) reminderPayload.guild_id = interaction.guild.id;
-    if (channel?.id) reminderPayload.channel_id = channel.id;
-    if (author.id) reminderPayload.owner_id = author.id;
-    if (time) reminderPayload.time = time;
-    if (message) reminderPayload.message = message;
-    if (interval) reminderPayload.interval = interval;
-
-    const [reminder]: [Reminder, boolean | null] = await model.upsert(reminderPayload, { returning: true });
-    setReminder(reminder);
-
-    const upsertPart = editing ? 'updated' : 'created';
-    const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
-
-    return interaction.editReply(`Reminder (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`);
-  } catch (err) {
-    return interaction.editReply(err.message);
-  }
-}
-
-async function handleDelete(interaction: CommandInteraction) {
-  const id = interaction.options.getString('reminder_id', true);
-  const reminder: Reminder | null = await model.findOne({
-    where: {
-      id,
-    },
-  });
-  if (!reminder) {
-    return interaction.editReply('Reminder does not exist!');
-  }
-  const channel = await getChannel(reminder.channel_id);
-  if (!channel || !channel.isText()) {
-    await removeReminder(id);
-    return interaction.editReply('Reminder deleted.');
-  }
-  if (reminder.owner_id !== interaction.user.id && !usersHavePermission(channel, interaction.user, 'MANAGE_MESSAGES')) {
-    return interaction.editReply('You cannot delete a reminder that you don\'t own.');
-  }
-  if (!usersHavePermission(channel, interaction.user, 'SEND_MESSAGES')) {
-    return interaction.editReply(`You do not have access to send messages in <#${channel.id}>`);
-  }
-  await removeReminder(id);
-  return interaction.editReply('Reminder deleted.');
 }
 
 const RemindersCommand: Command = {
