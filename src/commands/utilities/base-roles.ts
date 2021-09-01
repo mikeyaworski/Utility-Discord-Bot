@@ -113,8 +113,8 @@ const BaseRolesCommand: Command = {
   guildOnly: true,
   userPermissions: 'MANAGE_ROLES',
   clientPermissions: 'MANAGE_ROLES',
-  data: commandBuilder,
-  run: async interaction => {
+  slashCommandData: commandBuilder,
+  runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
     const subcommand = interaction.options.getSubcommand();

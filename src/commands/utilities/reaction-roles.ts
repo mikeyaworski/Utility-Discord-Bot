@@ -274,8 +274,8 @@ const ReactionRolesCommand: Command = {
   guildOnly: true,
   userPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
   clientPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
-  data: commandBuilder,
-  run: async interaction => {
+  slashCommandData: commandBuilder,
+  runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
     const subcommand = interaction.options.getSubcommand();

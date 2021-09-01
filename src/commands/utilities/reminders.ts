@@ -347,8 +347,8 @@ async function handleList(interaction: CommandInteraction) {
 
 const RemindersCommand: Command = {
   guildOnly: false,
-  data: commandBuilder,
-  run: async interaction => {
+  slashCommandData: commandBuilder,
+  runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
     const subcommand = interaction.options.getSubcommand();

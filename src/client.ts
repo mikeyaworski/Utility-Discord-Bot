@@ -5,6 +5,7 @@ import { Routes } from 'discord-api-types/v9';
 
 import { log, warn, error } from 'src/logging';
 
+import { filterOutFalsy } from 'src/utils';
 import commands, { listenToCommands } from 'src/commands';
 import events from 'src/events';
 import type { IntentionalAny } from 'src/types';
@@ -54,7 +55,10 @@ export function initClient(): Promise<IntentionalAny> {
       client.login(token);
     }),
     (async () => {
-      const body = commands.map(command => command.data.toJSON());
+      const slashCommands = commands.map(command => command.slashCommandData.toJSON());
+      const contextMenus = commands.map(command => command.contextMenuData);
+      // TODO: Improve typing
+      const body = filterOutFalsy(slashCommands.concat(contextMenus as IntentionalAny));
       if (isDev && slashCommandsGuildId) {
         await rest.put(
           Routes.applicationGuildCommands(clientId, slashCommandsGuildId),

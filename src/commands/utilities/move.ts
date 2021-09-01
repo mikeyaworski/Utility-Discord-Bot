@@ -1,19 +1,27 @@
-import type { Message, TextBasedChannels } from 'discord.js';
-import type { Command, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
-
-import ConfirmationCommandRunner, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
+import type { DMChannel, PartialDMChannel, Message, TextBasedChannels, TextChannel, ContextMenuInteraction } from 'discord.js';
+import {
+  Command,
+  CommandBeforeConfirmMethod,
+  CommandAfterConfirmMethod,
+  ContextMenuTypes,
+  IntentionalAny,
+} from 'src/types';
 
 import Discord from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
+import get from 'lodash.get';
 
 import {
   findMessageInGuild,
   getMessagesInRange,
   usersHavePermission,
   getInfoFromCommandInteraction,
+  getChannel,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
+import ConfirmationCommandRunner from 'src/commands/confirmation-command';
+import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 
 interface IntermediateResult {
   msgs: Message[],
@@ -21,7 +29,7 @@ interface IntermediateResult {
   fromChannel: TextBasedChannels,
 }
 
-async function moveMessage(channel: TextBasedChannels, msg: Message): Promise<void> {
+async function moveMessage(channel: TextBasedChannels | TextChannel, msg: Message): Promise<void> {
   await channel.sendTyping();
   const newMessage = new Discord.MessageEmbed({
     author: {
@@ -126,6 +134,79 @@ const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (inter
   return `${msgs.length} messages have been moved to <#${toChannel.id}>`;
 };
 
+async function handleContextMenu(interaction: ContextMenuInteraction): Promise<IntentionalAny> {
+  await interaction.deferReply({ ephemeral: true });
+
+  const ogChannelId = interaction.channelId;
+  const ogMessageId = interaction.options.getMessage('message')?.id;
+  const ogChannel = ogChannelId && await getChannel(ogChannelId);
+  const ogMessage = ogMessageId && ogChannel && ogChannel.isText() && await ogChannel.messages.fetch(ogMessageId);
+
+  if (!ogMessage) return interaction.editReply('Could not fetch original message!');
+  if (!ogChannel) return interaction.editReply('Could not fetch original channel!');
+
+  const textChannels = Array.from(await interaction.guild!.channels.cache.values())
+    .filter(channel => channel.isText()) as Exclude<TextBasedChannels, PartialDMChannel | DMChannel>[];
+  const { author } = await getInfoFromCommandInteraction(interaction, { ephemeral: true });
+  if (!author) {
+    return interaction.editReply('Could not find who is invoking this command!');
+  }
+  if (!ogChannel) return interaction.editReply('Could not find the original channel this is coming from!');
+  const authorAndBot = filterOutFalsy([author, client.user]);
+
+  const options = textChannels
+    .filter(channel => usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES') && channel.id !== ogChannel.id)
+    .map(channel => ({
+      label: `#${channel.name}`,
+      value: channel.id,
+    }));
+
+  const menu = new Discord.MessageSelectMenu({
+    customId: 'channel',
+    placeholder: 'Select a channel...',
+    options,
+  });
+  const row = new Discord.MessageActionRow({
+    components: [menu],
+  });
+  await interaction.editReply({
+    content: 'Select a channel to move the message to.',
+    components: [row],
+  });
+
+  try {
+    const selectInteraction = await interaction.channel?.awaitMessageComponent({
+      filter: i => i.message.interaction?.id === interaction.id,
+      time: CONFIRMATION_DEFAULT_TIMEOUT,
+    }).catch(() => {
+      // Intentionally empty catch
+    });
+    if (selectInteraction?.isSelectMenu()) {
+      // Apparently there is no way to defer button interactions in the way we want.
+      // The button's loading state cannot stay for more than 3 seconds, regardless of how we choose to defer.
+      await interaction.editReply({
+        content: 'Moving message...',
+        components: [],
+      });
+
+      const toChannelId = selectInteraction.values[0];
+      const toChannel = await getChannel(toChannelId);
+
+      if (!toChannel || !toChannel.isText()) throw new Error(`Could not fetch channel from ID: ${toChannelId}`);
+
+      await moveMessage(toChannel, ogMessage);
+      return interaction.editReply('1 message moved.');
+    }
+    // If we get here, then the interaction button was not clicked.
+    return interaction.editReply({
+      content: `Confirmation timed out after ${CONFIRMATION_DEFAULT_TIMEOUT / 1000} seconds.`,
+      components: [],
+    });
+  } catch (err) {
+    return interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
+  }
+}
+
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('move')
@@ -151,14 +232,19 @@ commandBuilder.addStringOption(option => {
 
 const MoveCommand: Command = {
   guildOnly: true,
-  data: commandBuilder,
+  slashCommandData: commandBuilder,
+  contextMenuData: {
+    type: ContextMenuTypes.MESSAGE,
+    name: 'move',
+  },
+  runContextMenu: handleContextMenu,
   ...ConfirmationCommandRunner(
     beforeConfirm,
     afterConfirm,
     {
-      ...DEFAULT_CONFIRMATION_INFO,
       workingMessage: 'Fetching...\nThis may take a minute.',
       declinedMessage: 'No messages were moved.',
+      ephemeral: true,
     },
   ),
 };

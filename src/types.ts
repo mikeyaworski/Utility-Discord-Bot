@@ -10,6 +10,7 @@ import type {
   CommandInteraction,
   ButtonInteraction,
   PermissionString,
+  ContextMenuInteraction,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
@@ -36,17 +37,27 @@ export type ClientType = Client;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogArg = any;
 
+export enum ContextMenuTypes {
+  USER = 2,
+  MESSAGE = 3,
+}
+
 export interface Command {
   // TODO: Properly generalize the data type
-  data: SlashCommandBuilder | ReturnType<SlashCommandBuilder['addStringOption']>,
-  run: (interaction: CommandInteraction) => Promise<IntentionalAny>,
+  slashCommandData: SlashCommandBuilder | ReturnType<SlashCommandBuilder['addStringOption']>,
+  contextMenuData?: {
+    name: string,
+    type: ContextMenuTypes,
+  },
+  runCommand: (interaction: CommandInteraction) => Promise<IntentionalAny>,
+  runContextMenu?: (interaction: ContextMenuInteraction) => Promise<IntentionalAny>,
   buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
   guildOnly?: boolean,
   userPermissions?: PermissionString | PermissionString[],
   clientPermissions?: PermissionString | PermissionString[],
 }
 
-export type CommandRunMethod = Command['run'];
+export type CommandRunMethod = Command['runCommand'];
 export type CommandButtonActionMethod = Command['buttonAction'];
 
 type BeforeConfirmResponse<T> = null | {

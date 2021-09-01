@@ -13,7 +13,7 @@ import {
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
 import { BULK_MESSAGES_LIMIT } from 'src/constants';
-import ConfirmationCommandRunner, { DEFAULT_CONFIRMATION_INFO } from 'src/commands/confirmation-command';
+import ConfirmationCommandRunner from 'src/commands/confirmation-command';
 
 interface IntermediateResult {
   msgs: Message[],
@@ -116,14 +116,14 @@ commandBuilder.addBooleanOption(option => {
 
 const DeleteCommand: Command = {
   guildOnly: true,
-  data: commandBuilder,
+  slashCommandData: commandBuilder,
   ...ConfirmationCommandRunner(
     beforeConfirm,
     afterConfirm,
     {
-      ...DEFAULT_CONFIRMATION_INFO,
       workingMessage: 'Fetching...\nThis may take a minute.',
       declinedMessage: 'No messages were deleted.',
+      ephemeral: true,
     },
   ),
 };

@@ -13,7 +13,7 @@ import {
 } from 'src/discord-utils';
 
 const PollCommand: Command = {
-  data: new SlashCommandBuilder()
+  slashCommandData: new SlashCommandBuilder()
     .setName('poll')
     .setDescription('Creates an embedded poll in chat.')
     .addStringOption(option => option.setName('question').setDescription('Question').setRequired(true))
@@ -21,7 +21,7 @@ const PollCommand: Command = {
       .setDescription('[emoji_1] "<option_1>" [emoji_2] "<option_2>" ...')
       .setRequired(true)),
 
-  async run(interaction: CommandInteraction): Promise<void> {
+  async runCommand(interaction: CommandInteraction): Promise<void> {
     const question = interaction.options.getString('question');
     const optionsStr = interaction.options.getString('options');
     const options = await parseArguments(optionsStr as string, { parseChannels: false }) as string[];

@@ -7,16 +7,14 @@ import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 
 interface Options {
   ephemeral?: boolean;
-}
-
-interface ConfirmationInfo {
   timeout: number;
   workingMessage?: string;
   confirmPrompt?: string;
   declinedMessage?: string;
 }
 
-export const DEFAULT_CONFIRMATION_INFO = {
+const DEFAULT_OPTIONS = {
+  ephemeral: true,
   timeout: CONFIRMATION_DEFAULT_TIMEOUT,
 };
 
@@ -31,16 +29,16 @@ export const DEFAULT_CONFIRMATION_INFO = {
 export default function ConfirmationCommandRunner<IntermediateResult>(
   beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult>,
   afterConfirm: CommandAfterConfirmMethod<IntermediateResult>,
-  confirmationInfo: ConfirmationInfo,
-  options: Options = {},
+  partialOptions: Partial<Options> = { ...DEFAULT_OPTIONS },
 ): {
-  run: CommandRunMethod,
+  runCommand: CommandRunMethod,
 } {
-  const run: CommandRunMethod = async interaction => {
+  const runCommand: CommandRunMethod = async interaction => {
+    const options: Options = { ...DEFAULT_OPTIONS, ...partialOptions };
     const { ephemeral = true } = options;
     await interaction.deferReply({ ephemeral });
 
-    if (confirmationInfo.workingMessage) {
+    if (options.workingMessage) {
       await interaction.editReply({
         content: 'Fetching...\nThis may take a minute.',
       });
@@ -50,9 +48,9 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
     if (!beforeConfirmResult) return; // no confirmation required
     const {
       intermediateResult,
-      confirmPrompt = confirmationInfo.confirmPrompt || 'Please confirm.',
-      workingMessage = confirmationInfo.workingMessage || 'Working...',
-      declinedMessage = confirmationInfo.declinedMessage || 'Nothing was done.',
+      confirmPrompt = options.confirmPrompt || 'Please confirm.',
+      workingMessage = options.workingMessage || 'Working...',
+      declinedMessage = options.declinedMessage || 'Nothing was done.',
     } = beforeConfirmResult;
 
     const buttonActionRow = new Discord.MessageActionRow({
@@ -77,7 +75,7 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
     try {
       const buttonInteraction = await interaction.channel?.awaitMessageComponent({
         filter: i => i.message.interaction?.id === interaction.id,
-        time: confirmationInfo.timeout,
+        time: options.timeout,
       }).catch(() => {
         // Intentionally empty catch
       });
@@ -108,7 +106,7 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
         default: {
           // If we get here, then the interaction button was not clicked.
           await interaction.editReply({
-            content: `Confirmation timed out after ${confirmationInfo.timeout / 1000} seconds.`,
+            content: `Confirmation timed out after ${options.timeout / 1000} seconds.`,
             components: [],
           });
           break;
@@ -120,6 +118,6 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
   };
 
   return {
-    run,
+    runCommand,
   };
 }
