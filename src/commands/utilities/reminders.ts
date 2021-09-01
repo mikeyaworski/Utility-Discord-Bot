@@ -5,7 +5,9 @@ import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
+import { Op } from 'sequelize';
 
+import { IntentionalAny } from 'src/types';
 import { client } from 'src/client';
 import { getModels } from 'src/models';
 import {
@@ -100,6 +102,12 @@ commandBuilder.addSubcommand(subcommand => {
         .setName('channel')
         .setDescription('The channel to list reminders for.')
         .setRequired(false);
+    })
+    .addStringOption(option => {
+      return option
+        .setName('filter')
+        .setDescription('Filter results by message content.')
+        .setRequired(false);
     });
   return subcommand;
 });
@@ -191,6 +199,7 @@ function checkReminderErrors(interaction: CommandInteraction, {
 
 async function handleList(interaction: CommandInteraction) {
   const channelArg = interaction.options.getChannel('channel', false);
+  const filter = interaction.options.getString('filter', false);
   const { channel, author } = await findOptionalChannel(interaction, channelArg);
 
   if (!channel) return interaction.editReply('Channel not found!');
@@ -201,15 +210,30 @@ async function handleList(interaction: CommandInteraction) {
   if (!usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES'])) {
     return interaction.editReply(`One of us does not have access to channel <#${channel.id}>!`);
   }
-  const guildId = interaction.guild?.id ?? null;
-  const reminders: Reminder[] = await model.findAll({
-    where: {
-      guild_id: guildId,
-      channel_id: channel.id,
-    },
-  });
-  if (!reminders.length) return interaction.editReply(`There are no reminders for <#${channel.id}>.`);
 
+  const guildId = interaction.guild?.id ?? null;
+  const where: {
+    guild_id: string | null;
+    channel_id: string
+    message?: {
+      [Op.iLike]: `%${string}%`,
+    };
+  } = {
+    guild_id: guildId,
+    channel_id: channel.id,
+  };
+  if (filter) {
+    where.message = {
+      [Op.iLike]: `%${filter}%`,
+    };
+  }
+  const reminders: Reminder[] = await model.findAll({ where });
+  if (!reminders.length) {
+    const filterPart = filter ? ' containing that message content.' : '';
+    return interaction.editReply(`There are no reminders for <#${channel.id}>.${filterPart}`);
+  }
+
+  const filterPart = filter ? ` (using filter **${filter}**)` : '';
   const response = reminders.reduce((acc, reminder) => {
     return (
       // eslint-disable-next-line prefer-template
@@ -220,7 +244,7 @@ async function handleList(interaction: CommandInteraction) {
       + (reminder.message ? `Message: ${reminder.message}` : '')
       + '\n'
     );
-  }, `__Reminders for <#${channel.id}>__\n`);
+  }, `__Reminders for <#${channel.id}>__${filterPart}\n`);
 
   return interaction.editReply(response);
 }
