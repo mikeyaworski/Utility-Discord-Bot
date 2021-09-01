@@ -1,4 +1,15 @@
 import { getTimeZones } from '@vvo/tzdb';
+import type { Falsy } from 'src/types';
+
+export function array<T = unknown>(t: T | T[]): T[] {
+  return Array.isArray(t) ? t : [t];
+}
+
+export function filterOutFalsy<T>(
+  items: (T | Falsy)[],
+): Exclude<T, Falsy>[] {
+  return items.filter(item => Boolean(item)) as Exclude<T, Falsy>[];
+}
 
 /**
  * Returns the intersection of two arrays (in the order of a)
@@ -30,7 +41,7 @@ export function shorten(msg: string, length: number): string {
 /**
  * For parsing command input of delays. Note that this function is NOT used for parsing input of dates.
  * Throws an error if it's not parsable.
- * TODO: support months and years as well
+ * TODO: support weeks, months and years as well
  * @param {string} arg Some string representation of time, e.g. "600" or "10 minutes" or "July 10th".
  *   If the argument is purely numeric, then it will be treated as milliseconds.
  * @returns An integer representing the number of milliseconds for delay.

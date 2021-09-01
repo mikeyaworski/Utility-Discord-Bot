@@ -10,13 +10,14 @@ This is a private bot. This bot does not have measures in place to handle scalin
     ```
     https://discord.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&permissions=261419429111&scope=bot
     ```
-    And the bot token will need to be used as the `DISCORD_BOT_TOKEN` environment variable on both Heroku and in your `.env` file (see the section below).
+    The bot token and client ID will need to be used as the `DISCORD_BOT_TOKEN` and `DISCORD_BOT_CLIENT_ID` environment variable on both Heroku and in your `.env` file (see the section below).
 
 1. Go to https://heroku.com and create an app (free version is fine). This bot will actually ping itself every 20 minutes so that the bot does not sleep automatically. When configuring the dyno, you can use `web npm start`.
 
 1. Add the Postgres add-on to your Heroku app: https://elements.heroku.com/addons/heroku-postgresql. This add-on will automatically add a `DATABASE_URL` config variable to your app, which the code uses to connect to your database. Easy!
 
 1. Go to Settings for your Heroku app and start adding Config Vars.
+    - Add one with the name `DISCORD_BOT_CLIENT_ID` and the value with the value that I asked you to copy in step 2.
     - Add one with the name `DISCORD_BOT_TOKEN` and the value with the value that I asked you to copy in step 2.
     - Add another for `ENVIRONMENT` = `production`
     - Add another for `NPM_CONFIG_PRODUCTION` = `false`
@@ -53,13 +54,19 @@ This is a private bot. This bot does not have measures in place to handle scalin
 1. You can opt to not use Docker and instead run `npm run dev`. By doing this, Docker will no longer deploy Postgres for you, so you will have errors connecting to a database. To solve this, you can easily use your production database instead by following step 3.
 
 ## Environment Variables
-Fill in your own `DISCORD_BOT_TOKEN` and `OWNER_ID` for development / your bot deployment.
+Fill in your own `DISCORD_BOT_CLIENT_ID`, `DISCORD_BOT_TOKEN` and `OWNER_ID` for development / your bot deployment.
+
+You may (optionally) also provide a `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
 
 ```
 ENVIRONMENT=development
 
+DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_TOKEN=...
 DATABASE_URL=postgres://user:password@utility_discord_bot_db:5432/utility_discord_bot_db
+
+# Slash Commands in Development
+SLASH_COMMANDS_GUILD_ID=...
 
 OWNER_ID=...
 PORT=8080

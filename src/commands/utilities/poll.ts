@@ -1,45 +1,35 @@
-import type { ClientType, CommandRunMethod } from 'src/types';
-import type { Message } from 'discord.js';
+import type { CommandInteraction } from 'discord.js';
+import type { Command } from 'src/types';
 
 import Discord from 'discord.js';
-import { Command } from 'discord.js-commando';
-import { isEmoji, reactMulitple, getLetterEmoji } from 'src/discord-utils';
+import { SlashCommandBuilder } from '@discordjs/builders';
 
-type Args = string[];
+import {
+  isEmoji,
+  reactMulitple,
+  getLetterEmoji,
+  parseArguments,
+  getInfoFromCommandInteraction,
+} from 'src/discord-utils';
 
-/**
- * !poll <question> [emoji_1] <option_1> [emoji_2] <option_2> ...
- */
-export default class PollCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
-      name: 'poll',
-      aliases: ['ask'],
-      group: 'utilities',
-      memberName: 'poll',
-      description: 'Creates an embedded poll in chat.\n'
-        + 'Add custom emojis to the left of any options.\n'
-        + 'Provide quotes around questions/options with spaces.\n'
-        + 'Example: !poll "Question" 👍 "Option 1" 👎 "Option 2"\n'
-        + 'Example: !poll "Question" "Option 1" "Option 2"',
-      examples: [
-        '!poll "Question" "Option 1" "Option 2"',
-        '!poll "Question" 👍 "Option 1" 👎 "Option 2"',
-      ],
-      format: '<question> [emoji_1] <option_1> [emoji_2] <option_2> ...',
-      argsType: 'multiple',
-      argsCount: 10,
-      argsPromptLimit: 0,
-      guildOnly: true,
-    });
-  }
+const PollCommand: Command = {
+  data: new SlashCommandBuilder()
+    .setName('poll')
+    .setDescription('Creates an embedded poll in chat.')
+    .addStringOption(option => option.setName('question').setDescription('Question').setRequired(true))
+    .addStringOption(option => option.setName('options')
+      .setDescription('[emoji_1] "<option_1>" [emoji_2] "<option_2>" ...')
+      .setRequired(true)),
 
-  run: CommandRunMethod<Args> = async (commandMsg, args) => {
-    if (!args.length) return null;
+  async run(interaction: CommandInteraction): Promise<void> {
+    const question = interaction.options.getString('question');
+    const optionsStr = interaction.options.getString('options');
+    const options = await parseArguments(optionsStr as string, { parseChannels: false }) as string[];
 
-    const [question, ...options] = args;
-
-    if (!options.length) return commandMsg.reply('Please provide some options!');
+    if (!options.length) {
+      interaction.reply('Please provide some options!');
+      return;
+    }
 
     let indicatorCount = 0;
     const reactionsAndText = options.reduce((acc, option, idx) => {
@@ -64,21 +54,27 @@ export default class PollCommand extends Command {
     }, '');
     const reactions = reactionsAndText.map(([reaction]) => reaction);
 
-    const poll = new Discord.MessageEmbed()
-      .setTitle(`:bar_chart: ${question}`)
-      .setDescription(pollBody);
+    const poll = new Discord.MessageEmbed({
+      title: `:bar_chart: ${question}`,
+      description: pollBody,
+    });
 
-    const pollMsg = await commandMsg.say({ embeds: [poll] });
+    // Apparently this result is useless: interactionMsg.channel is null and the message can't be reacted to directly.
+    // So as a workaround, we fetch the channel and message manually 🤷‍♂️
+    await interaction.reply({ embeds: [poll] });
+    const { message } = await getInfoFromCommandInteraction(interaction);
+
+    if (!message) return;
 
     try {
-      await reactMulitple(pollMsg as Message, reactions);
+      await reactMulitple(message, reactions);
     } catch (err) {
-      return commandMsg.reply(
+      await interaction.followUp(
         'Could not react with at least one of the emojis!'
         + ' Make sure that I (the bot) am in whichever server the emoji comes from.',
       );
     }
+  },
+};
 
-    return commandMsg.delete();
-  }
-}
+export default PollCommand;

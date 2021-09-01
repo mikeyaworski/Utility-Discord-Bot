@@ -1,9 +1,5 @@
 import type {
-  CommandoMessage,
-  CommandoClient,
-  ArgumentCollectorResult,
-} from 'discord.js-commando';
-import type {
+  Client,
   Message,
   Presence,
   MessageReaction,
@@ -11,8 +7,17 @@ import type {
   Collection,
   Snowflake,
   GuildMember,
+  CommandInteraction,
+  ButtonInteraction,
+  PermissionString,
 } from 'discord.js';
+import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type IntentionalAny = any;
+
+export type Falsy = | undefined | '' | false | null | 0;
 
 // https://stackoverflow.com/a/43001581/2554605
 export type Mutable<T> = { -readonly [P in keyof T]: T[P] };
@@ -26,37 +31,39 @@ export type StringMapping = GenericMapping<string>;
 export type BooleanMapping = GenericMapping<boolean>;
 export type UnknownMapping = GenericMapping<unknown>;
 
-export type EitherMessage = Message | CommandoMessage;
-
-export type ClientType = CommandoClient;
+export type ClientType = Client;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogArg = any;
 
-// The typing is bad because they use object as a type, so
-// we define it manually until they fix it.
-// export type CommandRunMethod = typeof Command.prototype.run;
-export type CommandRunMethod<T1 = UnknownMapping | string | string[]> = (
-  message: CommandoMessage,
-  args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
-) => Promise<Message | Message[] | null> | null;
+export interface Command {
+  // TODO: Properly generalize the data type
+  data: SlashCommandBuilder | ReturnType<SlashCommandBuilder['addStringOption']>,
+  run: (interaction: CommandInteraction) => Promise<IntentionalAny>,
+  buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
+  guildOnly?: boolean,
+  userPermissions?: PermissionString | PermissionString[],
+  clientPermissions?: PermissionString | PermissionString[],
+}
 
-export type CommandBeforeConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
-  message: CommandoMessage,
-  args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
-) => Promise<[T2, string] | [T2] | null>;
+export type CommandRunMethod = Command['run'];
+export type CommandButtonActionMethod = Command['buttonAction'];
 
-export type CommandAfterConfirmMethod<T1 = UnknownMapping | string | string[], T2 = unknown> = (
+type BeforeConfirmResponse<T> = null | {
+  intermediateResult: T,
+  confirmPrompt?: string,
+  workingMessage?: string,
+  declinedMessage?: string;
+}
+
+export type CommandBeforeConfirmMethod<T2 = unknown> = (
+  interaction: CommandInteraction,
+) => Promise<BeforeConfirmResponse<T2>>;
+
+export type CommandAfterConfirmMethod<T2 = unknown> = (
+  interaction: CommandInteraction,
   beforeResult: T2,
-  message: CommandoMessage,
-  args: T1,
-  fromPattern: boolean,
-  result?: ArgumentCollectorResult,
-) => Promise<string>;
+) => Promise<string | null>;
 
 // TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:
 // export type EventTrigger = Parameters<typeof CommandoClient.prototype.on>
@@ -84,9 +91,8 @@ export type EventTrigger = [
   (member: GuildMember) => void
 ];
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // TODO: type this better than "any"
-type Model = ModelCtor<any>;
+type Model = ModelCtor<IntentionalAny>;
 export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique' | 'base_roles' | 'reminders';
 export type ModelMapping = GenericMapping<Model, ModelKey>;
 export type ModelDefinition = (sequelize: Sequelize) => [
@@ -97,6 +103,3 @@ export type ModelDefinition = (sequelize: Sequelize) => [
   ModelKey,
   Model,
 ];
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
-export type CommandOperationHandler<Args> = (commandMsg: CommandoMessage, args: Args) => Promise<Message | Message[]>;
