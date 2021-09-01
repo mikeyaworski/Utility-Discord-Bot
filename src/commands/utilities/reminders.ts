@@ -1,7 +1,8 @@
-import type { CommandInteraction } from 'discord.js';
+import type { CommandInteraction, TextBasedChannels, User } from 'discord.js';
 import type { Command } from 'src/types';
 import type { Reminder } from 'models/reminders';
 
+import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
 
@@ -20,67 +21,173 @@ import { setReminder, removeReminder } from 'src/jobs/reminders';
 
 const model = getModels().reminders;
 
+const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
+  return option
+    .setName('time')
+    .setDescription('The time of the reminder. Examples: "2 hours" or "December 5th at 5pm"')
+    .setRequired(required);
+};
+const timeZoneOption = (option: SlashCommandStringOption) => {
+  return option
+    .setName('time_zone')
+    .setDescription('[Barely working]: Time zone abbreviation. Example: "UTC". Defaults to Toronto time zone.')
+    .setRequired(false);
+};
+const messageOption = (option: SlashCommandStringOption) => {
+  return option
+    .setName('message')
+    .setDescription('The message of the reminder. Defaults to "Timer is up!" if nothing provided.')
+    .setRequired(false);
+};
+const channelOption = (option: SlashCommandChannelOption) => {
+  return option
+    .setName('channel')
+    .setDescription('The channel to send the message in. Defaults to the current one if not provided.')
+    .setRequired(false);
+};
+const intervalOption = (option: SlashCommandStringOption) => {
+  return option
+    .setName('interval')
+    .setDescription('Interval to send reminder on repeat. Examples: "24 hours" or "8640000"')
+    .setRequired(false);
+};
+const idOption = (option: SlashCommandStringOption) => {
+  return option
+    .setName('reminder_id')
+    .setDescription('The ID of the reminder (use "/reminders list" to find it).')
+    .setRequired(true);
+};
+
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('reminders')
   .setDescription('Creates reminders.');
 commandBuilder.addSubcommand(subcommand => {
-  subcommand.setName('create');
-  subcommand.setDescription('Create a reminder or timer (timer is if there is no message).');
-  subcommand.addStringOption(option => {
-    return option
-      .setName('time')
-      .setDescription('The time of the reminder. Examples: "2 hours" or "December 5th at 5pm"')
-      .setRequired(true);
-  });
-  subcommand.addStringOption(option => {
-    return option
-      .setName('time_zone')
-      .setDescription('[Barely working]: Time zone abbreviation. Example: "UTC". Defaults to Toronto time zone.')
-      .setRequired(false);
-  });
-  subcommand.addStringOption(option => {
-    return option
-      .setName('message')
-      .setDescription('The message of the reminder. Defaults to "Timer is up!" if nothing provided.')
-      .setRequired(false);
-  });
-  subcommand.addChannelOption(option => {
-    return option
-      .setName('channel')
-      .setDescription('The channel to send the message in. Defaults to the current one if not provided.')
-      .setRequired(false);
-  });
-  subcommand.addStringOption(option => {
-    return option
-      .setName('interval')
-      .setDescription('Interval to send reminder on repeat. Examples: "24 hours" or "8640000"')
-      .setRequired(false);
-  });
+  subcommand
+    .setName('create')
+    .setDescription('Create a reminder or timer (timer is if there is no message).')
+    .addStringOption(timeOption({ required: true }))
+    .addStringOption(timeZoneOption)
+    .addStringOption(messageOption)
+    .addChannelOption(channelOption)
+    .addStringOption(intervalOption);
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
-  subcommand.setName('delete');
-  subcommand.setDescription('Delete a reminder by its ID.');
-  subcommand.addStringOption(option => {
-    return option
-      .setName('reminder_id')
-      .setDescription('The ID of the reminder (use "/reminders list" to find it).')
-      .setRequired(true);
-  });
+  subcommand
+    .setName('edit')
+    .setDescription('Edit an existing reminder by its ID.')
+    .addStringOption(idOption)
+    .addStringOption(timeOption({ required: false }))
+    .addStringOption(timeZoneOption)
+    .addStringOption(messageOption)
+    .addChannelOption(channelOption)
+    .addStringOption(intervalOption);
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
-  subcommand.setName('list');
-  subcommand.setDescription('List upcoming reminders.');
-  subcommand.addChannelOption(option => {
-    return option
-      .setName('channel')
-      .setDescription('The channel to list reminders for.')
-      .setRequired(false);
-  });
+  subcommand
+    .setName('delete')
+    .setDescription('Delete a reminder by its ID.')
+    .addStringOption(idOption);
   return subcommand;
 });
+commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('list')
+    .setDescription('List upcoming reminders.')
+    .addChannelOption(option => {
+      return option
+        .setName('channel')
+        .setDescription('The channel to list reminders for.')
+        .setRequired(false);
+    });
+  return subcommand;
+});
+
+async function parseReminderOptions(interaction: CommandInteraction, { editing }: { editing: boolean }) {
+  const timeArg = interaction.options.getString('time', false); // Optional for editing
+  const timeZone = interaction.options.getString('time_zone', false);
+  const message = interaction.options.getString('message', false);
+  const channelArg = interaction.options.getChannel('channel', false);
+  const intervalArg = interaction.options.getString('interval', false);
+
+  const fetchResults = await findOptionalChannel(interaction, channelArg);
+  const { author } = fetchResults;
+
+  // Don't fetch the channel if the channelArg was not provided and they're editing an existing reminder
+  const channel = (editing && !channelArg) ? null : fetchResults.channel;
+
+  if (channelArg && !channel) throw new Error('Channel not found!');
+  if (!author) throw new Error('Could not find who is invoking this command.');
+
+  let interval: number | null;
+  try {
+    interval = intervalArg ? Math.floor(parseDelay(intervalArg) / 1000) : null;
+  } catch (err) {
+    throw new Error('Could not parse interval!');
+  }
+  if (interval && interval < MIN_REMINDER_INTERVAL) {
+    throw new Error(`Minimum interval is ${MIN_REMINDER_INTERVAL} seconds.`);
+  }
+
+  let time: number | null | undefined;
+  if (timeArg) {
+    const tzOffset = getTimezoneOffsetFromAbbreviation(timeZone || '')
+      || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
+    let date = parseDate(timeArg, {
+      timezone: tzOffset ?? undefined,
+    });
+    if (!date) {
+      try {
+        date = new Date(Date.now() + parseDelay(timeArg));
+      } catch (err) {
+        throw new Error('Could not parse reminder time!');
+      }
+    }
+    time = Math.floor(date.getTime() / 1000);
+  }
+
+  return {
+    message,
+    time,
+    interval,
+    channel,
+    author,
+  };
+}
+
+function checkReminderErrors(interaction: CommandInteraction, {
+  message,
+  channel,
+  author,
+}: {
+  message: string | null,
+  channel: TextBasedChannels | null | undefined,
+  author: User,
+}) {
+  const authorAndBot = filterOutFalsy([author, client.user]);
+
+  if (channel && !usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES')) {
+    throw new Error(`One of us does not have permission to send messages in <#${channel.id}>`);
+  }
+
+  // TODO: Remove this comment if it's outdated with v13
+  // Do not check against msg.mentions since putting the mentions like
+  // @everyone or <@&786840067103653931> won't register as a mention
+  // if the user does not have permission, but will register as a mention
+  // when the bot (with permission) posts the reminder.
+
+  if (message && channel && interaction.guild) {
+    if (checkMentionsEveryone(message) && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+      throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
+    }
+
+    const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
+    if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+      throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
+    }
+  }
+}
 
 async function handleList(interaction: CommandInteraction) {
   const channelArg = interaction.options.getChannel('channel', false);
@@ -118,74 +225,57 @@ async function handleList(interaction: CommandInteraction) {
   return interaction.editReply(response);
 }
 
-async function handleCreate(interaction: CommandInteraction) {
-  const timeArg = interaction.options.getString('time', true);
-  const timeZone = interaction.options.getString('time_zone', false);
-  const message = interaction.options.getString('message', false);
-  const channelArg = interaction.options.getChannel('channel', false);
-  const intervalArg = interaction.options.getString('interval', false);
-
-  const { channel, author } = await findOptionalChannel(interaction, channelArg);
-  const authorAndBot = filterOutFalsy([author, client.user]);
-
-  if (!channel) return interaction.editReply('Channel not found!');
-  if (!author) return interaction.editReply('Could not find who is invoking this command.');
-
-  let interval: number | null;
+async function handleUpsert(interaction: CommandInteraction) {
+  const id = interaction.options.getString('reminder_id', false); // Not present in creation
+  const editing = Boolean(id);
   try {
-    interval = intervalArg ? Math.floor(parseDelay(intervalArg) / 1000) : null;
-    if (interval && interval < MIN_REMINDER_INTERVAL) {
-      return interaction.editReply(`Minimum interval is ${MIN_REMINDER_INTERVAL} seconds.`);
+    const {
+      message,
+      interval,
+      time,
+      channel,
+      author,
+    } = await parseReminderOptions(interaction, { editing });
+
+    // Throws if there is an issue
+    checkReminderErrors(interaction, {
+      channel,
+      author,
+      message,
+    });
+
+    const reminderPayload: Partial<Reminder> = {};
+
+    if (id) {
+      const existingReminder: Reminder | null = await model.findByPk(id);
+      if (!existingReminder) return interaction.editReply('Reminder does not exist!');
+
+      reminderPayload.id = id;
+      reminderPayload.guild_id = existingReminder.guild_id;
+      reminderPayload.channel_id = existingReminder.channel_id;
+      reminderPayload.owner_id = existingReminder.owner_id;
+      reminderPayload.time = existingReminder.time;
+      reminderPayload.message = existingReminder.message;
+      reminderPayload.interval = existingReminder.interval;
     }
+
+    if (interaction.guild?.id) reminderPayload.guild_id = interaction.guild.id;
+    if (channel?.id) reminderPayload.channel_id = channel.id;
+    if (author.id) reminderPayload.owner_id = author.id;
+    if (time) reminderPayload.time = time;
+    if (message) reminderPayload.message = message;
+    if (interval) reminderPayload.interval = interval;
+
+    const [reminder]: [Reminder, boolean | null] = await model.upsert(reminderPayload, { returning: true });
+    setReminder(reminder);
+
+    const upsertPart = editing ? 'updated' : 'created';
+    const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
+
+    return interaction.editReply(`Reminder (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`);
   } catch (err) {
-    return interaction.editReply('Could not parse interval time!');
+    return interaction.editReply(err.message);
   }
-
-  const tzOffset = getTimezoneOffsetFromAbbreviation(timeZone || '')
-    || getTimezoneOffsetFromAbbreviation('EST', 'America/Toronto');
-  let date = parseDate(timeArg, {
-    timezone: tzOffset ?? undefined,
-  });
-  if (!date) {
-    try {
-      date = new Date(Date.now() + parseDelay(timeArg));
-    } catch (err) {
-      return interaction.editReply('Could not parse reminder time!');
-    }
-  }
-  const time = Math.floor(date.getTime() / 1000);
-
-  if (!usersHavePermission(channel, author, 'SEND_MESSAGES')) {
-    return interaction.editReply(`One of us does not have permission to send messages in <#${channel.id}>`);
-  }
-
-  // TODO: Remove this comment if it's outdated with v13
-  // Do not check against msg.mentions since putting the mentions like
-  // @everyone or <@&786840067103653931> won't register as a mention
-  // if the user does not have permission, but will register as a mention
-  // when the bot (with permission) posts the reminder.
-
-  if (message && interaction.guild) {
-    if (checkMentionsEveryone(message) && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
-      return interaction.editReply(`One of us does not have permission to mention everyone in <#${channel.id}>`);
-    }
-
-    const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
-    if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
-      return interaction.editReply(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
-    }
-  }
-
-  const reminder: Reminder = await model.create({
-    guild_id: interaction.guild?.id,
-    channel_id: channel.id,
-    owner_id: author.id,
-    time,
-    message,
-    interval,
-  });
-  setReminder(reminder);
-  return interaction.editReply(`Reminder (ID: ${reminder.id}) created for ${getDateString(time)} in channel <#${channel.id}>`);
 }
 
 async function handleDelete(interaction: CommandInteraction) {
@@ -224,8 +314,9 @@ const RemindersCommand: Command = {
       case 'list': {
         return handleList(interaction);
       }
+      case 'edit':
       case 'create': {
-        return handleCreate(interaction);
+        return handleUpsert(interaction);
       }
       case 'delete': {
         return handleDelete(interaction);
