@@ -118,7 +118,6 @@ commandBuilder.addSubcommand(subcommand => {
 function parseTimesArg(timesArg: string | null, timeZone: string | null): number[] {
   if (!timesArg) return [];
   const tzOffset = getTimezoneOffsetFromFilter(timeZone || '') || getTimezoneOffsetFromFilter('America/Toronto');
-  console.log('tz offset', tzOffset);
   const times = filterOutFalsy(timesArg.split(/,\s+/).map(timeArg => {
     let date = parseDate(timeArg, {
       timezone: tzOffset ?? undefined,
