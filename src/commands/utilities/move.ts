@@ -145,21 +145,34 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   if (!ogMessage) return interaction.editReply('Could not fetch original message!');
   if (!ogChannel) return interaction.editReply('Could not fetch original channel!');
 
-  const textChannels = Array.from(await interaction.guild!.channels.cache.values())
-    .filter(channel => channel.isText()) as Exclude<TextBasedChannels, PartialDMChannel | DMChannel>[];
+  const allChannels = Array.from(await interaction.guild!.channels.cache.values());
   const { author } = await getInfoFromCommandInteraction(interaction, { ephemeral: true });
-  if (!author) {
-    return interaction.editReply('Could not find who is invoking this command!');
-  }
-  if (!ogChannel) return interaction.editReply('Could not find the original channel this is coming from!');
+  if (!author) return interaction.editReply('Could not find who is invoking this command!');
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  const options = textChannels
-    .filter(channel => usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES']) && channel.id !== ogChannel.id)
-    .map(channel => ({
-      label: `#${channel.name}`,
-      value: channel.id,
-    }));
+  const textChannelsWithPermission = allChannels
+    .filter(channel => channel.isText())
+    .filter(channel => {
+      return usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES'])
+        && channel.id !== ogChannel.id;
+    });
+
+  const options = textChannelsWithPermission
+    .map(channel => {
+      const parentCategory = channel.parentId && allChannels.find(p => p.id === channel.parentId);
+      const duplicateNamedChannel = textChannelsWithPermission.find(textChannel => {
+        return textChannel.id !== channel.id
+          && textChannel.name === channel.name
+          && textChannel.parentId !== channel.parentId;
+      });
+      const label = (duplicateNamedChannel && parentCategory)
+        ? `#${channel.name} (${parentCategory.name})`
+        : `#${channel.name}`;
+      return {
+        label,
+        value: channel.id,
+      };
+    });
 
   const menu = new Discord.MessageSelectMenu({
     customId: 'channel',
