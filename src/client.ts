@@ -1,55 +1,77 @@
 import dotenv from 'dotenv';
-import { CommandoClient } from 'discord.js-commando';
+import { Client } from 'discord.js';
+import { REST } from '@discordjs/rest';
+import { Routes } from 'discord-api-types/v9';
 
-import { COMMAND_PREFIX } from 'src/constants';
 import { log, warn, error } from 'src/logging';
 
-import commands from 'src/commands';
+import { filterOutFalsy } from 'src/utils';
+import commands, { listenToCommands } from 'src/commands';
 import events from 'src/events';
+import type { IntentionalAny } from 'src/types';
 
 dotenv.config();
 
-export const client = new CommandoClient({
-  commandPrefix: COMMAND_PREFIX,
-  owner: process.env.OWNER_ID,
+const token = process.env.DISCORD_BOT_TOKEN || '';
+const clientId = process.env.DISCORD_BOT_CLIENT_ID || '';
+const isDev = process.env.ENVIRONMENT === 'development';
+const slashCommandsGuildId = process.env.SLASH_COMMANDS_GUILD_ID || '';
+
+export const client = new Client({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  intents: [
+    'GUILDS',
+    'GUILD_BANS',
+    'GUILD_MEMBERS',
+    'GUILD_PRESENCES',
+    'GUILD_MESSAGES',
+    'GUILD_MESSAGE_REACTIONS',
+    'GUILD_MESSAGE_TYPING',
+    'DIRECT_MESSAGES',
+    'DIRECT_MESSAGE_REACTIONS',
+    'DIRECT_MESSAGE_TYPING',
+  ],
 });
 
-export function initClient(): Promise<void> {
-  return new Promise(resolve => {
-    client.registry
-      .registerDefaultTypes()
-      .registerGroups([
-        ['utilities', 'Utilities'],
-      ])
-      .registerDefaultGroups()
-      .registerDefaultCommands()
-      .registerCommands(commands);
-    // registerCommandsIn does not play well with TypeScript files, so we are just going to manually register commands.
-    // .registerCommandsIn({
-    //   // https://www.npmjs.com/package/require-all
-    //   // https://discord.js.org/#/docs/commando/master/class/CommandoRegistry?scrollTo=registerCommandsIn
-    //   dirname: path.join(__dirname, 'commands'),
-    //   filter: () => true,
-    //   // filter: /.([tj]s)$/,
-    //   // recursive: true,
-    // });
-    // .registerCommandsIn(path.join(__dirname, 'commands'));
+const rest = new REST({ version: '9' }).setToken(token);
 
-    events.forEach(([trigger, cb]) => {
-      // @ts-ignore It's really hard to enforce correct types here. Just trust that the EventTrigger type is written correctly.
-      client.on(trigger, cb);
-    });
+export function initClient(): Promise<IntentionalAny> {
+  return Promise.all([
+    new Promise<void>(resolve => {
+      events.forEach(([trigger, cb]) => {
+        // @ts-ignore It's really hard to enforce correct types here. Just trust that the EventTrigger type is written correctly.
+        client.on(trigger, cb);
+      });
 
-    client.on('ready', () => {
-      log(`Logged in as ${client.user?.tag} (${client.user?.id})`);
-      resolve();
-    });
-    client.on('warn', warn);
-    client.on('error', error);
+      client.on('ready', () => {
+        log(`Logged in as ${client.user?.tag} (${client.user?.id})`);
+        resolve();
+      });
+      client.on('warn', warn);
+      client.on('error', error);
 
-    client.login(process.env.DISCORD_BOT_TOKEN);
-  });
+      listenToCommands();
+
+      client.login(token);
+    }),
+    (async () => {
+      const slashCommands = commands.map(command => command.slashCommandData.toJSON());
+      const contextMenus = commands.map(command => command.contextMenuData);
+      // TODO: Improve typing
+      const body = filterOutFalsy(slashCommands.concat(contextMenus as IntentionalAny));
+      if (isDev && slashCommandsGuildId) {
+        await rest.put(
+          Routes.applicationGuildCommands(clientId, slashCommandsGuildId),
+          { body },
+        );
+      } else {
+        await rest.put(
+          Routes.applicationCommands(clientId),
+          { body },
+        );
+      }
+    })(),
+  ]);
 }
 
 export function destroyClient(): void {

@@ -1,4 +1,5 @@
 import type {
+  ThreadChannel,
   TextChannel,
   DMChannel,
   NewsChannel,
@@ -9,39 +10,41 @@ import type {
   EmojiIdentifierResolvable,
   Guild,
   Role,
+  CommandInteraction,
+  TextBasedChannels,
+  GuildChannel,
 } from 'discord.js';
-import type { CommandoGuild } from 'discord.js-commando';
-import type { EitherMessage } from 'src/types';
+import type { IntentionalAny } from 'src/types';
 
-// @ts-ignore
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
 import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX } from 'src/constants';
 import { error } from 'src/logging';
 import { client } from 'src/client';
+import { array } from 'src/utils';
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
  * This can be used as a fallback after any custom error handling for the use case.
  */
-export function handleError(err: unknown, commandMsg: EitherMessage): Promise<Message | Message[]> {
-  const name = get(err, 'name');
-  const message = get(err, 'message');
+export function handleError(err: unknown, interaction: CommandInteraction): Promise<IntentionalAny> {
+  const name: string | undefined = get(err, 'name');
+  const message: string | undefined = get(err, 'message');
   if (name === 'SequelizeUniqueConstraintError') {
-    return commandMsg.reply('That is a duplicate entry in our database!');
+    return interaction.editReply('That is a duplicate entry in our database!');
   }
   if (message === 'Unknown Emoji') {
-    return commandMsg.reply('I\'m not able to use that emoji!');
+    return interaction.editReply('I\'m not able to use that emoji!');
   }
   error(err);
-  return commandMsg.reply(message || 'Something went wrong...');
+  return interaction.editReply(message || 'Something went wrong...');
 }
 
 export async function findMessageInGuild(
   messageId: string,
-  guild: CommandoGuild,
-  startingChannel?: TextChannel | NewsChannel,
-): Promise<[EitherMessage, TextChannel | NewsChannel] | []> {
+  guild: Guild,
+  startingChannel?: TextBasedChannels | null,
+): Promise<[Message, TextBasedChannels] | []> {
   if (startingChannel) {
     try {
       const foundMsg = await startingChannel.messages.fetch(messageId);
@@ -50,12 +53,11 @@ export async function findMessageInGuild(
       // Do nothing
     }
   }
-  const channels = guild.channels.cache
-    .filter(channel => channel.isText())
-    // assert based on the isText() filter
-    .array() as (TextChannel | NewsChannel)[];
+  // TODO: Search threads as well
+  const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel.isText() || channel === startingChannel) continue;
     try {
       const foundMsg = await channel.messages.fetch(messageId);
       return [foundMsg, channel];
@@ -72,10 +74,10 @@ export async function findMessageInGuild(
  * Return type is of the form [msgs, stoppedFetchingEarly].
  */
 export async function getMessagesInRange(
-  channel: TextChannel | DMChannel | NewsChannel,
-  start: EitherMessage,
-  end: EitherMessage,
-): Promise<[EitherMessage[], boolean]> {
+  channel: TextBasedChannels,
+  start: Message,
+  end: Message,
+): Promise<[Message[], boolean]> {
   // swap them if start > end
   if (start.createdTimestamp > end.createdTimestamp) {
     const temp = start;
@@ -86,11 +88,11 @@ export async function getMessagesInRange(
   let stoppedEarly = true;
   const msgs = [start];
   while (msgs.length < MAX_MESSAGES_FETCH) {
-    const fetchedMsgs: (Message)[] = (await channel.messages.fetch({
+    const fetchedMsgs: (Message)[] = Array.from((await channel.messages.fetch({
       // cannot also provide the "before: end.id" option since multiple options are not supported by the API
       after: start.id,
       limit: BULK_MESSAGES_LIMIT,
-    })).array().reverse(); // reverse so the messages are ordered chronologically
+    })).values()).reverse(); // reverse so the messages are ordered chronologically
 
     const indexOfEndMsg = fetchedMsgs.findIndex(msg => msg.id === end.id);
 
@@ -140,13 +142,14 @@ export function getRoleMentions(msg: string, guild: Guild): Role[] {
     .filter(role => Boolean(role)) as Role[];
 }
 
-export function userHasPermission(
-  channel: TextChannel | NewsChannel | DMChannel | Channel,
-  user: User,
+export function usersHavePermission(
+  channel: TextBasedChannels | GuildChannel,
+  userOrUsers: User | User[],
   permission: PermissionString | PermissionString[],
 ): boolean {
+  const users = array(userOrUsers);
   if (!('permissionsFor' in channel)) return true;
-  return Boolean(channel.permissionsFor(user)?.has(permission));
+  return users.every(user => Boolean(channel.permissionsFor(user)?.has(permission)));
 }
 
 export function isCustomEmoji(arg: string): boolean {
@@ -188,24 +191,32 @@ export function getLetterEmoji(offset: number): string {
   // ][offset];
 }
 
-export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageId: string, givenChannel?: TextChannel): Promise<Message | null> {
+export async function fetchMessageInGuild(guild: Guild, messageId: string, givenChannel?: TextBasedChannels): Promise<Message | null> {
   await guild.fetch();
   if (givenChannel) {
     try {
       await givenChannel.fetch(true);
-      const message = await givenChannel.messages.fetch(messageId, false, true);
+      const message = await givenChannel.messages.fetch(messageId, {
+        cache: false,
+        force: true,
+      });
       if (message) return message;
     } catch (err) {
       // intentionally left blank
     }
   }
-  // do this with a vanilla loop so we can do it in order and make as little API calls as necessary
+  // do this with a vanilla loop so we can do it sequentially and make as little API calls as necessary
   let foundMessage = null;
-  const channels = guild.channels.cache.array().filter(channel => channel.isText()) as TextChannel[];
+  // TODO: Search threads as well
+  const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel.isText() || channel === givenChannel) continue;
     try {
-      const message = await channel.messages.fetch(messageId, false, true);
+      const message = await channel.messages.fetch(messageId, {
+        cache: false,
+        force: true,
+      });
       if (message) {
         foundMessage = message;
         break;
@@ -215,4 +226,94 @@ export async function fetchMessageInGuild(guild: Guild | CommandoGuild, messageI
     }
   }
   return foundMessage;
+}
+
+export async function getInfoFromCommandInteraction(
+  interaction: CommandInteraction,
+  options: { ephemeral?: boolean } = {},
+): Promise<{
+  channel: TextBasedChannels | null | undefined,
+  message: Message | null | undefined,
+  author: User | null | undefined,
+}> {
+  const { ephemeral = false } = options;
+  const interactionMsg = !ephemeral ? await interaction.fetchReply() : null;
+
+  // Guild
+  if (interaction.inGuild()) {
+    const channel = await interaction.guild!.channels.fetch(interaction.channelId);
+    if (!channel || !channel.isText()) {
+      return {
+        message: null,
+        channel: null,
+        author: null,
+      };
+    }
+    const message = interactionMsg ? await channel.messages.fetch(interactionMsg.id) : null;
+    const member = await interaction.guild!.members.fetch(interaction.user.id);
+    const author = member?.user;
+    return {
+      channel,
+      message,
+      author,
+    };
+  }
+
+  // DM
+  const channel = await client.channels.fetch(interaction.channelId) as TextBasedChannels | null;
+  const author = interaction.user;
+  const message = interactionMsg ? await channel?.messages.fetch(interactionMsg.id) : null;
+  return {
+    channel,
+    message,
+    author,
+  };
+}
+
+export async function findOptionalChannel(
+  interaction: CommandInteraction,
+  channelArg: ReturnType<CommandInteraction['options']['getChannel']>,
+): Promise<{
+  channel: TextBasedChannels | null | undefined,
+  message: Message | null | undefined,
+  author: User | null | undefined,
+}> {
+  const { channel: fetchedCurrentChannel, ...rest } = await getInfoFromCommandInteraction(interaction, { ephemeral: true });
+  let channel: TextBasedChannels | undefined | null = fetchedCurrentChannel;
+  const channelIdArg = channelArg?.id;
+  if (channelIdArg) {
+    const fetchedArgChannel = await client.channels.fetch(channelIdArg);
+    if (fetchedArgChannel?.isText()) channel = fetchedArgChannel;
+  }
+  return {
+    channel,
+    ...rest, // Doesn't have anything to do with the channel, but we fetch the info anyway, so forward it along
+  };
+}
+
+/**
+ * Naive argument parsing. Splits by whitespace, but quoted sections are treated as one entire argument.
+ */
+export async function parseArguments(input: string, options: { parseChannels?: boolean } = {}): Promise<(string | Channel)[]> {
+  const { parseChannels = true } = options;
+
+  // https://stackoverflow.com/a/16261693/2554605
+  const stringArgs = input.match(/(?:[^\s"']+|['"][^'"]*["'])+/g)?.map(arg => {
+    if (arg.startsWith('"') && arg.endsWith('"')) {
+      return arg.substring(1, arg.length - 1);
+    }
+    if (arg.startsWith('\'') && arg.endsWith('\'')) {
+      return arg.substring(1, arg.length - 1);
+    }
+    return arg.trim();
+  });
+  if (!stringArgs) throw new Error(`Unable to parse input: ${input}`);
+
+  return Promise.all(stringArgs.map(async arg => {
+    if (parseChannels && CHANNEL_ARG_REGEX.test(arg)) {
+      const channel = await getChannel(arg);
+      return channel || arg;
+    }
+    return arg;
+  }));
 }

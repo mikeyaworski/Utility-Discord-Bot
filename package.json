@@ -1,10 +1,14 @@
 {
   "name": "utility-discord-bot",
   "version": "1.0.0",
+  "engines": {
+    "node": "16.x"
+  },
   "description": "https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot",
-  "main": "src/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "lint": "eslint .",
+    "test:unit": "jest",
     "test": "npm run lint && jest && tsc",
     "shell:bot": "docker exec -it utility_discord_bot sh",
     "shell:db": "docker exec -it utility_discord_bot_db sh -c \"psql -d utility_discord_bot_db -U user\"",
@@ -22,12 +26,14 @@
   },
   "homepage": "https://github.com/mikeyaworski/utility-discord-bot#readme",
   "dependencies": {
+    "@discordjs/builders": "^0.6.0",
+    "@discordjs/rest": "0.1.0-canary.0",
     "@vvo/tzdb": "^6.7.0",
     "axios": "^0.21.1",
     "chrono-node": "^2.3.0",
     "cron": "^1.8.2",
-    "discord.js": "^12.5.1",
-    "discord.js-commando": "github:discordjs/Commando",
+    "discord-api-types": "^0.22.0",
+    "discord.js": "^13.1.0",
     "dotenv": "^8.2.0",
     "emoji-regex": "^9.2.0",
     "express": "^4.17.1",

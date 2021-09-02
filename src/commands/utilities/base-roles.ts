@@ -1,169 +1,138 @@
-import type { ClientType, CommandRunMethod, Mutable, CommandOperationHandler } from 'src/types';
+import type { CommandInteraction } from 'discord.js';
+import type { Command } from 'src/types';
 
-import { Command } from 'discord.js-commando';
-import { Role } from 'discord.js';
-import { error } from 'src/logging';
+import { SlashCommandBuilder } from '@discordjs/builders';
+
 import { getModels } from 'src/models';
 import { handleError } from 'src/discord-utils';
 import { parseDelay } from 'src/utils';
 
-const LIST_OPERATIONS = ['list', 'ls'] as const;
-const ADD_OPERATIONS = ['add'] as const;
-const CLEAR_OPERATIONS = ['clear'] as const;
-const OPERATIONS = [
-  ...LIST_OPERATIONS,
-  ...ADD_OPERATIONS,
-  ...CLEAR_OPERATIONS,
-] as const;
-
 const model = getModels().base_roles;
 
-interface Args {
-  operation: typeof OPERATIONS[number];
-  role: Role | '';
-  delay: string;
+const commandBuilder = new SlashCommandBuilder();
+commandBuilder
+  .setName('base-roles')
+  .setDescription('Moves a range of messages to another channel.');
+commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('list');
+  subcommand.setDescription('List the current roles being added to new members.');
+  return subcommand;
+});
+commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('add');
+  subcommand.setDescription('Add a role which should be added to new members.');
+  subcommand.addRoleOption(option => {
+    return option
+      .setName('role')
+      .setDescription('The role')
+      .setRequired(true);
+  });
+  subcommand.addStringOption(option => {
+    return option
+      .setName('delay')
+      .setDescription('Delay before role is added to a new member. Examples: a raw number in ms, or "5 mins".')
+      .setRequired(false);
+  });
+  return subcommand;
+});
+commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('clear');
+  subcommand.setDescription('Clear all base role configurations, or just a particular one.');
+  subcommand.addRoleOption(option => {
+    return option
+      .setName('role')
+      .setDescription('The role')
+      .setRequired(false);
+  });
+  return subcommand;
+});
+
+async function handleList(interaction: CommandInteraction) {
+  const guildId = interaction.guild!.id;
+  const roles: {
+    role_id: string;
+    delay: number | null;
+  }[] = await model.findAll({
+    where: {
+      guild_id: guildId,
+    },
+    attributes: ['role_id', 'delay'],
+  });
+  if (!roles.length) return interaction.editReply('There are no base roles!');
+
+  const response = roles.reduce((acc, role) => {
+    return `${acc}\n<@&${role.role_id}>${role.delay ? ` - ${role.delay} millisecond delay` : ''}`;
+  }, 'The following roles will be added to new members:');
+
+  return interaction.editReply(response);
 }
 
-type OperationHandler = CommandOperationHandler<Args>;
+async function handleAdd(interaction: CommandInteraction) {
+  const role = interaction.options.getRole('role', true);
+  const delay = interaction.options.getString('delay');
 
-/**
- * !base_roles add <role> [timeout]
- * !base_roles clear <role>
- * !base_roles list
- */
-export default class StreamerRulesCommand extends Command {
-  constructor(client: ClientType) {
-    super(client, {
-      name: 'base_roles',
-      aliases: ['noob_roles'],
-      group: 'utilities',
-      memberName: 'base_roles',
-      description:
-        'Adds base roles for new members, with an optional delay before adding.\n'
-        + 'Use !base_roles add <role> [delay] to set up adding a base role for any new member.\n'
-        + 'Use !base_roles clear [role] to remove a base role (or all of them, if no role specified).\n'
-        + 'Use !base_roles list to see all base roles.',
-      examples: [
-        '!base_roles add @noob',
-        '!base_roles add @noob 10 minutes',
-        '!base_roles clear @noob',
-        '!base_roles list',
-      ],
-      format: 'add/remove <role> [timeout]',
-      userPermissions: ['MANAGE_ROLES'],
-      clientPermissions: ['MANAGE_ROLES'],
-      guildOnly: true,
-      args: [
-        {
-          key: 'operation',
-          prompt: 'Whether you\'re adding, clearing or listing base roles.',
-          type: 'string',
-          oneOf: OPERATIONS as Mutable<typeof OPERATIONS>,
-        },
-        {
-          key: 'role',
-          prompt: 'The base role to add for new members.',
-          type: 'role',
-          default: '',
-        },
-        {
-          key: 'delay',
-          prompt: 'Optional delay before the role gets added to a new member.',
-          type: 'string',
-          default: '',
-        },
-      ],
-      argsPromptLimit: 0,
+  const guildId = interaction.guild!.id;
+  const roleId = role.id;
+  try {
+    const delayMs = delay ? parseDelay(delay) : null;
+    await model.create({
+      guild_id: guildId,
+      role_id: roleId,
+      delay: delayMs,
     });
+    const response = `New members will now be given the <@&${roleId}> role`;
+    if (!delayMs) return interaction.editReply(`${response}.`);
+    return interaction.editReply(`${response} after a ${delayMs} millisecond delay.`);
+  } catch (err) {
+    return handleError(err, interaction);
   }
+}
 
-  static handleAdd: OperationHandler = async (msg, { role, delay }) => {
-    const guildId = msg.guild.id;
-    const roleId = (role as Role).id;
-    try {
-      const delayMs = delay ? parseDelay(delay) : null;
-      await model.create({
-        guild_id: guildId,
-        role_id: roleId,
-        delay: delayMs,
-      });
-      const response = `New members will now be given the <@&${roleId}> role`;
-      if (!delayMs) return msg.say(`${response}.`);
-      return msg.say(`${response} after a ${delayMs} millisecond delay.`);
-    } catch (err) {
-      error(err);
-      return handleError(err, msg);
-    }
-  }
+async function handleClear(interaction: CommandInteraction) {
+  const guildId = interaction.guild!.id;
+  const role = interaction.options.getRole('role', false);
 
-  static handleList: OperationHandler = async (msg, args) => {
-    const guildId = msg.guild.id;
-    const roles: {
-      role_id: string;
-      delay: number | null;
-    }[] = await model.findAll({
-      where: {
-        guild_id: guildId,
-      },
-      attributes: ['role_id', 'delay'],
-    });
-    if (!roles.length) return msg.say('There are no base roles!');
-
-    const response = roles.reduce((acc, role) => {
-      return `${acc}\n<@&${role.role_id}>${role.delay ? ` - ${role.delay} millisecond delay` : ''}`;
-    }, 'The following roles will be added to new members:');
-
-    return msg.say(response);
-  }
-
-  static handleClear: OperationHandler = async (msg, { role }) => {
-    const guildId = msg.guild.id;
-    if (!role) {
-      await model.destroy({
-        where: {
-          guild_id: guildId,
-        },
-      });
-      return msg.say('All base roles were removed!');
-    }
+  if (!role) {
     await model.destroy({
       where: {
         guild_id: guildId,
-        role_id: role.id,
       },
     });
-    return msg.say(`Base role for <@&${role.id}> was removed.`);
+    return interaction.editReply('All base roles were removed!');
   }
-
-  run: CommandRunMethod<Args> = async (msg, args) => {
-    const { operation, role } = args;
-
-    // @ts-expect-error These TS errors are useless. Same goes for rest of ts-expect-errors below.
-    if (!role && ADD_OPERATIONS.includes(operation)) return msg.reply('A role is required!');
-
-    try {
-      // @ts-expect-error
-      if (ADD_OPERATIONS.includes(operation)) {
-        await StreamerRulesCommand.handleAdd(msg, args);
-        return null;
-      }
-      // @ts-expect-error
-      if (LIST_OPERATIONS.includes(operation)) {
-        await StreamerRulesCommand.handleList(msg, args);
-        return null;
-      }
-      // @ts-expect-error
-      if (CLEAR_OPERATIONS.includes(operation)) {
-        await StreamerRulesCommand.handleClear(msg, args);
-        return null;
-      }
-    } catch (err) {
-      if (err.name === 'SequelizeUniqueConstraintError') {
-        return msg.reply('That role is already in the database!');
-      }
-      return handleError(err, msg);
-    }
-
-    return msg.reply('What?');
-  }
+  await model.destroy({
+    where: {
+      guild_id: guildId,
+      role_id: role.id,
+    },
+  });
+  return interaction.editReply(`Base role for <@&${role.id}> was removed.`);
 }
+
+const BaseRolesCommand: Command = {
+  guildOnly: true,
+  userPermissions: 'MANAGE_ROLES',
+  clientPermissions: 'MANAGE_ROLES',
+  slashCommandData: commandBuilder,
+  runCommand: async interaction => {
+    await interaction.deferReply({ ephemeral: true });
+
+    const subcommand = interaction.options.getSubcommand();
+    switch (subcommand) {
+      case 'list': {
+        return handleList(interaction);
+      }
+      case 'add': {
+        return handleAdd(interaction);
+      }
+      case 'clear': {
+        return handleClear(interaction);
+      }
+      default: {
+        return interaction.editReply('What??');
+      }
+    }
+  },
+};
+
+export default BaseRolesCommand;

@@ -1,10 +1,35 @@
 import {
+  array,
+  filterOutFalsy,
   getIntersection,
   shorten,
   parseDelay,
 } from '../utils';
 
 describe('utils', () => {
+  describe('array', () => {
+    it('converts a single element to an array', () => {
+      expect(array('foo')).toEqual(['foo']);
+    });
+
+    it('works when passed an object', () => {
+      expect(array({ foo: 'bar' })).toEqual([{ foo: 'bar' }]);
+    });
+
+    it('returns the original array if given an array', () => {
+      expect(array(['foo', 'bar'])).toEqual(['foo', 'bar']);
+    });
+  });
+
+  describe('filterOutFalsy', () => {
+    it('filters out falsy values', () => {
+      const filtered = filterOutFalsy(
+        [0, 'false', 1, null, 2, undefined, 3, false, ''],
+      );
+      expect(filtered).toEqual(['false', 1, 2, 3]);
+    });
+  });
+
   describe('getIntersection', () => {
     const comparator = (el1: number, el2: number) => el1 === el2;
     it('returns the intersection', () => {

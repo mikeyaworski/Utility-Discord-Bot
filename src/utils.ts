@@ -1,4 +1,15 @@
 import { getTimeZones } from '@vvo/tzdb';
+import type { Falsy } from 'src/types';
+
+export function array<T = unknown>(t: T | T[]): T[] {
+  return Array.isArray(t) ? t : [t];
+}
+
+export function filterOutFalsy<T>(
+  items: (T | Falsy)[],
+): Exclude<T, Falsy>[] {
+  return items.filter(item => Boolean(item)) as Exclude<T, Falsy>[];
+}
 
 /**
  * Returns the intersection of two arrays (in the order of a)
@@ -30,7 +41,7 @@ export function shorten(msg: string, length: number): string {
 /**
  * For parsing command input of delays. Note that this function is NOT used for parsing input of dates.
  * Throws an error if it's not parsable.
- * TODO: support months and years as well
+ * TODO: support weeks, months and years as well
  * @param {string} arg Some string representation of time, e.g. "600" or "10 minutes" or "July 10th".
  *   If the argument is purely numeric, then it will be treated as milliseconds.
  * @returns An integer representing the number of milliseconds for delay.
@@ -71,17 +82,19 @@ export function parseDelay(arg: string): number {
 }
 
 /**
- * Finds the current time zone offset (account for daylight savings time) by abbreviation.
+ * Finds the current time zone offset (account for daylight savings time) by abbreviation or name.
  * If there are multiple abbreviations, the preferredName arg will be used to figure out which abbreviation to prefer.
  */
-export function getTimezoneOffsetFromAbbreviation(abbreviation: string, preferredName?: string): number | null {
+export function getTimezoneOffsetFromFilter(filter: string): number | null {
   const timeZones = getTimeZones();
-  const filteredZones = timeZones
-    .filter(tz => tz.abbreviation.toLowerCase() === abbreviation.toLowerCase());
-  let tzOffset: number | undefined = filteredZones[0]?.currentTimeOffsetInMinutes;
-  if (preferredName) {
-    tzOffset = filteredZones.find(tz => tz.name === preferredName || tz.group.includes(preferredName))?.currentTimeOffsetInMinutes || tzOffset;
-  }
+  const filteredZones = timeZones.filter(tz => {
+    return (
+      tz.abbreviation.toLowerCase() === filter.toLowerCase()
+      || tz.name.toLowerCase() === filter.toLowerCase()
+      || Boolean(tz.group.find(tzName => tzName.toLowerCase() === filter.toLowerCase()))
+    );
+  });
+  const tzOffset: number | undefined = filteredZones[0]?.currentTimeOffsetInMinutes;
   if (!tzOffset) return null;
   return tzOffset - new Date().getTimezoneOffset();
 }

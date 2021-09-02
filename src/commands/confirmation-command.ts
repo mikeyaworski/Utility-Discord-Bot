@@ -1,21 +1,20 @@
-import type { Message, MessageReaction, User } from 'discord.js';
-import type { CommandInfo } from 'discord.js-commando';
-import type { ClientType, CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, UnknownMapping } from 'src/types';
+import type { CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
 import Discord from 'discord.js';
-import { Command } from 'discord.js-commando';
 import get from 'lodash.get';
 
-import { Colors, CONFIRM_REACTION, DECLINE_REACTION, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
-import { reactMulitple } from 'src/discord-utils';
+import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 
-interface ConfirmationInfo {
+interface Options {
+  ephemeral?: boolean;
   timeout: number;
   workingMessage?: string;
   confirmPrompt?: string;
+  declinedMessage?: string;
 }
 
-export const DEFAULT_CONFIRMATION_INFO = {
+const DEFAULT_OPTIONS = {
+  ephemeral: true,
   timeout: CONFIRMATION_DEFAULT_TIMEOUT,
 };
 
@@ -27,67 +26,98 @@ export const DEFAULT_CONFIRMATION_INFO = {
  * If a falsey value is returned from `beforeConfirm` (instead of a tuple), then there will be no confirmation and
  * `beforeConfirm` will be assumed to have run to completion.
  */
-export default abstract class ConfirmationCommand<Args extends UnknownMapping, IntermediateResult> extends Command {
-  public readonly confirmationInfo: ConfirmationInfo;
+export default function ConfirmationCommandRunner<IntermediateResult>(
+  beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult>,
+  afterConfirm: CommandAfterConfirmMethod<IntermediateResult>,
+  partialOptions: Partial<Options> = { ...DEFAULT_OPTIONS },
+): {
+  runCommand: CommandRunMethod,
+} {
+  const runCommand: CommandRunMethod = async interaction => {
+    const options: Options = { ...DEFAULT_OPTIONS, ...partialOptions };
+    const { ephemeral = true } = options;
+    await interaction.deferReply({ ephemeral });
 
-  constructor(client: ClientType, commandInfo: CommandInfo, confirmationInfo: ConfirmationInfo = DEFAULT_CONFIRMATION_INFO) {
-    super(client, commandInfo);
-    this.confirmationInfo = confirmationInfo;
-  }
-
-  abstract beforeConfirm: CommandBeforeConfirmMethod<Args, IntermediateResult>;
-  abstract afterConfirm: CommandAfterConfirmMethod<Args, IntermediateResult>;
-
-  run: CommandRunMethod<Args> = async (...args) => {
-    const [commandMsg] = args;
-    const workingMessage = this.confirmationInfo.workingMessage
-      ? await commandMsg.say('Fetching...\nThis may take a minute.') as Message
-      : null;
-    const beforeConfirmResult = await this.beforeConfirm(...args);
-    if (workingMessage) await workingMessage.delete();
-    if (!beforeConfirmResult) return null; // no confirmation required
-
-    const [intermediateResult, confirmPrompt] = beforeConfirmResult;
-
-    const embedDescription = confirmPrompt || this.confirmationInfo.confirmPrompt || 'Please confirm.';
-    const confirmationMessageEmbed = new Discord.MessageEmbed()
-      .setTitle('Confirmation')
-      .setDescription(embedDescription)
-      .setColor(Colors.WARN);
-
-    const confirmationMessage = await commandMsg.say(confirmationMessageEmbed) as Message;
-    await reactMulitple(confirmationMessage as Message, [CONFIRM_REACTION, DECLINE_REACTION]);
-
-    const confirmationFilter = (reaction: MessageReaction, user: User): boolean => {
-      const emoji = reaction.emoji.toString();
-      return commandMsg.member?.id === user.id && [CONFIRM_REACTION, DECLINE_REACTION].includes(emoji);
-    };
-    try {
-      const reactions = await confirmationMessage.awaitReactions(confirmationFilter, {
-        max: 1,
-        time: this.confirmationInfo.timeout,
+    if (options.workingMessage) {
+      await interaction.editReply({
+        content: 'Fetching...\nThis may take a minute.',
       });
-      const emoji = reactions.first()?.emoji.toString();
-      if (!emoji) {
-        confirmationMessageEmbed.setColor(Colors.DANGER);
-        confirmationMessageEmbed.setDescription(`Confirmation timed out after ${this.confirmationInfo.timeout / 1000} seconds:\n${embedDescription}`);
-        await confirmationMessage.edit(confirmationMessageEmbed);
-      } else if (emoji === CONFIRM_REACTION) {
-        const responseMessage = await this.afterConfirm(intermediateResult, ...args);
-        confirmationMessageEmbed.setColor(Colors.SUCCESS);
-        confirmationMessageEmbed.setDescription(responseMessage);
-        await confirmationMessage.edit(confirmationMessageEmbed);
-      } else if (emoji === DECLINE_REACTION) {
-        confirmationMessageEmbed.setColor(Colors.DANGER);
-        confirmationMessageEmbed.setDescription(`Declined confirmation:\n${embedDescription}`);
-        await confirmationMessage.edit(confirmationMessageEmbed);
-      }
-    } catch (err) {
-      confirmationMessageEmbed.setColor(Colors.DANGER);
-      confirmationMessageEmbed.setDescription(`Error: ${get(err, 'message', 'Something went wrong.')}\n${embedDescription}`);
-      await confirmationMessage.edit(confirmationMessageEmbed);
     }
 
-    return null;
-  }
+    const beforeConfirmResult = await beforeConfirm(interaction);
+    if (!beforeConfirmResult) return; // no confirmation required
+    const {
+      intermediateResult,
+      confirmPrompt = options.confirmPrompt || 'Please confirm.',
+      workingMessage = options.workingMessage || 'Working...',
+      declinedMessage = options.declinedMessage || 'Nothing was done.',
+    } = beforeConfirmResult;
+
+    const buttonActionRow = new Discord.MessageActionRow({
+      components: [
+        new Discord.MessageButton({
+          customId: 'confirm',
+          label: 'Confirm',
+          style: 'SUCCESS',
+        }),
+        new Discord.MessageButton({
+          customId: 'decline',
+          label: 'Decline',
+          style: 'SECONDARY',
+        }),
+      ],
+    });
+    await interaction.editReply({
+      content: confirmPrompt,
+      components: [buttonActionRow],
+    });
+
+    try {
+      const buttonInteraction = await interaction.channel?.awaitMessageComponent({
+        filter: i => i.message.interaction?.id === interaction.id,
+        time: options.timeout,
+      }).catch(() => {
+        // Intentionally empty catch
+      });
+      switch (buttonInteraction?.customId) {
+        case 'confirm': {
+          // Apparently there is no way to defer button interactions in the way we want.
+          // The button's loading state cannot stay for more than 3 seconds, regardless of how we choose to defer.
+          await interaction.editReply({
+            content: workingMessage,
+            components: [],
+          });
+
+          const responseMessage = await afterConfirm(interaction, intermediateResult);
+          if (!responseMessage) throw new Error('Something went wrong!');
+          await interaction.editReply({
+            content: responseMessage,
+            components: [],
+          });
+          break;
+        }
+        case 'decline': {
+          await interaction.editReply({
+            content: declinedMessage,
+            components: [],
+          });
+          break;
+        }
+        default: {
+          // If we get here, then the interaction button was not clicked.
+          await interaction.editReply({
+            content: `Confirmation timed out after ${options.timeout / 1000} seconds.`,
+            components: [],
+          });
+          break;
+        }
+      }
+    } catch (err) {
+      await interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
+    }
+  };
+
+  return {
+    runCommand,
+  };
 }
