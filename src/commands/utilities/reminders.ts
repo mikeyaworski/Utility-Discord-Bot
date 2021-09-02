@@ -325,8 +325,8 @@ async function handleList(interaction: CommandInteraction) {
   }
   const reminders: Reminder[] = await model.findAll({ where });
   if (!reminders.length) {
-    const filterPart = filter ? ' containing that message content.' : '';
-    return interaction.editReply(`There are no reminders for <#${channel.id}>.${filterPart}`);
+    const filterPart = filter ? ' containing that message content.' : '.';
+    return interaction.editReply(`There are no reminders for <#${channel.id}>${filterPart}`);
   }
 
   const filterPart = filter ? ` (using filter **${filter}**)` : '';
