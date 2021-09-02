@@ -155,7 +155,7 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   const authorAndBot = filterOutFalsy([author, client.user]);
 
   const options = textChannels
-    .filter(channel => usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES') && channel.id !== ogChannel.id)
+    .filter(channel => usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES']) && channel.id !== ogChannel.id)
     .map(channel => ({
       label: `#${channel.name}`,
       value: channel.id,
