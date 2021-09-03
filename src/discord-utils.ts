@@ -1,8 +1,4 @@
 import type {
-  ThreadChannel,
-  TextChannel,
-  DMChannel,
-  NewsChannel,
   Channel,
   Message,
   User,

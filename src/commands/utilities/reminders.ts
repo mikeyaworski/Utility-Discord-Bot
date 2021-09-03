@@ -15,6 +15,7 @@ import {
   checkMentionsEveryone,
   getRoleMentions,
   findOptionalChannel,
+  handleError,
 } from 'src/discord-utils';
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
@@ -227,6 +228,8 @@ async function handleUpsert(interaction: CommandInteraction) {
     const existingReminder = id ? await model.findByPk(id) : null;
     if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
 
+    if (existingReminder && !times.length) times.push(existingReminder.time);
+
     const reminderPayloads: Partial<Reminder>[] = times.map(time => {
       const reminderPayload: Partial<Reminder> = {
         guild_id: existingReminder?.guild_id,
@@ -259,7 +262,7 @@ async function handleUpsert(interaction: CommandInteraction) {
     }, '');
     return interaction.editReply(response);
   } catch (err) {
-    return interaction.editReply(err.message);
+    return handleError(err, interaction);
   }
 }
 
