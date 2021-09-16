@@ -21,7 +21,6 @@ This is a private bot. This bot does not have measures in place to handle scalin
     - Add one with the name `DISCORD_BOT_TOKEN` and the value with the value that I asked you to copy in step 2.
     - Add another for `ENVIRONMENT` = `production`
     - Add another for `NPM_CONFIG_PRODUCTION` = `false`
-    - Add another for `OWNER_ID` which is the ID of your Discord account.
     - Finally, add one for `PING_HOST` which is a link to your Heroku app web URL. It will be:
     
         ```
@@ -54,7 +53,7 @@ This is a private bot. This bot does not have measures in place to handle scalin
 1. You can opt to not use Docker and instead run `npm run dev`. By doing this, Docker will no longer deploy Postgres for you, so you will have errors connecting to a database. To solve this, you can easily use your production database instead by following step 3.
 
 ## Environment Variables
-Fill in your own `DISCORD_BOT_CLIENT_ID`, `DISCORD_BOT_TOKEN` and `OWNER_ID` for development / your bot deployment.
+Fill in your own `DISCORD_BOT_CLIENT_ID` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
 
 You may (optionally) also provide a `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
 
@@ -68,7 +67,6 @@ DATABASE_URL=postgres://user:password@utility_discord_bot_db:5432/utility_discor
 # Slash Commands in Development
 SLASH_COMMANDS_GUILD_ID=...
 
-OWNER_ID=...
 PORT=8080
 PING_HOST=http://localhost:8080
 ```
