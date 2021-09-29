@@ -16,6 +16,12 @@ This is a private bot. This bot does not have measures in place to handle scalin
 
 1. Add the Postgres add-on to your Heroku app: https://elements.heroku.com/addons/heroku-postgresql. This add-on will automatically add a `DATABASE_URL` config variable to your app, which the code uses to connect to your database. Easy!
 
+1. Add the following buildpacks to your Heroku app (in Settings):
+    - `https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git`
+    - `heroku/python`
+
+    Note that these should be ordered before your `heroku/nodejs` buildpack (which would be there by default).
+
 1. Go to Settings for your Heroku app and start adding Config Vars.
     - Add one with the name `DISCORD_BOT_CLIENT_ID` and the value with the value that I asked you to copy in step 2.
     - Add one with the name `DISCORD_BOT_TOKEN` and the value with the value that I asked you to copy in step 2.
@@ -51,6 +57,8 @@ This is a private bot. This bot does not have measures in place to handle scalin
 1. Install Docker and run `docker-compose up` to run the bot. That's it.
 
 1. You can opt to not use Docker and instead run `npm run dev`. By doing this, Docker will no longer deploy Postgres for you, so you will have errors connecting to a database. To solve this, you can easily use your production database instead by following step 3.
+
+1. Make sure you are using Node v14 or above, since some of our dependencies require this.
 
 ## Environment Variables
 Fill in your own `DISCORD_BOT_CLIENT_ID` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
