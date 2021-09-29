@@ -8,6 +8,8 @@ import BaseRoles from './utilities/base-roles';
 import StreamerRules from './utilities/streamer-rules';
 import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
+import Play from './player/play';
+import Stop from './player/stop';
 
 const commands = [
   Poll,
@@ -17,6 +19,8 @@ const commands = [
   StreamerRules,
   ReactionRoles,
   Reminders,
+  Play,
+  Stop,
 ];
 
 export default commands;

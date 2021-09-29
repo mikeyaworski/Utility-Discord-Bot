@@ -105,3 +105,7 @@ export function getTimezoneOffsetFromFilter(filter: string): number | null {
 export function getDateString(epochTime: number): string {
   return new Date(epochTime * 1000).toISOString();
 }
+
+export function isYoutubeLink(str: string): boolean {
+  return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
+}

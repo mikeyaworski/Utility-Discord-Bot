@@ -30,6 +30,7 @@ export const client = new Client({
     'DIRECT_MESSAGES',
     'DIRECT_MESSAGE_REACTIONS',
     'DIRECT_MESSAGE_TYPING',
+    'GUILD_VOICE_STATES',
   ],
 });
 
