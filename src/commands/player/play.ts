@@ -104,7 +104,7 @@ const PlayCommand: Command = {
         if (tracks.length > 1) {
           return interaction.editReply(`Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`);
         }
-        if (!wasPlayingAnything) {
+        if (wasPlayingAnything) {
           return interaction.editReply(`Queued at position #${session.queue.length}: ${videoDetails.title}`);
         }
         return interaction.editReply(`Now playing: ${videoDetails.title}`);
