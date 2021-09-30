@@ -1,6 +1,7 @@
-import { ContextMenuInteraction } from 'discord.js';
 import { client } from 'src/client';
 import { array } from 'src/utils';
+import { handleError } from 'src/discord-utils';
+
 import Poll from './utilities/poll';
 import Move from './utilities/move';
 import Delete from './utilities/delete';
@@ -73,7 +74,11 @@ export function listenToCommands(): void {
           return;
         }
       }
-      if (command.runCommand) command.runCommand(interaction);
+      try {
+        if (command.runCommand) await command.runCommand(interaction);
+      } catch (err) {
+        handleError(err, interaction);
+      }
     } else if (interaction.isContextMenu()) {
       if (command.guildOnly && !interaction.guild) {
         await interaction.reply({
@@ -82,9 +87,17 @@ export function listenToCommands(): void {
         });
         return;
       }
-      if (command.runContextMenu) command.runContextMenu(interaction);
+      try {
+        if (command.runContextMenu) await command.runContextMenu(interaction);
+      } catch (err) {
+        handleError(err, interaction);
+      }
     } else if (interaction.isButton()) {
-      if (command.buttonAction) command.buttonAction(interaction);
+      try {
+        if (command.buttonAction) await command.buttonAction(interaction);
+      } catch (err) {
+        handleError(err, interaction);
+      }
     }
   });
 }

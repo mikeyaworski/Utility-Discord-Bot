@@ -9,6 +9,8 @@ import type {
   CommandInteraction,
   TextBasedChannels,
   GuildChannel,
+  ButtonInteraction,
+  ContextMenuInteraction,
 } from 'discord.js';
 import type { IntentionalAny } from 'src/types';
 
@@ -23,7 +25,10 @@ import { array } from 'src/utils';
  * Provides generic error handing for dealing with database operations or Discord API requests.
  * This can be used as a fallback after any custom error handling for the use case.
  */
-export function handleError(err: unknown, interaction: CommandInteraction): Promise<IntentionalAny> {
+export function handleError(
+  err: unknown,
+  interaction: CommandInteraction | ButtonInteraction | ContextMenuInteraction,
+): Promise<IntentionalAny> {
   const name: string | undefined = get(err, 'name');
   const message: string | undefined = get(err, 'message');
   if (name === 'SequelizeUniqueConstraintError') {
