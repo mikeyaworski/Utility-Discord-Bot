@@ -22,3 +22,6 @@ export const MAX_MESSAGES_FETCH = 500;
 export const MIN_REMINDER_INTERVAL = 10 * 60;
 export const WAKE_INTERVAL = 10 * 60 * 1000;
 export const MESSAGE_PREVIEW_LENGTH = 50;
+
+export const YT_PLAYLIST_PAGE_SIZE = 50;
+export const MAX_YT_PLAYLIST_PAGE_FETCHES = 4;

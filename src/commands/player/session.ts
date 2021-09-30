@@ -142,10 +142,10 @@ export default class Session {
     return this.queue.splice(idx, 1)[0];
   }
 
-  public enqueue(track: Track): Promise<void> {
-    this.queue.push(track);
+  public enqueue(tracks: Track[]): Promise<void> {
+    this.queue.push(...tracks);
     if (this.isLooped()) {
-      this.queueLoop.push(...this.duplicateTracks([track]));
+      this.queueLoop.push(...this.duplicateTracks(tracks));
     }
     return this.processQueue();
   }

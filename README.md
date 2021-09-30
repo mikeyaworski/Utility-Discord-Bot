@@ -22,12 +22,15 @@ This is a private bot. This bot does not have measures in place to handle scalin
 
     Note that these should be ordered before your `heroku/nodejs` buildpack (which would be there by default).
 
+1. [Optional] Go to https://console.cloud.google.com, create a project and API key for the `YouTube Data API v3`. This key will be used 
+
 1. Go to Settings for your Heroku app and start adding Config Vars.
-    - Add one with the name `DISCORD_BOT_CLIENT_ID` and the value with the value that I asked you to copy in step 2.
-    - Add one with the name `DISCORD_BOT_TOKEN` and the value with the value that I asked you to copy in step 2.
-    - Add another for `ENVIRONMENT` = `production`
-    - Add another for `NPM_CONFIG_PRODUCTION` = `false`
-    - Finally, add one for `PING_HOST` which is a link to your Heroku app web URL. It will be:
+    - `DISCORD_BOT_CLIENT_ID` and the value is from step 2.
+    - `DISCORD_BOT_TOKEN` and the value is from step 2.
+    - `ENVIRONMENT` = `production`
+    - `NPM_CONFIG_PRODUCTION` = `false`
+    - [Optional] `YOUTUBE_API_KEY` and the value is from step 6.
+    - [Optional] Finally, `PING_HOST`, which is a link to your Heroku app web URL. It will be:
     
         ```
         https://<HEROKU_APP_NAME>.herokuapp.com
@@ -63,7 +66,9 @@ This is a private bot. This bot does not have measures in place to handle scalin
 ## Environment Variables
 Fill in your own `DISCORD_BOT_CLIENT_ID` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
 
-You may (optionally) also provide a `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
+Optional variables:
+- `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
+- `YOUTUBE_API_KEY`, which is used to fetch playlist videos for the player commands.
 
 ```
 ENVIRONMENT=development
@@ -71,6 +76,7 @@ ENVIRONMENT=development
 DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_TOKEN=...
 DATABASE_URL=postgres://user:password@utility_discord_bot_db:5432/utility_discord_bot_db
+YOUTUBE_API_KEY=...
 
 # Slash Commands in Development
 SLASH_COMMANDS_GUILD_ID=...
