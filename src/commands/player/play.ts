@@ -49,8 +49,9 @@ const PlayCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('play')
     .setDescription('Plays audio into a voice channel.')
-    .addStringOption(option => option.setName('youtube').setDescription('YouTube Link').setRequired(false))
-    .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube').setRequired(false)),
+    .addStringOption(option => option.setName('youtube').setDescription('YouTube Link (video or playlist)').setRequired(false)),
+  // .addStringOption(option => option.setName('spotify').setDescription('Spotify Link').setRequired(false)),
+  // .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube').setRequired(false)),
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
