@@ -111,7 +111,7 @@ const PlayCommand: Command = {
       // TODO: Finish
       return interaction.editReply(`TODO: ${query}`);
     }
-    return interaction.editReply('Resumed');
+    return interaction.editReply('Resumed.');
   },
 };
 
