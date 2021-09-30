@@ -7,7 +7,7 @@ const NowPlayingCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()
     .setName('now-playing')
-    .setDescription('Disconnect the bot from voice channels.'),
+    .setDescription('Display the title of the track that is currently playing.'),
 
   runCommand: async interaction => {
     await interaction.deferReply({
