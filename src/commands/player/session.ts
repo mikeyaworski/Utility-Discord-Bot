@@ -136,6 +136,7 @@ export default class Session {
   public clear(): void {
     this.queue.splice(0, this.queue.length);
     this.shuffled = false;
+    this.setLoop(false);
   }
 
   public remove(idx: number): Track | undefined {
