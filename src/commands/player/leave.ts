@@ -4,15 +4,14 @@ import type { Command } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { usersHavePermission } from 'src/discord-utils';
 import { client } from 'src/client';
-import { disconnect } from './connections';
+import sessions from './sessions';
 
-const StopCommand: Command = {
+const LeaveCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()
-    .setName('stop')
+    .setName('leave')
     .setDescription('Disconnect the bot from voice channels.'),
-
-  async runCommand(interaction: CommandInteraction): Promise<void> {
+  runCommand: async interaction => {
     await interaction.deferReply({
       ephemeral: true,
     });
@@ -38,9 +37,9 @@ const StopCommand: Command = {
 
     // Redundant disconnection just in case it's not in our connections list for whatever reason
     await botVoiceState.disconnect();
-    disconnect(guild);
+    sessions.destroy(guild);
     await interaction.editReply('Disconnected');
   },
 };
 
-export default StopCommand;
+export default LeaveCommand;

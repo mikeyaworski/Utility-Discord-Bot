@@ -109,3 +109,16 @@ export function getDateString(epochTime: number): string {
 export function isYoutubeLink(str: string): boolean {
   return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
 }
+
+/**
+ * Randomize array in-place using Durstenfeld shuffle algorithm.
+ * https://stackoverflow.com/a/12646864/2554605
+ */
+export function shuffleArray<T = unknown>(array: T[]): void {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+}

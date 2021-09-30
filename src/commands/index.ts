@@ -9,8 +9,14 @@ import BaseRoles from './utilities/base-roles';
 import StreamerRules from './utilities/streamer-rules';
 import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
+
 import Play from './player/play';
-import Stop from './player/stop';
+import Skip from './player/skip';
+import Leave from './player/leave';
+import Pause from './player/pause';
+import Resume from './player/resume';
+import NowPlaying from './player/now-playing';
+import Queue from './player/queue';
 
 const commands = [
   Poll,
@@ -20,8 +26,14 @@ const commands = [
   StreamerRules,
   ReactionRoles,
   Reminders,
+
   Play,
-  Stop,
+  Skip,
+  Pause,
+  Resume,
+  NowPlaying,
+  Queue,
+  Leave,
 ];
 
 export default commands;
