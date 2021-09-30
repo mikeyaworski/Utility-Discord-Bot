@@ -21,7 +21,7 @@ const PollCommand: Command = {
       .setDescription('[emoji_1] "<option_1>" [emoji_2] "<option_2>" ...')
       .setRequired(true)),
 
-  async runCommand(interaction: CommandInteraction): Promise<void> {
+  runCommand: async interaction => {
     const question = interaction.options.getString('question');
     const optionsStr = interaction.options.getString('options');
     const options = await parseArguments(optionsStr as string, { parseChannels: false }) as string[];
