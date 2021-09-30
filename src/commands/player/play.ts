@@ -91,16 +91,20 @@ const PlayCommand: Command = {
 
         if (!session) session = sessions.create(channel);
 
+        const wasPlayingAnything = Boolean(session.getCurrentTrack());
         const tracks = youtubeLink.includes('/playlist')
           ? (await parseYoutubePlaylist(youtubeLink))
           : [new Track(youtubeLink)];
         await session.enqueue(tracks);
 
         const videoDetails = await tracks[0].getVideoDetails();
-        if (tracks.length > 1) {
-          return interaction.editReply(`Now playing: ${videoDetails.title}\nQueued ${session.queue.length} tracks.`);
+        if (wasPlayingAnything && tracks.length > 1) {
+          return interaction.editReply(`Queued ${tracks.length} tracks.`);
         }
-        if (session.queue.length) {
+        if (tracks.length > 1) {
+          return interaction.editReply(`Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`);
+        }
+        if (!wasPlayingAnything) {
           return interaction.editReply(`Queued at position #${session.queue.length}: ${videoDetails.title}`);
         }
         return interaction.editReply(`Now playing: ${videoDetails.title}`);
