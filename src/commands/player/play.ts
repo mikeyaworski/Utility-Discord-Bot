@@ -1,6 +1,7 @@
 import type { Command, IntentionalAny } from 'src/types';
 
 import dotenv from 'dotenv';
+import throttle from 'lodash.throttle';
 import { validateURL } from 'ytdl-core';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction } from 'discord.js';
@@ -41,9 +42,26 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
   const firstTrackPartialMessage = await enqueue(session, [firstTrack]);
   await interaction.editReply(`${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
 
-  const restTracks = await getTracksFromQueries(restQueries);
-  await session.enqueue(restTracks);
-  return interaction.editReply(`${firstTrackPartialMessage}\nQueued ${restQueries.length} tracks from YouTube.`);
+  let numFetched = 0;
+  const throttledMessageUpdate = throttle(async () => {
+    if (numFetched === 0) {
+      return interaction.editReply(`${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
+    }
+    if (numFetched < restQueries.length) {
+      return interaction.editReply(`${firstTrackPartialMessage}\nQueued ${
+        numFetched
+      } tracks.\nFetching the other ${
+        restQueries.length - numFetched
+      } tracks from YouTube...`);
+    }
+    return interaction.editReply(`${firstTrackPartialMessage}\nQueued ${numFetched} tracks from YouTube.`);
+  }, 5000);
+
+  await getTracksFromQueries(restQueries, async newTracks => {
+    await session.enqueue(newTracks);
+    numFetched += newTracks.length;
+    await throttledMessageUpdate();
+  });
 }
 
 const PlayCommand: Command = {

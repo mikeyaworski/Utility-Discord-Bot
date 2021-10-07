@@ -36,19 +36,29 @@ const clusterInitialization = (async () => {
   }
 })();
 
+type TracksFetchedCallback = (newTracks: Track[]) => void;
+
 const queryCache = new Map<string, string>();
-export async function getTracksFromQueries(queries: string[]): Promise<Track[]> {
+export async function getTracksFromQueries(queries: string[], tracksFetchedCb?: TracksFetchedCallback): Promise<Track[]> {
   const cluster = await clusterInitialization;
 
   const cachedQueries = queries.filter(query => queryCache.has(query));
   const newQueries = queries.filter(query => !queryCache.has(query));
 
   const cachedQueryTracks = cachedQueries.map(query => new Track(queryCache.get(query)!, TrackVariant.YOUTUBE));
+  if (tracksFetchedCb) {
+    tracksFetchedCb(cachedQueryTracks);
+  }
+
   const newQueryTracks = await Promise.all(newQueries.map(async query => {
     try {
       const youtubeLink = await cluster.execute(query);
       queryCache.set(query, youtubeLink);
-      return new Track(youtubeLink, TrackVariant.YOUTUBE);
+      const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE);
+      if (tracksFetchedCb) {
+        tracksFetchedCb([newTrack]);
+      }
+      return newTrack;
     } catch (err) {
       log('Could not fetch YouTube link for query', query);
       return null;
