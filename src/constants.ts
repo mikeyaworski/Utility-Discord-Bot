@@ -1,7 +1,3 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 export const CONFIRM_EMOJI = '✅';
 export const DECLINE_EMOJI = '❌';
 
@@ -25,3 +21,6 @@ export const MESSAGE_PREVIEW_LENGTH = 50;
 
 export const YT_PLAYLIST_PAGE_SIZE = 50;
 export const MAX_YT_PLAYLIST_PAGE_FETCHES = 4;
+
+export const SPOTIFY_PLAYLIST_PAGE_SIZE = 50;
+export const MAX_SPOTIFY_PLAYLIST_PAGE_FETCHES = 4;

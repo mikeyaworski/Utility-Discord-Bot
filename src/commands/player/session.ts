@@ -12,7 +12,7 @@ import {
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
 import sessions from './sessions';
-import Track from './track';
+import Track, { TrackVariant } from './track';
 
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
@@ -91,7 +91,7 @@ export default class Session {
    * it cannot be reused.
    */
   private duplicateTracks(tracks: Track[]): Track[] {
-    return tracks.map(track => new Track(track.youtubeLink));
+    return tracks.map(track => new Track(track.link, TrackVariant.YOUTUBE));
   }
 
   public getCurrentTrack(): Track | undefined {
@@ -201,6 +201,8 @@ export default class Session {
       const resource = await this.currentTrack.getAudioResource();
       this.audioPlayer.play(resource);
     } catch (err) {
+      error(err);
+      log('Could not play track', this.currentTrack.link, this.currentTrack.variant);
       // Skip and try next
       this.queueLock = false;
       await this.processQueue();

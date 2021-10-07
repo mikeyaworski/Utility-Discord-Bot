@@ -17,12 +17,15 @@ This is a private bot. This bot does not have measures in place to handle scalin
 1. Add the Postgres add-on to your Heroku app: https://elements.heroku.com/addons/heroku-postgresql. This add-on will automatically add a `DATABASE_URL` config variable to your app, which the code uses to connect to your database. Easy!
 
 1. Add the following buildpacks to your Heroku app (in Settings):
+    - `https://github.com/jontewks/puppeteer-heroku-buildpack.git`
     - `https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git`
     - `heroku/python`
 
     Note that these should be ordered before your `heroku/nodejs` buildpack (which would be there by default).
 
-1. [Optional] Go to https://console.cloud.google.com, create a project and API key for the `YouTube Data API v3`. This key will be used 
+1. [Optional] Go to https://console.cloud.google.com, create a project and API key for the `YouTube Data API v3`.
+
+1. [Optional] Go to https://developer.spotify.com/dashboard/applications, create a project and note your client ID & client secret.
 
 1. Go to Settings for your Heroku app and start adding Config Vars.
     - `DISCORD_BOT_CLIENT_ID` and the value is from step 2.
@@ -30,6 +33,7 @@ This is a private bot. This bot does not have measures in place to handle scalin
     - `ENVIRONMENT` = `production`
     - `NPM_CONFIG_PRODUCTION` = `false`
     - [Optional] `YOUTUBE_API_KEY` and the value is from step 6.
+    - [Optional] `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` with values from step 7.
     - [Optional] Finally, `PING_HOST`, which is a link to your Heroku app web URL. It will be:
     
         ```
@@ -90,7 +94,7 @@ PING_HOST=http://localhost:8080
 This repository is linked to a Heroku app which automatically deploys updates to the privately hosted bot when commits are made to `master`. The following invites will only work for myself and whitelisted members.
 
 ### Production
-https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=261419429111&scope=bot
+https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=536320928976&scope=bot
 
 ### Development
-https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=261419429111&scope=bot
+https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=536320928976&scope=bot

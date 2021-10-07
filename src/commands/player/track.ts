@@ -5,13 +5,19 @@ import { createAudioResource, demuxProbe } from '@discordjs/voice';
 import { raw as ytdl } from 'youtube-dl-exec';
 import { getInfo } from 'ytdl-core';
 
+export enum TrackVariant {
+  YOUTUBE,
+}
+
 export default class Track {
-  public readonly youtubeLink: string;
+  public readonly link: string;
+  public readonly variant: TrackVariant;
   // private audioResourcePromise: Promise<AudioResource>;
   // private videoDetailsPromise: Promise<MoreVideoDetails>
 
-  public constructor(youtubeLink: string) {
-    this.youtubeLink = youtubeLink;
+  public constructor(link: string, variant: TrackVariant) {
+    this.link = link;
+    this.variant = variant;
     // this.videoDetailsPromise = getInfo(youtubeLink).then(videoInfo => videoInfo.videoDetails);
     // this.audioResourcePromise = this.createAudioResource();
   }
@@ -19,7 +25,7 @@ export default class Track {
   public createAudioResource(): Promise<AudioResource<Track>> {
     return new Promise((resolve, reject) => {
       const process = ytdl(
-        this.youtubeLink, {
+        this.link, {
           o: '-',
           q: '',
           f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
@@ -53,7 +59,7 @@ export default class Track {
 
   public async getVideoDetails(): Promise<MoreVideoDetails> {
     // return this.videoDetailsPromise;
-    const info = await getInfo(this.youtubeLink).then(videoInfo => videoInfo.videoDetails);
+    const info = await getInfo(this.link).then(videoInfo => videoInfo.videoDetails);
     return info;
   }
 
