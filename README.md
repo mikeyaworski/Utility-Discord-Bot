@@ -8,7 +8,7 @@ This is a private bot. This bot does not have measures in place to handle scalin
 
 1. Take note of your application client ID (Application ID) and bot token. The client ID will let you form an invite:
     ```
-    https://discord.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&permissions=261419429111&scope=bot
+    https://discord.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&permissions=536320928976&scope=applications.commands%20bot
     ```
     The bot token and client ID will need to be used as the `DISCORD_BOT_TOKEN` and `DISCORD_BOT_CLIENT_ID` environment variable on both Heroku and in your `.env` file (see the section below).
 
@@ -94,7 +94,7 @@ PING_HOST=http://localhost:8080
 This repository is linked to a Heroku app which automatically deploys updates to the privately hosted bot when commits are made to `master`. The following invites will only work for myself and whitelisted members.
 
 ### Production
-https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=536320928976&scope=bot
+https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=536320928976&scope=applications.commands%20bot
 
 ### Development
-https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=536320928976&scope=bot
+https://discord.com/api/oauth2/authorize?client_id=785782124577685525&permissions=536320928976&scope=applications.commands%20bot
