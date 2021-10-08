@@ -143,10 +143,24 @@ export default class Session {
     return this.queue.splice(idx, 1)[0];
   }
 
-  public enqueue(tracks: Track[]): Promise<void> {
-    this.queue.push(...tracks);
+  public move(from: number, to: number): Track | undefined {
+    const [track] = this.queue.splice(from, 1);
+    this.queue.splice(to, 0, track);
+    return track;
+  }
+
+  public enqueue(tracks: Track[], pushToFront = false): Promise<void> {
+    if (pushToFront) {
+      this.queue.unshift(...tracks);
+    } else {
+      this.queue.push(...tracks);
+    }
     if (this.isLooped()) {
-      this.queueLoop.push(...this.duplicateTracks(tracks));
+      if (pushToFront) {
+        this.queueLoop.unshift(...this.duplicateTracks(tracks));
+      } else {
+        this.queueLoop.push(...this.duplicateTracks(tracks));
+      }
     }
     return this.processQueue();
   }

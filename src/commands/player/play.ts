@@ -19,9 +19,9 @@ import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 
 dotenv.config();
 
-async function enqueue(session: Session, tracks: Track[]): Promise<string> {
+async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<string> {
   const wasPlayingAnything = Boolean(session.getCurrentTrack());
-  await session.enqueue(tracks);
+  await session.enqueue(tracks, pushToFront);
 
   const videoDetails = await tracks[0].getVideoDetails();
   if (wasPlayingAnything && tracks.length > 1) {
@@ -31,7 +31,7 @@ async function enqueue(session: Session, tracks: Track[]): Promise<string> {
     return `Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`;
   }
   if (wasPlayingAnything) {
-    return `Queued at position #${session.queue.length}: ${videoDetails.title}`;
+    return `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}`;
   }
   return `Now playing: ${videoDetails.title}`;
 }
@@ -39,7 +39,7 @@ async function enqueue(session: Session, tracks: Track[]): Promise<string> {
 async function enqueueQueries(session: Session, queries: string[], interaction: CommandInteraction): Promise<IntentionalAny> {
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
-  const firstTrackPartialMessage = await enqueue(session, [firstTrack]);
+  const firstTrackPartialMessage = await enqueue(session, [firstTrack], false);
   await interaction.editReply(`${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
 
   let numFetched = 0;
@@ -71,13 +71,15 @@ const PlayCommand: Command = {
     .setDescription('Plays audio into a voice channel.')
     .addStringOption(option => option.setName('youtube').setDescription('YouTube Link (video or playlist)').setRequired(false))
     .addStringOption(option => option.setName('spotify').setDescription('Spotify Link (video, album or playlist)').setRequired(false))
-    .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube').setRequired(false)),
+    .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube').setRequired(false))
+    .addBooleanOption(option => option.setName('front').setDescription('Push song (singular) to the front of the queue.').setRequired(false)),
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
     const youtubeLink = interaction.options.getString('youtube');
     const spotifyLink = interaction.options.getString('spotify');
     const queryStr = interaction.options.getString('query');
+    const pushToFront = interaction.options.getBoolean('front') ?? false;
 
     const numArgs = [youtubeLink, spotifyLink, queryStr].filter(Boolean).length;
 
@@ -116,7 +118,7 @@ const PlayCommand: Command = {
         ? (await parseYoutubePlaylist(youtubeLink))
         : [new Track(youtubeLink, TrackVariant.YOUTUBE)];
 
-      const responseMessage = await enqueue(session, tracks);
+      const responseMessage = await enqueue(session, tracks, pushToFront);
       return interaction.editReply(responseMessage);
     }
     if (spotifyLink) {
@@ -128,7 +130,7 @@ const PlayCommand: Command = {
             return enqueueQueries(session, queries, interaction);
           }
           const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks);
+          const responseMessage = await enqueue(session, tracks, pushToFront);
           return interaction.editReply(responseMessage);
         }
         case LinkType.ALBUM: {
@@ -137,13 +139,13 @@ const PlayCommand: Command = {
             return enqueueQueries(session, queries, interaction);
           }
           const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks);
+          const responseMessage = await enqueue(session, tracks, pushToFront);
           return interaction.editReply(responseMessage);
         }
         case LinkType.TRACK: {
           const query = await parseSpotifyTrack(id);
           const tracks = await getTracksFromQueries([query]);
-          const responseMessage = await enqueue(session, tracks);
+          const responseMessage = await enqueue(session, tracks, pushToFront);
           return interaction.editReply(responseMessage);
         }
         default: {
@@ -153,7 +155,7 @@ const PlayCommand: Command = {
     }
     if (queryStr) {
       const tracks = await getTracksFromQueries([queryStr]);
-      const responseMessage = await enqueue(session, tracks);
+      const responseMessage = await enqueue(session, tracks, pushToFront);
       return interaction.editReply(responseMessage);
     }
     return interaction.editReply('Resumed.');

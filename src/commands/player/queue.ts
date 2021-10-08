@@ -43,6 +43,23 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('move');
+  subcommand.setDescription('Move an item in the queue.');
+  subcommand.addIntegerOption(option => {
+    return option
+      .setName('current-position')
+      .setDescription('The position of the item.')
+      .setRequired(true);
+  });
+  subcommand.addIntegerOption(option => {
+    return option
+      .setName('new-position')
+      .setDescription('The position to move the item to.')
+      .setRequired(true);
+  });
+  return subcommand;
+});
+commandBuilder.addSubcommand(subcommand => {
   subcommand.setName('clear');
   subcommand.setDescription('Clear the entire queue.');
   return subcommand;
@@ -114,6 +131,20 @@ async function handleRemove(interaction: CommandInteraction, session: Session): 
   }
 }
 
+async function handleMove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+  const currentPosition = interaction.options.getInteger('current-position', true);
+  const newPosition = interaction.options.getInteger('new-position', true);
+  if (currentPosition < 1 || newPosition < 1) return interaction.editReply('Queue position must be at least 1.');
+  const movedTrack = session.move(currentPosition - 1, newPosition - 1);
+  if (!movedTrack) return interaction.editReply('Could not find track.');
+  try {
+    const videoDetails = await movedTrack.getVideoDetails();
+    return interaction.editReply(`Moved track to queue position #${newPosition}: ${videoDetails.title}`);
+  } catch {
+    return interaction.editReply('Moved track.');
+  }
+}
+
 function handleClear(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   session.clear();
   return interaction.editReply('Queue cleared.');
@@ -149,6 +180,10 @@ const QueueCommand: Command = {
       }
       case 'remove': {
         await handleRemove(interaction, session);
+        break;
+      }
+      case 'move': {
+        await handleMove(interaction, session);
         break;
       }
       case 'clear': {
