@@ -1,5 +1,4 @@
 import type { CommandInteraction } from 'discord.js';
-import type { MoreVideoDetails } from 'ytdl-core';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 

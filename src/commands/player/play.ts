@@ -5,6 +5,7 @@ import throttle from 'lodash.throttle';
 import { validateURL } from 'ytdl-core';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction } from 'discord.js';
+import { error } from 'src/logging';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
 import Session from './session';
@@ -23,17 +24,24 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
   const wasPlayingAnything = Boolean(session.getCurrentTrack());
   await session.enqueue(tracks, pushToFront);
 
-  const videoDetails = await tracks[0].getVideoDetails();
-  if (wasPlayingAnything && tracks.length > 1) {
-    return `Queued ${tracks.length} tracks.`;
+  try {
+    const videoDetails = await tracks[0].getVideoDetails();
+    if (wasPlayingAnything && tracks.length > 1) {
+      return `Queued ${tracks.length} tracks.`;
+    }
+    if (tracks.length > 1) {
+      return `Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`;
+    }
+    if (wasPlayingAnything) {
+      return `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}`;
+    }
+    return `Now playing: ${videoDetails.title}`;
+  } catch (err) {
+    error(tracks[0].link, tracks[0].variant, err);
+    return 'Could not fetch video details.'
+    + ' This video probably cannot be played for some reason.'
+    + ' This can happen if the video is age-restricted or region-locked.';
   }
-  if (tracks.length > 1) {
-    return `Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`;
-  }
-  if (wasPlayingAnything) {
-    return `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}`;
-  }
-  return `Now playing: ${videoDetails.title}`;
 }
 
 async function enqueueQueries(session: Session, queries: string[], interaction: CommandInteraction): Promise<IntentionalAny> {

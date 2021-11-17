@@ -59,8 +59,8 @@ export default class Track {
 
   public async getVideoDetails(): Promise<MoreVideoDetails> {
     // return this.videoDetailsPromise;
-    const info = await getInfo(this.link).then(videoInfo => videoInfo.videoDetails);
-    return info;
+    const videoInfo = await getInfo(this.link);
+    return videoInfo.videoDetails;
   }
 
   public async getAudioResource(): Promise<AudioResource> {
