@@ -1,8 +1,14 @@
-import type { CommandInteraction } from 'discord.js';
+// eslint-disable-next-line import/no-duplicates
+import { CommandInteraction, Interaction, Message, MessageActionRow, MessageEmbed, Options, TextBasedChannels, TextChannel } from 'discord.js';
 import type { MoreVideoDetails } from 'ytdl-core';
 import type { Command, IntentionalAny } from 'src/types';
-import { SlashCommandBuilder } from '@discordjs/builders';
+import { channelMention, SlashCommandBuilder } from '@discordjs/builders';
 
+// eslint-disable-next-line import/no-duplicates
+import Discord from 'discord.js';
+import get from 'lodash.get';
+import { time } from 'console';
+import SkipCommand from './skip';
 import type Session from './session';
 import sessions from './sessions';
 
@@ -65,10 +71,15 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
+async function timeOutReply(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+  return interaction.editReply({ content: '**The slash command has expired, Please type the slash command again...**', components: [], embeds: [] });
+}
+
+let count = 0;
+
 async function handleList(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   const currentTrack = session.getCurrentTrack();
   if (!currentTrack) return interaction.editReply('Nothing is playing.');
-
   const combinedQueue = session.isLooped() ? session.queue.concat(session.queueLoop) : session.queue;
   type Next10 = {
     title: string,
@@ -89,11 +100,11 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
     }))).filter(Boolean) as Next10;
   const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
   const totalQueued = session.isLooped() ? session.queueLoop.length : session.queue.length;
-  let message = `__Now Playing__: ${
+  let message = `**__🔊Now Playing__**: ${
     nowPlayingTitle
-  }\n\n__Looped__? ${
+  }\n\n**__Looped__**? ${
     session.isLooped() ? 'Yes' : 'No'
-  }\n__Shuffled__? ${
+  }\n**__Shuffled__**? ${
     session.isShuffled() ? 'Yes' : 'No'
   }`;
 
@@ -104,7 +115,118 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
       next10.map(details => `#${details.position}: ${details.title}`).join('\n')
     }`;
   }
-  return interaction.editReply(message);
+  const queueEmbed = new Discord.MessageEmbed({
+    author: {
+      name: '🎵 Queue List 🎵',
+      icon_url: undefined,
+    },
+    color: 0x01ff01,
+    description: message,
+  });
+  const queueButtons = new Discord.MessageActionRow({
+    components: [
+      new Discord.MessageButton({
+        customId: 'loop',
+        label: 'Loop',
+        style: 'SUCCESS',
+      }),
+      new Discord.MessageButton({
+        customId: 'shuffle',
+        label: 'Shuffle',
+        style: 'SUCCESS',
+      }),
+      new Discord.MessageButton({
+        customId: 'clear',
+        label: 'Clear',
+        style: 'SUCCESS',
+      }),
+      new Discord.MessageButton({
+        customId: 'pause',
+        label: 'Pause/Resume',
+        style: 'SUCCESS',
+      }),
+      new Discord.MessageButton({
+        customId: 'skip',
+        label: 'Skip',
+        style: 'SUCCESS',
+      }),
+    ],
+  });
+  await interaction.editReply({
+    embeds: [queueEmbed],
+    components: [queueButtons],
+  });
+
+  async function handleShuffleButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+    session.shuffle();
+    return handleList(interaction, session);
+  }
+  async function handleLoopOnButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+    const loopValue = session.isLooped() ? session.setLoop(false) : session.setLoop(true);
+    return loopValue;
+  }
+  async function handleClearButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+    session.clear();
+    return handleList(interaction, session);
+  }
+  async function handleSkipButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+    session.skip();
+    return handleList(interaction, session);
+  }
+  async function handlePauseButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+    count += 1;
+    const pauseValue = (count % 2 === 0) ? session.resume() : session.pause();
+    return pauseValue;
+  }
+
+  try {
+    const buttonInteraction = await interaction.channel?.awaitMessageComponent({
+      filter: i => i.message.interaction?.id === interaction.id,
+    }).catch(() => {
+      // Intentionally empty catch
+    });
+    switch (buttonInteraction?.customId) {
+      case 'shuffle': {
+        await buttonInteraction?.deferUpdate();
+        await handleShuffleButton(interaction, session);
+        break;
+      }
+      case 'loop': {
+        await buttonInteraction?.deferUpdate();
+        await handleLoopOnButton(interaction, session);
+        await handleList(interaction, session);
+        break;
+      }
+      case 'clear': {
+        await buttonInteraction?.deferUpdate();
+        await handleClearButton(interaction, session);
+        break;
+      }
+      case 'skip': {
+        await buttonInteraction?.deferUpdate();
+        await handleSkipButton(interaction, session);
+        break;
+      }
+      case 'pause': {
+        await buttonInteraction?.deferUpdate();
+        await handlePauseButton(interaction, session);
+        await handleList(interaction, session);
+        break;
+      }
+      default: {
+        // If we get here, then the interaction button was not clicked.
+        await interaction.editReply({
+          embeds: [queueEmbed],
+          components: [],
+        });
+        break;
+      }
+    }
+  } catch (err) {
+    await interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
+  }
+
+  return handleList;
 }
 
 async function handleLoop(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
@@ -167,6 +289,9 @@ const QueueCommand: Command = {
     const subcommand = interaction.options.getSubcommand();
     switch (subcommand) {
       case 'list': {
+        setTimeout(() => {
+          timeOutReply(interaction, session);
+        }, 840000);
         await handleList(interaction, session);
         break;
       }

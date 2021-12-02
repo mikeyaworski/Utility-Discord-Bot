@@ -33,7 +33,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
   if (wasPlayingAnything) {
     return `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}`;
   }
-  return `Now playing: ${videoDetails.title}`;
+  return `🔊**Now playing**: ${videoDetails.title}`;
 }
 
 async function enqueueQueries(session: Session, queries: string[], interaction: CommandInteraction): Promise<IntentionalAny> {
