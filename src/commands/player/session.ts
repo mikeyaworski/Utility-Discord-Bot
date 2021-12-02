@@ -173,6 +173,10 @@ export default class Session {
     return this.audioPlayer.unpause();
   }
 
+  public isPaused(): boolean {
+    return this.audioPlayer.state.status === AudioPlayerStatus.Paused;
+  }
+
   public stop(): void {
     this.queueLock = true;
     this.queue.splice(0, this.queue.length);
