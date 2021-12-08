@@ -129,6 +129,14 @@ export default class Session {
     this.shuffled = true;
   }
 
+  /**
+   * Note: This does not restore the original order of the queue,
+   * but this means that if the queue is looped, it won't be reshuffled after looping.
+   */
+  public unshuffle(): void {
+    this.shuffled = false;
+  }
+
   public reverse(): void {
     this.queue.splice(0, this.queue.length, ...this.queue.reverse());
   }
