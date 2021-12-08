@@ -2,6 +2,7 @@ export const CONFIRM_EMOJI = '✅';
 export const DECLINE_EMOJI = '❌';
 
 export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
+export const FOURTEEN_MINUTES = 1000 * 60 * 14;
 
 export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;

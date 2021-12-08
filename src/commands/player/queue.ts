@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-duplicates
-import { CommandInteraction, Interaction, Message, MessageActionRow, MessageEmbed, Options, TextBasedChannels, TextChannel } from 'discord.js';
+import { CommandInteraction, Interaction, Message, MessageActionRow, MessageEmbed, Options, TextBasedChannels } from 'discord.js';
 import type { MoreVideoDetails } from 'ytdl-core';
 import type { Command, IntentionalAny } from 'src/types';
 import { channelMention, SlashCommandBuilder } from '@discordjs/builders';
@@ -7,8 +7,7 @@ import { channelMention, SlashCommandBuilder } from '@discordjs/builders';
 // eslint-disable-next-line import/no-duplicates
 import Discord from 'discord.js';
 import get from 'lodash.get';
-import { time } from 'console';
-import SkipCommand from './skip';
+import { FOURTEEN_MINUTES } from 'src/constants';
 import type Session from './session';
 import sessions from './sessions';
 
@@ -72,10 +71,8 @@ commandBuilder.addSubcommand(subcommand => {
 });
 
 async function timeOutReply(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  return interaction.editReply({ content: '**The slash command has expired, Please type the slash command again...**', components: [], embeds: [] });
+  return interaction.editReply({ components: [] });
 }
-
-let count = 0;
 
 async function handleList(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   const currentTrack = session.getCurrentTrack();
@@ -152,32 +149,24 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
       }),
     ],
   });
+  const unLoop = new Discord.MessageButton({ customId: 'loop', label: 'Unloop', style: 'SUCCESS' });
+  const Loop = new Discord.MessageButton({ customId: 'loop', label: 'Loop', style: 'SUCCESS' });
+  if (session.isLooped() === true) {
+    queueButtons.spliceComponents(0, 1, unLoop);
+  } else {
+    queueButtons.spliceComponents(0, 1, Loop);
+  }
+  const Resume = new Discord.MessageButton({ customId: 'pause', label: 'Resume', style: 'SUCCESS' });
+  const Pause = new Discord.MessageButton({ customId: 'pause', label: 'Pause', style: 'SUCCESS' });
+  if (session.isPaused() === true) {
+    queueButtons.spliceComponents(3, 1, Resume);
+  } else {
+    queueButtons.spliceComponents(3, 1, Pause);
+  }
   await interaction.editReply({
     embeds: [queueEmbed],
     components: [queueButtons],
   });
-
-  async function handleShuffleButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-    session.shuffle();
-    return handleList(interaction, session);
-  }
-  async function handleLoopOnButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-    const loopValue = session.isLooped() ? session.setLoop(false) : session.setLoop(true);
-    return loopValue;
-  }
-  async function handleClearButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-    session.clear();
-    return handleList(interaction, session);
-  }
-  async function handleSkipButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-    session.skip();
-    return handleList(interaction, session);
-  }
-  async function handlePauseButton(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-    count += 1;
-    const pauseValue = (count % 2 === 0) ? session.resume() : session.pause();
-    return pauseValue;
-  }
 
   try {
     const buttonInteraction = await interaction.channel?.awaitMessageComponent({
@@ -185,32 +174,28 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
     }).catch(() => {
       // Intentionally empty catch
     });
+    await buttonInteraction?.deferUpdate();
     switch (buttonInteraction?.customId) {
       case 'shuffle': {
-        await buttonInteraction?.deferUpdate();
-        await handleShuffleButton(interaction, session);
+        session.shuffle();
         break;
       }
       case 'loop': {
-        await buttonInteraction?.deferUpdate();
-        await handleLoopOnButton(interaction, session);
-        await handleList(interaction, session);
+        const loopValue = session.isLooped() ? session.setLoop(false) : session.setLoop(true);
+        await loopValue;
         break;
       }
       case 'clear': {
-        await buttonInteraction?.deferUpdate();
-        await handleClearButton(interaction, session);
+        session.clear();
         break;
       }
       case 'skip': {
-        await buttonInteraction?.deferUpdate();
-        await handleSkipButton(interaction, session);
+        session.skip();
         break;
       }
       case 'pause': {
-        await buttonInteraction?.deferUpdate();
-        await handlePauseButton(interaction, session);
-        await handleList(interaction, session);
+        const pauseValue = session.isPaused() ? session.resume() : session.pause();
+        await pauseValue;
         break;
       }
       default: {
@@ -222,6 +207,7 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
         break;
       }
     }
+    await handleList(interaction, session);
   } catch (err) {
     await interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
   }
@@ -291,7 +277,7 @@ const QueueCommand: Command = {
       case 'list': {
         setTimeout(() => {
           timeOutReply(interaction, session);
-        }, 840000);
+        }, FOURTEEN_MINUTES);
         await handleList(interaction, session);
         break;
       }
