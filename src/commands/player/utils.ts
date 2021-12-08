@@ -59,8 +59,6 @@ export async function listenForPlayerButtons(
     const buttonInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.interaction?.id === interaction.id,
       time: FOURTEEN_MINUTES,
-    }).catch(() => {
-      // Intentionally empty catch
     });
     await buttonInteraction?.deferUpdate();
     switch (buttonInteraction?.customId) {
