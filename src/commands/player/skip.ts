@@ -1,6 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { attachAndListenToPlayerButtons } from './utils';
 import sessions from './sessions';
 
 const SkipCommand: Command = {
@@ -21,10 +22,12 @@ const SkipCommand: Command = {
 
     try {
       const { title } = await newTrack.getVideoDetails();
-      return interaction.editReply(`Skipped. Now playing: ${title}`);
+      await interaction.editReply(`Skipped. Now playing: ${title}`);
     } catch {
-      return interaction.editReply('Skipped.');
+      await interaction.editReply('Skipped.');
     }
+    attachAndListenToPlayerButtons(interaction, session);
+    return null;
   },
 };
 

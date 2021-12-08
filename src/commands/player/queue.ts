@@ -3,9 +3,10 @@ import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 
 import get from 'lodash.get';
-import { FOURTEEN_MINUTES } from 'src/constants';
+import { FOURTEEN_MINUTES, SUCCESS_COLOR } from 'src/constants';
 import type Session from './session';
 import sessions from './sessions';
+import { getPlayerButtons, listenForPlayerButtons } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -66,10 +67,6 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function removeMsgComponents(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  return interaction.editReply({ components: [] });
-}
-
 async function handleList(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   const currentTrack = session.getCurrentTrack();
   if (!currentTrack) return interaction.editReply('Nothing is playing.');
@@ -93,7 +90,7 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
     }))).filter(Boolean) as Next10;
   const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
   const totalQueued = session.isLooped() ? session.queueLoop.length : session.queue.length;
-  let message = `**__🔊Now Playing__**: ${
+  let message = `**__🔊 Now Playing__**: ${
     nowPlayingTitle
   }\n\n**__Looped__**? ${
     session.isLooped() ? 'Yes' : 'No'
@@ -108,102 +105,28 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
       next10.map(details => `#${details.position}: ${details.title}`).join('\n')
     }`;
   }
-  const queueEmbed = new Discord.MessageEmbed({
+  const embed = new Discord.MessageEmbed({
     author: {
       name: '🎵 Queue List 🎵',
     },
-    color: 0x01ff01,
+    color: SUCCESS_COLOR,
     description: message,
   });
-  const queueButtons = new Discord.MessageActionRow({
-    components: [
-      new Discord.MessageButton({
-        customId: 'loop',
-        label: 'Loop',
-        style: 'SUCCESS',
-      }),
-      new Discord.MessageButton({
-        customId: 'shuffle',
-        label: 'Shuffle',
-        style: 'SUCCESS',
-      }),
-      new Discord.MessageButton({
-        customId: 'clear',
-        label: 'Clear',
-        style: 'SUCCESS',
-      }),
-      new Discord.MessageButton({
-        customId: 'pause',
-        label: 'Pause/Resume',
-        style: 'SUCCESS',
-      }),
-      new Discord.MessageButton({
-        customId: 'skip',
-        label: 'Skip',
-        style: 'SUCCESS',
-      }),
-    ],
-  });
-  const unloop = new Discord.MessageButton({ customId: 'loop', label: 'Unloop', style: 'SUCCESS' });
-  const loop = new Discord.MessageButton({ customId: 'loop', label: 'Loop', style: 'SUCCESS' });
-  queueButtons.spliceComponents(0, 1, session.isLooped() ? unloop : loop);
-  const resume = new Discord.MessageButton({ customId: 'pause', label: 'Resume', style: 'SUCCESS' });
-  const pause = new Discord.MessageButton({ customId: 'pause', label: 'Pause', style: 'SUCCESS' });
-  queueButtons.spliceComponents(3, 1, session.isPaused() ? resume : pause);
+  const buttons = getPlayerButtons(session);
   await interaction.editReply({
-    embeds: [queueEmbed],
-    components: [queueButtons],
+    embeds: [embed],
+    components: [buttons],
   });
-
-  try {
-    const buttonInteraction = await interaction.channel?.awaitMessageComponent({
-      filter: i => i.message.interaction?.id === interaction.id,
-    }).catch(() => {
-      // Intentionally empty catch
-    });
-    await buttonInteraction?.deferUpdate();
-    switch (buttonInteraction?.customId) {
-      case 'shuffle': {
-        session.shuffle();
-        break;
-      }
-      case 'loop': {
-        session.setLoop(!session.isLooped());
-        break;
-      }
-      case 'clear': {
-        session.clear();
-        break;
-      }
-      case 'skip': {
-        session.skip();
-        break;
-      }
-      case 'pause': {
-        if (session.isPaused()) session.resume();
-        else session.pause();
-        break;
-      }
-      default: {
-        // If we get here, then the interaction button was not clicked.
-        await interaction.editReply({
-          embeds: [queueEmbed],
-          components: [],
-        });
-        break;
-      }
-    }
+  listenForPlayerButtons(interaction, session, async () => {
     await handleList(interaction, session);
-  } catch (err) {
-    await interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
-  }
-
-  return handleList;
+  });
+  return null;
 }
 
 async function handleLoop(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   const loop = interaction.options.getBoolean('loop', true);
-  session.setLoop(loop);
+  if (loop) session.loop();
+  else session.unloop();
   return interaction.editReply(`Queue loop: ${loop ? 'ON' : 'OFF'}.`);
 }
 
@@ -244,6 +167,7 @@ function handleClear(interaction: CommandInteraction, session: Session): Promise
   return interaction.editReply('Queue cleared.');
 }
 
+// TODO: Add player buttons for all subcommands here as well
 const QueueCommand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
@@ -261,9 +185,6 @@ const QueueCommand: Command = {
     const subcommand = interaction.options.getSubcommand();
     switch (subcommand) {
       case 'list': {
-        setTimeout(() => {
-          removeMsgComponents(interaction, session);
-        }, FOURTEEN_MINUTES);
         await handleList(interaction, session);
         break;
       }

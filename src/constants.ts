@@ -1,5 +1,6 @@
 export const CONFIRM_EMOJI = '✅';
 export const DECLINE_EMOJI = '❌';
+export const SUCCESS_COLOR = '#01FF01';
 
 export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
 export const FOURTEEN_MINUTES = 1000 * 60 * 14;

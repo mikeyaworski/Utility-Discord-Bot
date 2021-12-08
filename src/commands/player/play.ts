@@ -72,6 +72,7 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
   });
 }
 
+// TODO: Add player buttons for all subcommands here as well
 const PlayCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()

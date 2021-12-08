@@ -98,15 +98,15 @@ export default class Session {
     return this.currentTrack;
   }
 
-  public setLoop(loop: boolean): void {
-    if (loop) {
-      const newQueueLoop = this.duplicateTracks(
-        this.currentTrack ? [this.currentTrack].concat(this.queue) : this.queue,
-      );
-      this.queueLoop.splice(0, this.queueLoop.length, ...newQueueLoop);
-    } else {
-      this.queueLoop.splice(0, this.queueLoop.length);
-    }
+  public loop(): void {
+    const newQueueLoop = this.duplicateTracks(
+      this.currentTrack ? [this.currentTrack].concat(this.queue) : this.queue,
+    );
+    this.queueLoop.splice(0, this.queueLoop.length, ...newQueueLoop);
+  }
+
+  public unloop(): void {
+    this.queueLoop.splice(0, this.queueLoop.length);
   }
 
   public isLooped(): boolean {
@@ -143,8 +143,8 @@ export default class Session {
 
   public clear(): void {
     this.queue.splice(0, this.queue.length);
-    this.shuffled = false;
-    this.setLoop(false);
+    this.unshuffle();
+    this.unloop();
   }
 
   public remove(idx: number): Track | undefined {

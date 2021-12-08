@@ -2,6 +2,7 @@ import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import sessions from './sessions';
+import { attachAndListenToPlayerButtons } from './utils';
 
 const NowPlayingCommand: Command = {
   guildOnly: true,
@@ -13,11 +14,20 @@ const NowPlayingCommand: Command = {
     await interaction.deferReply({ ephemeral: true });
 
     const session = sessions.get(interaction.guild!);
-    if (!session) return interaction.editReply('Session does not exist.');
+    if (!session) {
+      await interaction.editReply({
+        components: [],
+        embeds: [],
+        content: 'Session does not exist.',
+      });
+      return;
+    }
     const success = session.resume();
 
-    if (success) return interaction.editReply('Resumed.');
-    return interaction.editReply('Could not resume.');
+    await interaction.editReply({
+      content: success ? 'Resumed.' : 'Could not resume.',
+    });
+    attachAndListenToPlayerButtons(interaction, session);
   },
 };
 
