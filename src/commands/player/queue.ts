@@ -66,7 +66,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function timeOutReply(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+async function removeMsgComponents(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   return interaction.editReply({ components: [] });
 }
 
@@ -111,7 +111,6 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
   const queueEmbed = new Discord.MessageEmbed({
     author: {
       name: '🎵 Queue List 🎵',
-      icon_url: undefined,
     },
     color: 0x01ff01,
     description: message,
@@ -145,20 +144,12 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
       }),
     ],
   });
-  const unLoop = new Discord.MessageButton({ customId: 'loop', label: 'Unloop', style: 'SUCCESS' });
-  const Loop = new Discord.MessageButton({ customId: 'loop', label: 'Loop', style: 'SUCCESS' });
-  if (session.isLooped() === true) {
-    queueButtons.spliceComponents(0, 1, unLoop);
-  } else {
-    queueButtons.spliceComponents(0, 1, Loop);
-  }
-  const Resume = new Discord.MessageButton({ customId: 'pause', label: 'Resume', style: 'SUCCESS' });
-  const Pause = new Discord.MessageButton({ customId: 'pause', label: 'Pause', style: 'SUCCESS' });
-  if (session.isPaused() === true) {
-    queueButtons.spliceComponents(3, 1, Resume);
-  } else {
-    queueButtons.spliceComponents(3, 1, Pause);
-  }
+  const unloop = new Discord.MessageButton({ customId: 'loop', label: 'Unloop', style: 'SUCCESS' });
+  const loop = new Discord.MessageButton({ customId: 'loop', label: 'Loop', style: 'SUCCESS' });
+  queueButtons.spliceComponents(0, 1, session.isLooped() ? unloop : loop);
+  const resume = new Discord.MessageButton({ customId: 'pause', label: 'Resume', style: 'SUCCESS' });
+  const pause = new Discord.MessageButton({ customId: 'pause', label: 'Pause', style: 'SUCCESS' });
+  queueButtons.spliceComponents(3, 1, session.isPaused() ? resume : pause);
   await interaction.editReply({
     embeds: [queueEmbed],
     components: [queueButtons],
@@ -177,8 +168,7 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
         break;
       }
       case 'loop': {
-        const loopValue = session.isLooped() ? session.setLoop(false) : session.setLoop(true);
-        await loopValue;
+        session.setLoop(!session.isLooped());
         break;
       }
       case 'clear': {
@@ -190,8 +180,8 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
         break;
       }
       case 'pause': {
-        const pauseValue = session.isPaused() ? session.resume() : session.pause();
-        await pauseValue;
+        if (session.isPaused()) session.resume();
+        else session.pause();
         break;
       }
       default: {
@@ -272,7 +262,7 @@ const QueueCommand: Command = {
     switch (subcommand) {
       case 'list': {
         setTimeout(() => {
-          timeOutReply(interaction, session);
+          removeMsgComponents(interaction, session);
         }, FOURTEEN_MINUTES);
         await handleList(interaction, session);
         break;
