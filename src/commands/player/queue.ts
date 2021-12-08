@@ -1,11 +1,7 @@
-// eslint-disable-next-line import/no-duplicates
-import { CommandInteraction, Interaction, Message, MessageActionRow, MessageEmbed, Options, TextBasedChannels } from 'discord.js';
-import type { MoreVideoDetails } from 'ytdl-core';
+import Discord, { CommandInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
-import { channelMention, SlashCommandBuilder } from '@discordjs/builders';
+import { SlashCommandBuilder } from '@discordjs/builders';
 
-// eslint-disable-next-line import/no-duplicates
-import Discord from 'discord.js';
 import get from 'lodash.get';
 import { FOURTEEN_MINUTES } from 'src/constants';
 import type Session from './session';
