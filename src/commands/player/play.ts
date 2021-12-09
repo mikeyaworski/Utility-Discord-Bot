@@ -4,7 +4,8 @@ import dotenv from 'dotenv';
 import throttle from 'lodash.throttle';
 import { validateURL } from 'ytdl-core';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, MessageEmbed } from 'discord.js';
+import { SUCCESS_COLOR } from 'src/constants';
 import { error } from 'src/logging';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
@@ -17,8 +18,18 @@ import {
   parseSpotifyTrack,
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
+import { attachAndListenToPlayerButtons, replyWithSessionButtons } from './utils';
 
 dotenv.config();
+
+function respondWithEmbed(interaction: CommandInteraction, message: string) {
+  return interaction.editReply({
+    embeds: [new MessageEmbed({
+      color: SUCCESS_COLOR,
+      description: message,
+    })],
+  });
+}
 
 async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<string> {
   const wasPlayingAnything = Boolean(session.getCurrentTrack());
@@ -48,21 +59,21 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
   const firstTrackPartialMessage = await enqueue(session, [firstTrack], false);
-  await interaction.editReply(`${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
+  await respondWithEmbed(interaction, `${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
 
   let numFetched = 0;
   const throttledMessageUpdate = throttle(async () => {
     if (numFetched === 0) {
-      return interaction.editReply(`${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
+      return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
     }
     if (numFetched < restQueries.length) {
-      return interaction.editReply(`${firstTrackPartialMessage}\nQueued ${
+      return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nQueued ${
         numFetched
       } tracks.\nFetching the other ${
         restQueries.length - numFetched
       } tracks from YouTube...`);
     }
-    return interaction.editReply(`${firstTrackPartialMessage}\nQueued ${numFetched} tracks from YouTube.`);
+    return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nQueued ${numFetched} tracks from YouTube.`);
   }, 5000);
 
   await getTracksFromQueries(restQueries, async newTracks => {
@@ -72,7 +83,6 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
   });
 }
 
-// TODO: Add player buttons for all subcommands here as well
 const PlayCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()
@@ -128,7 +138,8 @@ const PlayCommand: Command = {
         : [new Track(youtubeLink, TrackVariant.YOUTUBE)];
 
       const responseMessage = await enqueue(session, tracks, pushToFront);
-      return interaction.editReply(responseMessage);
+      await respondWithEmbed(interaction, responseMessage);
+      return attachAndListenToPlayerButtons(interaction, session);
     }
     if (spotifyLink) {
       const { type, id } = parseSpotifyLink(spotifyLink);
@@ -136,11 +147,13 @@ const PlayCommand: Command = {
         case LinkType.PLAYLIST: {
           const queries = await parseSpotifyPlaylist(id);
           if (queries.length > 1) {
-            return enqueueQueries(session, queries, interaction);
+            await enqueueQueries(session, queries, interaction);
+            return attachAndListenToPlayerButtons(interaction, session);
           }
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          return interaction.editReply(responseMessage);
+          await respondWithEmbed(interaction, responseMessage);
+          return attachAndListenToPlayerButtons(interaction, session);
         }
         case LinkType.ALBUM: {
           const queries = await parseSpotifyAlbum(id);
@@ -149,13 +162,15 @@ const PlayCommand: Command = {
           }
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          return interaction.editReply(responseMessage);
+          await respondWithEmbed(interaction, responseMessage);
+          return attachAndListenToPlayerButtons(interaction, session);
         }
         case LinkType.TRACK: {
           const query = await parseSpotifyTrack(id);
           const tracks = await getTracksFromQueries([query]);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          return interaction.editReply(responseMessage);
+          await respondWithEmbed(interaction, responseMessage);
+          return attachAndListenToPlayerButtons(interaction, session);
         }
         default: {
           throw new Error('Could not parse Spotify link.');
@@ -165,9 +180,11 @@ const PlayCommand: Command = {
     if (queryStr) {
       const tracks = await getTracksFromQueries([queryStr]);
       const responseMessage = await enqueue(session, tracks, pushToFront);
-      return interaction.editReply(responseMessage);
+      await respondWithEmbed(interaction, responseMessage);
+      return attachAndListenToPlayerButtons(interaction, session);
     }
-    return interaction.editReply('Resumed.');
+    await interaction.editReply('Resumed.');
+    return attachAndListenToPlayerButtons(interaction, session);
   },
 };
 

@@ -1,12 +1,10 @@
-import Discord, { CommandInteraction } from 'discord.js';
+import { CommandInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 
-import get from 'lodash.get';
-import { FOURTEEN_MINUTES, SUCCESS_COLOR } from 'src/constants';
 import type Session from './session';
 import sessions from './sessions';
-import { getPlayerButtons, listenForPlayerButtons } from './utils';
+import { replyWithSessionButtons, attachAndListenToPlayerButtons } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -68,71 +66,79 @@ commandBuilder.addSubcommand(subcommand => {
 });
 
 async function handleList(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  const currentTrack = session.getCurrentTrack();
-  if (!currentTrack) return interaction.editReply('Nothing is playing.');
-  const combinedQueue = session.isLooped() ? session.queue.concat(session.queueLoop) : session.queue;
-  type Next10 = {
-    title: string,
-    position: number,
-  }[];
-  const next10 = (await Promise.all(combinedQueue
-    .slice(0, 10)
-    .map(async (track, idx) => {
-      try {
-        const details = await track.getVideoDetails();
+  await replyWithSessionButtons({
+    interaction,
+    session,
+    run: async s => {
+      const currentTrack = s.getCurrentTrack();
+      if (!currentTrack) {
         return {
-          title: details.title,
-          position: idx + 1,
+          message: 'Nothing is playing',
+          showButtons: false,
         };
-      } catch {
-        return null;
       }
-    }))).filter(Boolean) as Next10;
-  const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
-  const totalQueued = session.isLooped() ? session.queueLoop.length : session.queue.length;
-  let message = `**__🔊 Now Playing__**: ${
-    nowPlayingTitle
-  }\n\n**__Looped__**? ${
-    session.isLooped() ? 'Yes' : 'No'
-  }\n**__Shuffled__**? ${
-    session.isShuffled() ? 'Yes' : 'No'
-  }`;
+      const combinedQueue = s.isLooped() ? s.queue.concat(s.queueLoop) : s.queue;
+      type Next10 = {
+        title: string,
+        position: number,
+      }[];
+      const next10 = (await Promise.all(combinedQueue
+        .slice(0, 10)
+        .map(async (track, idx) => {
+          try {
+            const details = await track.getVideoDetails();
+            return {
+              title: details.title,
+              position: idx + 1,
+            };
+          } catch {
+            return null;
+          }
+        }))).filter(Boolean) as Next10;
+      const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
+      const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
+      let message = `**__🔊 Now Playing__**: ${
+        nowPlayingTitle
+      }\n\n**__Looped__**? ${
+        session.isLooped() ? 'Yes' : 'No'
+      }\n**__Shuffled__**? ${
+        session.isShuffled() ? 'Yes' : 'No'
+      }`;
 
-  if (next10.length > 0) {
-    message = `${message}\n\n__Length of Queue__: ${
-      totalQueued
-    }\n__Queue__ (max 10 are shown):\n${
-      next10.map(details => `#${details.position}: ${details.title}`).join('\n')
-    }`;
-  }
-  const embed = new Discord.MessageEmbed({
-    author: {
-      name: '🎵 Queue List 🎵',
+      if (next10.length > 0) {
+        message = `${message}\n\n__Length of Queue__: ${
+          totalQueued
+        }\n__Queue__ (max 10 are shown):\n${
+          next10.map(details => `#${details.position}: ${details.title}`).join('\n')
+        }`;
+      }
+      return {
+        message,
+        title: '🎵 Queue List 🎵',
+      };
     },
-    color: SUCCESS_COLOR,
-    description: message,
   });
-  const buttons = getPlayerButtons(session);
-  await interaction.editReply({
-    embeds: [embed],
-    components: [buttons],
-  });
-  listenForPlayerButtons(interaction, session, async () => {
-    await handleList(interaction, session);
-  });
-  return null;
 }
 
 async function handleLoop(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   const loop = interaction.options.getBoolean('loop', true);
   if (loop) session.loop();
   else session.unloop();
-  return interaction.editReply(`Queue loop: ${loop ? 'ON' : 'OFF'}.`);
+  await replyWithSessionButtons({
+    interaction,
+    session: sessions.get(interaction.guild!),
+    run: async s => {
+      return {
+        message: `Queue loop: ${s.isLooped() ? 'ON' : 'OFF'}.`,
+      };
+    },
+  });
 }
 
 async function handleShuffle(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   session.shuffle();
-  return interaction.editReply('Queue shuffled.');
+  await interaction.editReply('Queue shuffled.');
+  attachAndListenToPlayerButtons(interaction, session);
 }
 
 async function handleRemove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
@@ -142,10 +148,12 @@ async function handleRemove(interaction: CommandInteraction, session: Session): 
   if (!removedTrack) return interaction.editReply('Could not find track.');
   try {
     const videoDetails = await removedTrack.getVideoDetails();
-    return interaction.editReply(`Removed track: ${videoDetails.title}`);
+    await interaction.editReply(`Removed track: ${videoDetails.title}`);
   } catch {
-    return interaction.editReply('Removed track.');
+    await interaction.editReply('Removed track.');
   }
+  attachAndListenToPlayerButtons(interaction, session);
+  return null;
 }
 
 async function handleMove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
@@ -156,18 +164,20 @@ async function handleMove(interaction: CommandInteraction, session: Session): Pr
   if (!movedTrack) return interaction.editReply('Could not find track.');
   try {
     const videoDetails = await movedTrack.getVideoDetails();
-    return interaction.editReply(`Moved track to queue position #${newPosition}: ${videoDetails.title}`);
+    await interaction.editReply(`Moved track to queue position #${newPosition}: ${videoDetails.title}`);
   } catch {
-    return interaction.editReply('Moved track.');
+    await interaction.editReply('Moved track.');
   }
+  attachAndListenToPlayerButtons(interaction, session);
+  return null;
 }
 
-function handleClear(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+async function handleClear(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   session.clear();
-  return interaction.editReply('Queue cleared.');
+  await interaction.editReply('Queue cleared.');
+  attachAndListenToPlayerButtons(interaction, session);
 }
 
-// TODO: Add player buttons for all subcommands here as well
 const QueueCommand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
