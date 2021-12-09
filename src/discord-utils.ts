@@ -16,7 +16,7 @@ import type { IntentionalAny } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
-import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX } from 'src/constants';
+import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX, FOURTEEN_MINUTES } from 'src/constants';
 import { error } from 'src/logging';
 import { client } from 'src/client';
 import { array } from 'src/utils';
@@ -39,6 +39,18 @@ export function handleError(
   }
   error(err);
   return interaction.editReply(message || 'Something went wrong...');
+}
+
+export function eventuallyRemoveComponents(interaction: CommandInteraction): void {
+  // Unfortunately, we can't catch this error. If message components exist 15 minutes after the interaction
+  // has been created, interacting with any of the components will crash the app.
+  setTimeout(() => {
+    interaction.editReply({
+      components: [],
+    }).catch(() => {
+      // Intentionally empty
+    });
+  }, FOURTEEN_MINUTES);
 }
 
 export async function findMessageInGuild(

@@ -1,12 +1,28 @@
 import Discord, { CommandInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
-import { handleError } from 'src/discord-utils';
-import { FOURTEEN_MINUTES, SUCCESS_COLOR } from 'src/constants';
+import { handleError, eventuallyRemoveComponents } from 'src/discord-utils';
+import { SUCCESS_COLOR } from 'src/constants';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
   const buttons = new Discord.MessageActionRow({
     components: [
+      session.isPaused()
+        ? new Discord.MessageButton({
+          customId: 'resume',
+          label: 'Resume',
+          style: 'SUCCESS',
+        })
+        : new Discord.MessageButton({
+          customId: 'pause',
+          label: 'Pause',
+          style: 'SUCCESS',
+        }),
+      new Discord.MessageButton({
+        customId: 'skip',
+        label: 'Skip',
+        style: 'SUCCESS',
+      }),
       session.isLooped()
         ? new Discord.MessageButton({
           customId: 'unloop',
@@ -28,22 +44,6 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow {
         label: 'Clear',
         style: 'SUCCESS',
       }),
-      session.isPaused()
-        ? new Discord.MessageButton({
-          customId: 'resume',
-          label: 'Resume',
-          style: 'SUCCESS',
-        })
-        : new Discord.MessageButton({
-          customId: 'pause',
-          label: 'Pause',
-          style: 'SUCCESS',
-        }),
-      new Discord.MessageButton({
-        customId: 'skip',
-        label: 'Skip',
-        style: 'SUCCESS',
-      }),
     ].filter(Boolean),
   });
 
@@ -58,7 +58,6 @@ export async function listenForPlayerButtons(
   try {
     const buttonInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.interaction?.id === interaction.id,
-      time: FOURTEEN_MINUTES,
     });
     await buttonInteraction?.deferUpdate();
     switch (buttonInteraction?.customId) {
@@ -108,6 +107,7 @@ export async function listenForPlayerButtons(
 }
 
 export function attachAndListenToPlayerButtons(interaction: CommandInteraction, session: Session): void {
+  eventuallyRemoveComponents(interaction);
   (async function populateButtons() {
     const buttons = getPlayerButtons(session);
     await interaction.editReply({
@@ -140,6 +140,7 @@ export async function replyWithSessionButtons({
     });
     return;
   }
+  eventuallyRemoveComponents(interaction);
   (async function recursiveFn() {
     const {
       message,
