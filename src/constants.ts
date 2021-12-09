@@ -3,7 +3,7 @@ export const DECLINE_EMOJI = '❌';
 export const SUCCESS_COLOR = '#208637';
 
 export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
-export const FOURTEEN_MINUTES = 1000 * 60 * 14;
+export const INTERACTION_MAX_TIMEOUT = 1000 * 60 * 10; // 14 mins still caused errors for some reason
 
 export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;
