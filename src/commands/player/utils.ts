@@ -1,7 +1,7 @@
 import Discord, { CommandInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
 import { handleError, eventuallyRemoveComponents } from 'src/discord-utils';
-import { SUCCESS_COLOR } from 'src/constants';
+import { SUCCESS_COLOR, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
@@ -58,6 +58,7 @@ export async function listenForPlayerButtons(
   try {
     const buttonInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.interaction?.id === interaction.id,
+      time: INTERACTION_MAX_TIMEOUT,
     });
     await buttonInteraction?.deferUpdate();
     switch (buttonInteraction?.customId) {
