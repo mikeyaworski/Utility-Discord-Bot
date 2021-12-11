@@ -1,6 +1,5 @@
 export const CONFIRM_EMOJI = '✅';
 export const DECLINE_EMOJI = '❌';
-export const SUCCESS_COLOR = '#208637';
 
 export const ONE_MINUTE = 1000 * 60;
 export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
@@ -10,9 +9,9 @@ export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;
 
 export const Colors = Object.freeze({
-  SUCCESS: '#8bc34a',
-  WARN: '#ffc107',
-  DANGER: '#f44336',
+  SUCCESS: '#8BC34A',
+  WARN: '#FFC107',
+  DANGER: '#F44336',
 } as const);
 
 export const BULK_MESSAGES_LIMIT = 100;

@@ -1,7 +1,7 @@
 import Discord, { CommandInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
 import { handleError, eventuallyRemoveComponents } from 'src/discord-utils';
-import { SUCCESS_COLOR, INTERACTION_MAX_TIMEOUT } from 'src/constants';
+import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
@@ -103,7 +103,9 @@ export async function listenForPlayerButtons(
     }
     if (!cb) listenForPlayerButtons(interaction, session);
   } catch (err) {
-    await handleError(err, interaction);
+    await interaction.editReply({
+      components: [],
+    });
   }
 }
 
@@ -152,7 +154,7 @@ export async function replyWithSessionButtons({
       author: {
         name: title,
       },
-      color: SUCCESS_COLOR,
+      color: Colors.SUCCESS,
       description: message,
     })] : [];
     const content = title ? undefined : message;

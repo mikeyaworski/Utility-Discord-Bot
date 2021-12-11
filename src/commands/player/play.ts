@@ -5,7 +5,7 @@ import throttle from 'lodash.throttle';
 import { validateURL } from 'ytdl-core';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction, MessageEmbed } from 'discord.js';
-import { SUCCESS_COLOR } from 'src/constants';
+import { Colors } from 'src/constants';
 import { error } from 'src/logging';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
@@ -25,7 +25,7 @@ dotenv.config();
 function respondWithEmbed(interaction: CommandInteraction, message: string) {
   return interaction.editReply({
     embeds: [new MessageEmbed({
-      color: SUCCESS_COLOR,
+      color: Colors.SUCCESS,
       description: message,
     })],
   });
