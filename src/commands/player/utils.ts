@@ -1,6 +1,6 @@
 import Discord, { CommandInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
-import { handleError, eventuallyRemoveComponents } from 'src/discord-utils';
+// import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import Session from './session';
 
@@ -110,7 +110,7 @@ export async function listenForPlayerButtons(
 }
 
 export function attachAndListenToPlayerButtons(interaction: CommandInteraction, session: Session): void {
-  eventuallyRemoveComponents(interaction);
+  // eventuallyRemoveComponents(interaction);
   (async function populateButtons() {
     const buttons = getPlayerButtons(session);
     await interaction.editReply({
@@ -143,7 +143,7 @@ export async function replyWithSessionButtons({
     });
     return;
   }
-  eventuallyRemoveComponents(interaction);
+  // eventuallyRemoveComponents(interaction);
   (async function recursiveFn() {
     const {
       message,
