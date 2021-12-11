@@ -16,7 +16,7 @@ import type { IntentionalAny } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
-import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX, INTERACTION_MAX_TIMEOUT } from 'src/constants';
+import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX, INTERACTION_MAX_TIMEOUT, ONE_MINUTE } from 'src/constants';
 import { error } from 'src/logging';
 import { client } from 'src/client';
 import { array } from 'src/utils';
@@ -50,7 +50,8 @@ export function eventuallyRemoveComponents(interaction: CommandInteraction): voi
     }).catch(() => {
       // Intentionally empty
     });
-  }, INTERACTION_MAX_TIMEOUT);
+  // Subtract one minute to beat the timeout
+  }, INTERACTION_MAX_TIMEOUT - ONE_MINUTE);
 }
 
 export async function findMessageInGuild(
