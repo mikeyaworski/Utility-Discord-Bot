@@ -94,6 +94,7 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
     const youtubeLinks: string[] = res.data.items
       .filter((item: IntentionalAny) => item.snippet?.resourceId?.kind === 'youtube#video')
       .map((item: IntentionalAny) => `https://youtube.com/watch?v=${item.snippet?.resourceId.videoId}`);
+    // TODO: We can provide the title of the YouTube video right here, so that it doesn't need to be fetched separately
     tracks.push(...youtubeLinks.map(youtubeLink => new Track(youtubeLink, TrackVariant.YOUTUBE)));
   } while (nextPageToken && numPagesFetched < MAX_YT_PLAYLIST_PAGE_FETCHES);
 
