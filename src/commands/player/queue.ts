@@ -4,7 +4,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 
 import type Session from './session';
 import sessions from './sessions';
-import { replyWithSessionButtons, attachAndListenToPlayerButtons } from './utils';
+import { replyWithSessionButtons, attachPlayerButtons } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -138,7 +138,7 @@ async function handleLoop(interaction: CommandInteraction, session: Session): Pr
 async function handleShuffle(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   session.shuffle();
   await interaction.editReply('Queue shuffled.');
-  attachAndListenToPlayerButtons(interaction, session);
+  attachPlayerButtons(interaction, session);
 }
 
 async function handleRemove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
@@ -152,7 +152,7 @@ async function handleRemove(interaction: CommandInteraction, session: Session): 
   } catch {
     await interaction.editReply('Removed track.');
   }
-  attachAndListenToPlayerButtons(interaction, session);
+  attachPlayerButtons(interaction, session);
   return null;
 }
 
@@ -168,14 +168,14 @@ async function handleMove(interaction: CommandInteraction, session: Session): Pr
   } catch {
     await interaction.editReply('Moved track.');
   }
-  attachAndListenToPlayerButtons(interaction, session);
+  attachPlayerButtons(interaction, session);
   return null;
 }
 
 async function handleClear(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
   session.clear();
   await interaction.editReply('Queue cleared.');
-  attachAndListenToPlayerButtons(interaction, session);
+  attachPlayerButtons(interaction, session);
 }
 
 const QueueCommand: Command = {

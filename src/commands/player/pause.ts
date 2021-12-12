@@ -1,7 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { attachAndListenToPlayerButtons } from './utils';
+import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
 const NowPlayingCommand: Command = {
@@ -28,7 +28,7 @@ const NowPlayingCommand: Command = {
     await interaction.editReply({
       content: success ? 'Paused.' : 'Could not pause.',
     });
-    attachAndListenToPlayerButtons(interaction, session);
+    attachPlayerButtons(interaction, session);
   },
 };
 

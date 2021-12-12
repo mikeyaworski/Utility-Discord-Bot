@@ -18,7 +18,7 @@ import {
   parseSpotifyTrack,
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
-import { attachAndListenToPlayerButtons, replyWithSessionButtons } from './utils';
+import { attachPlayerButtons } from './utils';
 
 dotenv.config();
 
@@ -139,7 +139,7 @@ const PlayCommand: Command = {
 
       const responseMessage = await enqueue(session, tracks, pushToFront);
       await respondWithEmbed(interaction, responseMessage);
-      return attachAndListenToPlayerButtons(interaction, session);
+      return attachPlayerButtons(interaction, session);
     }
     if (spotifyLink) {
       const { type, id } = parseSpotifyLink(spotifyLink);
@@ -148,12 +148,12 @@ const PlayCommand: Command = {
           const queries = await parseSpotifyPlaylist(id);
           if (queries.length > 1) {
             await enqueueQueries(session, queries, interaction);
-            return attachAndListenToPlayerButtons(interaction, session);
+            return attachPlayerButtons(interaction, session);
           }
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
           await respondWithEmbed(interaction, responseMessage);
-          return attachAndListenToPlayerButtons(interaction, session);
+          return attachPlayerButtons(interaction, session);
         }
         case LinkType.ALBUM: {
           const queries = await parseSpotifyAlbum(id);
@@ -163,14 +163,14 @@ const PlayCommand: Command = {
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
           await respondWithEmbed(interaction, responseMessage);
-          return attachAndListenToPlayerButtons(interaction, session);
+          return attachPlayerButtons(interaction, session);
         }
         case LinkType.TRACK: {
           const query = await parseSpotifyTrack(id);
           const tracks = await getTracksFromQueries([query]);
           const responseMessage = await enqueue(session, tracks, pushToFront);
           await respondWithEmbed(interaction, responseMessage);
-          return attachAndListenToPlayerButtons(interaction, session);
+          return attachPlayerButtons(interaction, session);
         }
         default: {
           throw new Error('Could not parse Spotify link.');
@@ -181,10 +181,10 @@ const PlayCommand: Command = {
       const tracks = await getTracksFromQueries([queryStr]);
       const responseMessage = await enqueue(session, tracks, pushToFront);
       await respondWithEmbed(interaction, responseMessage);
-      return attachAndListenToPlayerButtons(interaction, session);
+      return attachPlayerButtons(interaction, session);
     }
     await interaction.editReply('Resumed.');
-    return attachAndListenToPlayerButtons(interaction, session);
+    return attachPlayerButtons(interaction, session);
   },
 };
 

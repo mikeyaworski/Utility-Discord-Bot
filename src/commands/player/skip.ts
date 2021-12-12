@@ -1,7 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { attachAndListenToPlayerButtons } from './utils';
+import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
 const SkipCommand: Command = {
@@ -26,7 +26,7 @@ const SkipCommand: Command = {
     } catch {
       await interaction.editReply('Skipped.');
     }
-    attachAndListenToPlayerButtons(interaction, session);
+    attachPlayerButtons(interaction, session);
     return null;
   },
 };

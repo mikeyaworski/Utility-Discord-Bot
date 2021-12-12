@@ -109,7 +109,7 @@ export async function listenForPlayerButtons(
   }
 }
 
-export function attachAndListenToPlayerButtons(interaction: CommandInteraction, session: Session): void {
+export function attachPlayerButtons(interaction: CommandInteraction, session: Session): void {
   // eventuallyRemoveComponents(interaction);
   (async function populateButtons() {
     const buttons = getPlayerButtons(session);

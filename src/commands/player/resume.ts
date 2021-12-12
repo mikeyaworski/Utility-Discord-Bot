@@ -2,7 +2,7 @@ import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import sessions from './sessions';
-import { attachAndListenToPlayerButtons } from './utils';
+import { attachPlayerButtons } from './utils';
 
 const NowPlayingCommand: Command = {
   guildOnly: true,
@@ -27,7 +27,7 @@ const NowPlayingCommand: Command = {
     await interaction.editReply({
       content: success ? 'Resumed.' : 'Could not resume.',
     });
-    attachAndListenToPlayerButtons(interaction, session);
+    attachPlayerButtons(interaction, session);
   },
 };
 
