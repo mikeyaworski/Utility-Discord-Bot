@@ -1,6 +1,7 @@
 import { CommandInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
+import pLimit from 'p-limit';
 
 import type Session from './session';
 import sessions from './sessions';
@@ -82,9 +83,12 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
         title: string,
         position: number,
       }[];
+      // Limit the requests because doing all 10 at the same time causes a long audio hitch
+      // (probably exhausting the network bandwidth)
+      const limit = pLimit(2);
       const next10 = (await Promise.all(combinedQueue
         .slice(0, 10)
-        .map(async (track, idx) => {
+        .map((track, idx) => limit(async () => {
           try {
             const details = await track.getVideoDetails();
             return {
@@ -94,7 +98,7 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
           } catch {
             return null;
           }
-        }))).filter(Boolean) as Next10;
+        })))).filter(Boolean) as Next10;
       const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
       const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
       let message = `**__🔊 Now Playing__**: ${
