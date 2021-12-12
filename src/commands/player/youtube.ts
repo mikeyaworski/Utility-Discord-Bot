@@ -1,5 +1,6 @@
 import { Cluster } from 'puppeteer-cluster';
 import axios from 'axios';
+import cheerio from 'cheerio';
 
 import type { IntentionalAny } from 'src/types';
 import { MAX_YT_PLAYLIST_PAGE_FETCHES, YT_PLAYLIST_PAGE_SIZE } from 'src/constants';
@@ -98,3 +99,16 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
 
   return tracks;
 }
+
+export const getTitleFromUrl = (() => {
+  const titleCache = new Map<string, string>();
+  return async (url: string): Promise<string> => {
+    if (titleCache.has(url)) return titleCache.get(url)!;
+    const res = await axios(url);
+    const $ = cheerio.load(res.data);
+    const title = $('meta[name="title"]').attr('content');
+    if (!title) throw new Error('Could not fetch title');
+    titleCache.set(url, title);
+    return title;
+  };
+})();

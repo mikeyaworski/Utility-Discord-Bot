@@ -1,9 +1,8 @@
-import type { MoreVideoDetails } from 'ytdl-core';
 import type { AudioResource } from '@discordjs/voice';
 
 import { createAudioResource, demuxProbe } from '@discordjs/voice';
 import { raw as ytdl } from 'youtube-dl-exec';
-import { getInfo } from 'ytdl-core';
+import { getTitleFromUrl } from './youtube';
 
 export enum TrackVariant {
   YOUTUBE,
@@ -12,14 +11,10 @@ export enum TrackVariant {
 export default class Track {
   public readonly link: string;
   public readonly variant: TrackVariant;
-  // private audioResourcePromise: Promise<AudioResource>;
-  // private videoDetailsPromise: Promise<MoreVideoDetails>
 
   public constructor(link: string, variant: TrackVariant) {
     this.link = link;
     this.variant = variant;
-    // this.videoDetailsPromise = getInfo(youtubeLink).then(videoInfo => videoInfo.videoDetails);
-    // this.audioResourcePromise = this.createAudioResource();
   }
 
   public createAudioResource(): Promise<AudioResource<Track>> {
@@ -57,14 +52,13 @@ export default class Track {
     });
   }
 
-  public async getVideoDetails(): Promise<MoreVideoDetails> {
-    // return this.videoDetailsPromise;
-    const videoInfo = await getInfo(this.link);
-    return videoInfo.videoDetails;
+  public async getVideoDetails(): Promise<{ title: string }> {
+    return {
+      title: await getTitleFromUrl(this.link),
+    };
   }
 
   public async getAudioResource(): Promise<AudioResource> {
-    // return this.audioResourcePromise;
     const audioResource = await this.createAudioResource();
     return audioResource;
   }
