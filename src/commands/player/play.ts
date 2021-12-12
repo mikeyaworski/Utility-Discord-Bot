@@ -76,7 +76,7 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
     return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nQueued ${numFetched} tracks from YouTube.`);
   }, 5000);
 
-  await getTracksFromQueries(restQueries, async newTracks => {
+  getTracksFromQueries(restQueries, async newTracks => {
     await session.enqueue(newTracks);
     numFetched += newTracks.length;
     await throttledMessageUpdate();
