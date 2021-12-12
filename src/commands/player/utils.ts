@@ -2,6 +2,7 @@ import Discord, { CommandInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
+import { log } from 'src/logging';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
@@ -56,54 +57,67 @@ export async function listenForPlayerButtons(
   cb?: () => Promise<unknown>,
 ): Promise<void> {
   try {
-    const buttonInteraction = await interaction.channel?.awaitMessageComponent({
-      filter: i => i.message.interaction?.id === interaction.id,
+    const collector = interaction.channel?.createMessageComponentCollector({
+      filter: i => {
+        // Need to respond to all interactions, regardless of if they match the filter
+        i.deferUpdate().catch(() => {
+          log('Could not defer update for interaction', i.customId);
+        });
+        return i.message.interaction?.id === interaction.id;
+      },
       time: INTERACTION_MAX_TIMEOUT,
     });
-    await buttonInteraction?.deferUpdate();
-    switch (buttonInteraction?.customId) {
-      case 'shuffle': {
-        session.shuffle();
-        if (cb) cb();
-        break;
+    collector?.on('collect', i => {
+      switch (i.customId) {
+        case 'shuffle': {
+          session.shuffle();
+          if (cb) cb();
+          break;
+        }
+        case 'loop': {
+          session.loop();
+          if (cb) cb();
+          break;
+        }
+        case 'unloop': {
+          session.unloop();
+          if (cb) cb();
+          break;
+        }
+        case 'clear': {
+          session.clear();
+          if (cb) cb();
+          break;
+        }
+        case 'skip': {
+          session.skip();
+          if (cb) cb();
+          break;
+        }
+        case 'pause': {
+          session.pause();
+          if (cb) cb();
+          break;
+        }
+        case 'resume': {
+          session.resume();
+          if (cb) cb();
+          break;
+        }
+        default: {
+          break;
+        }
       }
-      case 'loop': {
-        session.loop();
-        if (cb) cb();
-        break;
-      }
-      case 'unloop': {
-        session.unloop();
-        if (cb) cb();
-        break;
-      }
-      case 'clear': {
-        session.clear();
-        if (cb) cb();
-        break;
-      }
-      case 'skip': {
-        session.skip();
-        if (cb) cb();
-        break;
-      }
-      case 'pause': {
-        session.pause();
-        if (cb) cb();
-        break;
-      }
-      case 'resume': {
-        session.resume();
-        if (cb) cb();
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    if (!cb) listenForPlayerButtons(interaction, session);
+    });
+    collector?.on('end', () => {
+      log('Ended collection of message components.');
+      interaction.editReply({
+        components: [],
+      });
+    });
   } catch (err) {
-    await interaction.editReply({
+    log('Entered catch block for player buttons collector.');
+    interaction.editReply({
       components: [],
     });
   }
@@ -111,15 +125,16 @@ export async function listenForPlayerButtons(
 
 export function attachPlayerButtons(interaction: CommandInteraction, session: Session): void {
   // eventuallyRemoveComponents(interaction);
-  (async function populateButtons() {
+  async function populateButtons() {
     const buttons = getPlayerButtons(session);
     await interaction.editReply({
       components: [buttons],
     });
-    listenForPlayerButtons(interaction, session, async () => {
-      await populateButtons();
-    });
-  }());
+  }
+  populateButtons();
+  listenForPlayerButtons(interaction, session, async () => {
+    await populateButtons();
+  });
 }
 
 export async function replyWithSessionButtons({
@@ -144,7 +159,8 @@ export async function replyWithSessionButtons({
     return;
   }
   // eventuallyRemoveComponents(interaction);
-  (async function recursiveFn() {
+  async function runAndReply() {
+    if (!session) return;
     const {
       message,
       title,
@@ -164,9 +180,9 @@ export async function replyWithSessionButtons({
       components,
       content,
     });
-    listenForPlayerButtons(interaction, session, async () => {
-      await recursiveFn();
-    });
-    return null;
-  }());
+  }
+  runAndReply();
+  listenForPlayerButtons(interaction, session, async () => {
+    await runAndReply();
+  });
 }
