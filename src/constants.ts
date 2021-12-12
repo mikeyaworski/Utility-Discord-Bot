@@ -9,7 +9,7 @@ export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;
 
 export const Colors = Object.freeze({
-  SUCCESS: '#8BC34A',
+  SUCCESS: '#208637',
   WARN: '#FFC107',
   DANGER: '#F44336',
 } as const);
