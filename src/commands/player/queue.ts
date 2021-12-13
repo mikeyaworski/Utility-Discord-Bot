@@ -85,7 +85,7 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
       }[];
       // Limit the requests because doing all 10 at the same time causes a long audio hitch
       // (probably exhausting the network bandwidth)
-      const limit = pLimit(2);
+      const limit = pLimit(1);
       const next10 = (await Promise.all(combinedQueue
         .slice(0, 10)
         .map((track, idx) => limit(async () => {
