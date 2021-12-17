@@ -1,7 +1,8 @@
 import type { AudioResource } from '@discordjs/voice';
 
 import { createAudioResource, demuxProbe } from '@discordjs/voice';
-import { raw as ytdl } from 'youtube-dl-exec';
+import { exec as ytdl } from 'youtube-dl-exec';
+import { error } from 'src/logging';
 import { getTitleFromUrl } from './youtube';
 
 export enum TrackVariant {
@@ -21,6 +22,7 @@ export default class Track {
     return new Promise((resolve, reject) => {
       const process = ytdl(
         this.link, {
+          // @ts-ignore This library has incomplete typing
           o: '-',
           q: '',
           f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
@@ -34,10 +36,17 @@ export default class Track {
         return;
       }
       const stream = process.stdout;
-      const onError = (error: Error) => {
+      const onError = (err: unknown) => {
         if (!process.killed) process.kill();
         stream.resume();
-        reject(error);
+        reject(err);
+        // This ERR_STREAM_PREMATURE_CLOSE error happens when you skip the last song, but there is no issue with that.
+        // TODO: See if there is an alternative way to skip songs which does not run into this error.
+        // @ts-ignore This is useless TS
+        if (typeof err === 'object' && err && 'code' in err && err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+          return;
+        }
+        error(err);
       };
       process.once('spawn', () => {
         demuxProbe(stream)

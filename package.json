@@ -53,7 +53,7 @@
     "puppeteer-cluster": "^0.22.0",
     "sequelize": "^6.3.5",
     "tweetnacl": "^1.0.3",
-    "youtube-dl-exec": "^1.2.13",
+    "youtube-dl-exec": "^2.0.2",
     "ytdl-core": "^4.9.1"
   },
   "devDependencies": {
