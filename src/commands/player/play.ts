@@ -7,6 +7,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
+import { isTwitchVodLink } from 'src/utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
 import Session from './session';
@@ -88,19 +89,21 @@ const PlayCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('play')
     .setDescription('Plays audio into a voice channel.')
-    .addStringOption(option => option.setName('youtube').setDescription('YouTube Link (video or playlist)').setRequired(false))
-    .addStringOption(option => option.setName('spotify').setDescription('Spotify Link (video, album or playlist)').setRequired(false))
-    .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube').setRequired(false))
+    .addStringOption(option => option.setName('youtube').setDescription('YouTube Link (video or playlist).').setRequired(false))
+    .addStringOption(option => option.setName('spotify').setDescription('Spotify Link (video, album or playlist).').setRequired(false))
+    .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube.').setRequired(false))
+    .addStringOption(option => option.setName('twitch').setDescription('Twitch Link. Only VODs are supported right now.').setRequired(false))
     .addBooleanOption(option => option.setName('front').setDescription('Push song (singular) to the front of the queue.').setRequired(false)),
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
+    const twitchLink = interaction.options.getString('twitch');
     const youtubeLink = interaction.options.getString('youtube');
     const spotifyLink = interaction.options.getString('spotify');
     const queryStr = interaction.options.getString('query');
     const pushToFront = interaction.options.getBoolean('front') ?? false;
 
-    const numArgs = [youtubeLink, spotifyLink, queryStr].filter(Boolean).length;
+    const numArgs = [youtubeLink, twitchLink, spotifyLink, queryStr].filter(Boolean).length;
 
     // Assert guild since this is a guild-only command
     const guild = interaction.guild!;
@@ -176,6 +179,14 @@ const PlayCommand: Command = {
           throw new Error('Could not parse Spotify link.');
         }
       }
+    }
+    if (twitchLink) {
+      if (!isTwitchVodLink(twitchLink)) {
+        return interaction.editReply('Invalid Twitch VOD link.');
+      }
+      const track = new Track(twitchLink, TrackVariant.TWITCH_VOD);
+      const responseMessage = await enqueue(session, [track], pushToFront);
+      await respondWithEmbed(interaction, responseMessage);
     }
     if (queryStr) {
       const tracks = await getTracksFromQueries([queryStr]);

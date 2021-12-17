@@ -106,10 +106,6 @@ export function getDateString(epochTime: number): string {
   return new Date(epochTime * 1000).toISOString();
 }
 
-export function isYoutubeLink(str: string): boolean {
-  return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
-}
-
 /**
  * Randomize array in-place using Durstenfeld shuffle algorithm.
  * https://stackoverflow.com/a/12646864/2554605
@@ -121,4 +117,12 @@ export function shuffleArray<T = unknown>(array: T[]): void {
     array[i] = array[j];
     array[j] = temp;
   }
+}
+
+export function isYoutubeLink(str: string): boolean {
+  return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
+}
+
+export function isTwitchVodLink(url: string): boolean {
+  return /^https:\/\/(www\.)?twitch\.tv\/videos\/\d+$/.test(url);
 }

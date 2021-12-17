@@ -7,6 +7,7 @@ import { getTitleFromUrl } from './youtube';
 
 export enum TrackVariant {
   YOUTUBE,
+  TWITCH_VOD,
 }
 
 export default class Track {
@@ -62,9 +63,24 @@ export default class Track {
   }
 
   public async getVideoDetails(): Promise<{ title: string }> {
-    return {
-      title: await getTitleFromUrl(this.link),
-    };
+    switch (this.variant) {
+      case TrackVariant.YOUTUBE: {
+        return {
+          title: await getTitleFromUrl(this.link),
+        };
+      }
+      case TrackVariant.TWITCH_VOD: {
+        // TODO: Add support for fetching Twitch titles
+        return {
+          title: 'TODO',
+        };
+      }
+      default: {
+        return {
+          title: 'TODO',
+        };
+      }
+    }
   }
 
   public async getAudioResource(): Promise<AudioResource> {

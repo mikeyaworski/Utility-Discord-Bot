@@ -5,6 +5,7 @@ import {
   shorten,
   parseDelay,
   isYoutubeLink,
+  isTwitchVodLink,
 } from '../utils';
 
 describe('utils', () => {
@@ -100,25 +101,37 @@ describe('utils', () => {
       expect(() => parseDelay('random')).toThrowError();
     });
   });
-});
 
-describe('isYoutubeLink', () => {
-  test('proper link', () => {
-    expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0tFkwM')).toBe(true);
+  describe('isYoutubeLink', () => {
+    test('proper link', () => {
+      expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0tFkwM')).toBe(true);
+    });
+    test('proper link', () => {
+      expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0t-FkwM')).toBe(true);
+    });
+    test('proper link', () => {
+      expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0t_FkwM')).toBe(true);
+    });
+    test('www', () => {
+      expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM')).toBe(true);
+    });
+    test('extra query parameters', () => {
+      expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM&foo=bar')).toBe(false);
+    });
+    test('invalid link', () => {
+      expect(isYoutubeLink('https://twitter.com')).toBe(false);
+    });
   });
-  test('proper link', () => {
-    expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0t-FkwM')).toBe(true);
-  });
-  test('proper link', () => {
-    expect(isYoutubeLink('https://youtube.com/watch?v=QnL5P0t_FkwM')).toBe(true);
-  });
-  test('www', () => {
-    expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM')).toBe(true);
-  });
-  test('extra query parameters', () => {
-    expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM&foo=bar')).toBe(false);
-  });
-  test('invalid link', () => {
-    expect(isYoutubeLink('https://twitter.com')).toBe(false);
+
+  describe('isTwitchVodLink', () => {
+    test('proper link', () => {
+      expect(isTwitchVodLink('https://twitch.tv/videos/12345')).toBe(true);
+    });
+    test('www', () => {
+      expect(isTwitchVodLink('https://www.twitch.tv/videos/12345')).toBe(true);
+    });
+    test('invalid link', () => {
+      expect(isTwitchVodLink('https://twitch.tv/foobar')).toBe(false);
+    });
   });
 });
