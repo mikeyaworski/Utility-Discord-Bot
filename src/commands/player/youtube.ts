@@ -15,7 +15,7 @@ export const getTracksFromQueries = (() => {
     const cachedQueries = queries.filter(query => queryCache.has(query));
     const newQueries = queries.filter(query => !queryCache.has(query));
 
-    const cachedQueryTracks = cachedQueries.map(query => new Track(queryCache.get(query)!, TrackVariant.YOUTUBE));
+    const cachedQueryTracks = cachedQueries.map(query => new Track(queryCache.get(query)!, TrackVariant.YOUTUBE_VOD));
     if (tracksFetchedCb) {
       tracksFetchedCb(cachedQueryTracks);
     }
@@ -31,7 +31,7 @@ export const getTracksFromQueries = (() => {
         const youtubeLink = `https://youtube.com/watch?v=${youtubeResults[0].id}`;
         const youtubeTitle = youtubeResults[0].title;
         queryCache.set(query, youtubeLink);
-        const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE, youtubeTitle ? {
+        const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE_VOD, youtubeTitle ? {
           title: youtubeTitle,
         } : undefined);
         if (tracksFetchedCb) {
@@ -75,7 +75,7 @@ export async function parseYoutubePlaylistFromApi(playlistUrl: string): Promise<
         link: `https://youtube.com/watch?v=${item.snippet?.resourceId.videoId}`,
         title: item.snippet?.title,
       }));
-    tracks.push(...youtubeResults.map(({ link, title }) => new Track(link, TrackVariant.YOUTUBE, {
+    tracks.push(...youtubeResults.map(({ link, title }) => new Track(link, TrackVariant.YOUTUBE_VOD, {
       title,
     })));
   } while (nextPageToken && numPagesFetched < MAX_YT_PLAYLIST_PAGE_FETCHES);
@@ -92,7 +92,7 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
     const limit = YT_PLAYLIST_PAGE_SIZE * MAX_YT_PLAYLIST_PAGE_FETCHES;
     const playlist = await YouTubeSr.getPlaylist(playlistUrl, { limit });
     const allResults = await playlist.fetch(limit);
-    return allResults.videos.map(video => new Track(video.url, TrackVariant.YOUTUBE, video.title ? {
+    return allResults.videos.map(video => new Track(video.url, TrackVariant.YOUTUBE_VOD, video.title ? {
       title: video.title,
     } : undefined));
   }

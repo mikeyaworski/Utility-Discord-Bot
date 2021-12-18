@@ -86,21 +86,19 @@ const PlayCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('play')
     .setDescription('Plays audio into a voice channel.')
-    .addStringOption(option => option.setName('youtube').setDescription('YouTube Link (video or playlist).').setRequired(false))
-    .addStringOption(option => option.setName('spotify').setDescription('Spotify Link (video, album or playlist).').setRequired(false))
+    .addStringOption(option => option.setName('link').setDescription('YouTube, Spotify, Twitch. No livestreams.').setRequired(false))
     .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube.').setRequired(false))
-    .addStringOption(option => option.setName('twitch').setDescription('Twitch Link. Only VODs are supported right now.').setRequired(false))
+    .addStringOption(option => option.setName('stream').setDescription('YouTube livestream. Twitch is not currently supported.').setRequired(false))
     .addBooleanOption(option => option.setName('front').setDescription('Push song (singular) to the front of the queue.').setRequired(false)),
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
-    const twitchLink = interaction.options.getString('twitch');
-    const youtubeLink = interaction.options.getString('youtube');
-    const spotifyLink = interaction.options.getString('spotify');
+    const vodLink = interaction.options.getString('link');
+    const streamLink = interaction.options.getString('stream');
     const queryStr = interaction.options.getString('query');
     const pushToFront = interaction.options.getBoolean('front') ?? false;
 
-    const numArgs = [youtubeLink, twitchLink, spotifyLink, queryStr].filter(Boolean).length;
+    const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
 
     // Assert guild since this is a guild-only command
     const guild = interaction.guild!;
@@ -127,62 +125,71 @@ const PlayCommand: Command = {
 
     if (!session) session = sessions.create(channel);
 
-    if (youtubeLink) {
-      if (!YouTubeSr.validate(youtubeLink, 'VIDEO') && !YouTubeSr.validate(youtubeLink, 'PLAYLIST')) {
-        return interaction.editReply('Invalid YouTube link.');
+    if (vodLink) {
+      if (isTwitchVodLink(vodLink)) {
+        const track = new Track(vodLink, TrackVariant.TWITCH_VOD);
+        const responseMessage = await enqueue(session, [track], pushToFront);
+        await respondWithEmbed(interaction, responseMessage);
       }
 
-      const tracks = YouTubeSr.isPlaylist(youtubeLink)
-        ? (await parseYoutubePlaylist(youtubeLink))
-        : [new Track(youtubeLink, TrackVariant.YOUTUBE)];
+      if (YouTubeSr.validate(vodLink, 'VIDEO') || YouTubeSr.validate(vodLink, 'PLAYLIST')) {
+        const tracks = YouTubeSr.isPlaylist(vodLink)
+          ? (await parseYoutubePlaylist(vodLink))
+          : [new Track(vodLink, TrackVariant.YOUTUBE_VOD)];
+        const responseMessage = await enqueue(session, tracks, pushToFront);
+        await respondWithEmbed(interaction, responseMessage);
+        return attachPlayerButtons(interaction, session);
+      }
 
+      try {
+        const { type } = parseSpotifyLink(vodLink);
+        switch (type) {
+          case LinkType.PLAYLIST: {
+            const queries = await parseSpotifyPlaylist(vodLink);
+            if (queries.length > 1) {
+              await enqueueQueries(session, queries, interaction);
+              return attachPlayerButtons(interaction, session);
+            }
+            const tracks = await getTracksFromQueries(queries);
+            const responseMessage = await enqueue(session, tracks, pushToFront);
+            await respondWithEmbed(interaction, responseMessage);
+            return attachPlayerButtons(interaction, session);
+          }
+          case LinkType.ALBUM: {
+            const queries = await parseSpotifyAlbum(vodLink);
+            if (queries.length > 1) {
+              return enqueueQueries(session, queries, interaction);
+            }
+            const tracks = await getTracksFromQueries(queries);
+            const responseMessage = await enqueue(session, tracks, pushToFront);
+            await respondWithEmbed(interaction, responseMessage);
+            return attachPlayerButtons(interaction, session);
+          }
+          case LinkType.TRACK: {
+            const query = await parseSpotifyTrack(vodLink);
+            const tracks = await getTracksFromQueries([query]);
+            const responseMessage = await enqueue(session, tracks, pushToFront);
+            await respondWithEmbed(interaction, responseMessage);
+            return attachPlayerButtons(interaction, session);
+          }
+          default: {
+            throw new Error('Could not parse Spotify link.');
+          }
+        }
+      } catch {
+        // Intentionally empty
+      }
+
+      throw new Error('Invalid link.');
+    }
+    if (streamLink) {
+      if (!YouTubeSr.validate(streamLink, 'VIDEO')) {
+        return interaction.editReply('Invalid YouTube link.');
+      }
+      const tracks = [new Track(streamLink, TrackVariant.YOUTUBE_LIVESTREAM)];
       const responseMessage = await enqueue(session, tracks, pushToFront);
       await respondWithEmbed(interaction, responseMessage);
       return attachPlayerButtons(interaction, session);
-    }
-    if (spotifyLink) {
-      const { type } = parseSpotifyLink(spotifyLink);
-      switch (type) {
-        case LinkType.PLAYLIST: {
-          const queries = await parseSpotifyPlaylist(spotifyLink);
-          if (queries.length > 1) {
-            await enqueueQueries(session, queries, interaction);
-            return attachPlayerButtons(interaction, session);
-          }
-          const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
-        }
-        case LinkType.ALBUM: {
-          const queries = await parseSpotifyAlbum(spotifyLink);
-          if (queries.length > 1) {
-            return enqueueQueries(session, queries, interaction);
-          }
-          const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
-        }
-        case LinkType.TRACK: {
-          const query = await parseSpotifyTrack(spotifyLink);
-          const tracks = await getTracksFromQueries([query]);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
-        }
-        default: {
-          throw new Error('Could not parse Spotify link.');
-        }
-      }
-    }
-    if (twitchLink) {
-      if (!isTwitchVodLink(twitchLink)) {
-        return interaction.editReply('Invalid Twitch VOD link.');
-      }
-      const track = new Track(twitchLink, TrackVariant.TWITCH_VOD);
-      const responseMessage = await enqueue(session, [track], pushToFront);
-      await respondWithEmbed(interaction, responseMessage);
     }
     if (queryStr) {
       const tracks = await getTracksFromQueries([queryStr]);

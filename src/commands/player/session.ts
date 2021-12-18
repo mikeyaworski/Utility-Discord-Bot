@@ -1,18 +1,20 @@
-import type { VoiceConnection, AudioPlayer } from '@discordjs/voice';
-import type { Guild } from 'discord.js';
-
-import { promisify } from 'util';
 import {
+  VoiceConnection,
+  AudioPlayer,
   createAudioPlayer,
   entersState,
   VoiceConnectionStatus,
   VoiceConnectionDisconnectReason,
   AudioPlayerStatus,
 } from '@discordjs/voice';
+import type { Guild } from 'discord.js';
+
+import { promisify } from 'util';
+
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
 import sessions from './sessions';
-import Track, { TrackVariant } from './track';
+import Track from './track';
 
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
@@ -91,7 +93,7 @@ export default class Session {
    * it cannot be reused.
    */
   private duplicateTracks(tracks: Track[]): Track[] {
-    return tracks.map(track => new Track(track.link, TrackVariant.YOUTUBE));
+    return tracks.map(track => new Track(track.link, track.variant));
   }
 
   public getCurrentTrack(): Track | undefined {

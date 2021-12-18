@@ -50,6 +50,7 @@
     "node-notifier": "^9.0.0",
     "p-limit": "^3.1.0",
     "pg": "^8.5.1",
+    "play-dl": "^1.6.1",
     "sequelize": "^6.3.5",
     "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
