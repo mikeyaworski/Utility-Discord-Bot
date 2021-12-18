@@ -56,7 +56,7 @@ export function initClient(): Promise<IntentionalAny> {
       client.login(token);
     }),
     (async () => {
-      const slashCommands = commands.map(command => command.slashCommandData.toJSON());
+      const slashCommands = commands.map(command => command.slashCommandData?.toJSON());
       const contextMenus = commands.map(command => command.contextMenuData);
       // TODO: Improve typing
       const body = filterOutFalsy(slashCommands.concat(contextMenus as IntentionalAny));

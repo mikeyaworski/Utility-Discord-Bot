@@ -44,12 +44,12 @@ export enum ContextMenuTypes {
 
 export interface Command {
   // TODO: Properly generalize the data type
-  slashCommandData: SlashCommandBuilder | ReturnType<SlashCommandBuilder['addStringOption']>,
+  slashCommandData?: SlashCommandBuilder | ReturnType<SlashCommandBuilder['addStringOption']>,
   contextMenuData?: {
     name: string,
     type: ContextMenuTypes,
   },
-  runCommand: (interaction: CommandInteraction) => Promise<IntentionalAny>,
+  runCommand?: (interaction: CommandInteraction) => Promise<IntentionalAny>,
   runContextMenu?: (interaction: ContextMenuInteraction) => Promise<IntentionalAny>,
   buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
   guildOnly?: boolean,

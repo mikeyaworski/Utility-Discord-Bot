@@ -17,6 +17,8 @@ import Pause from './player/pause';
 import Resume from './player/resume';
 import NowPlaying from './player/now-playing';
 import Queue from './player/queue';
+import Shuffle from './player/shuffle';
+import Loop from './player/loop';
 
 const commands = [
   Poll,
@@ -34,6 +36,8 @@ const commands = [
   NowPlaying,
   Queue,
   Leave,
+  Shuffle,
+  Loop,
 ];
 
 export default commands;
@@ -42,7 +46,7 @@ export function listenToCommands(): void {
   client.on('interactionCreate', async interaction => {
     const command = commands.find(c => {
       if (interaction.isCommand()) {
-        return interaction.commandName === c.slashCommandData.name;
+        return interaction.commandName === c.slashCommandData?.name;
       }
       if (interaction.isContextMenu()) {
         return interaction.commandName === c.contextMenuData?.name;
@@ -50,7 +54,7 @@ export function listenToCommands(): void {
       if (interaction.isButton()) {
         return interaction.message.interaction
             && 'commandName' in interaction.message.interaction
-            && interaction.message.interaction.commandName === c.slashCommandData.name;
+            && interaction.message.interaction.commandName === c.slashCommandData?.name;
       }
       return false;
     });
