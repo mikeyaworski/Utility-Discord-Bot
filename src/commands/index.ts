@@ -11,6 +11,7 @@ import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
 
 import Play from './player/play';
+import Seek from './player/seek';
 import Skip from './player/skip';
 import Leave from './player/leave';
 import Pause from './player/pause';
@@ -30,6 +31,7 @@ const commands = [
   Reminders,
 
   Play,
+  Seek,
   Skip,
   Pause,
   Resume,

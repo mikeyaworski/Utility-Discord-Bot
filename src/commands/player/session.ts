@@ -197,6 +197,14 @@ export default class Session {
     return this.processQueue(true);
   }
 
+  public async seek(amount: number): Promise<void> {
+    if (!this.currentTrack) return;
+    const resource = await this.currentTrack.getAudioResource({
+      seek: amount,
+    });
+    this.audioPlayer.play(resource);
+  }
+
   private async processQueue(forceSkip = false): Promise<void> {
     if (this.queueLock) {
       log('Queue lock prevented a problem.');

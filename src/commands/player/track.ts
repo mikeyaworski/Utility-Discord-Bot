@@ -10,6 +10,10 @@ interface VideoDetails {
   title: string,
 }
 
+interface AudioResourceOptions {
+  seek?: number, // in seconds
+}
+
 export enum TrackVariant {
   YOUTUBE_VOD,
   YOUTUBE_LIVESTREAM,
@@ -28,15 +32,21 @@ export default class Track {
     this.details = details;
   }
 
-  public async createAudioResource(): Promise<AudioResource<Track>> {
+  public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        const stream = await play.stream(this.link);
-        return createAudioResource(stream.stream, {
+        const source = options.seek
+          ? await play.stream(this.link, {
+            seek: options.seek,
+            seekMode: 'precise',
+          })
+          : await play.stream(this.link);
+        const audioResource = await createAudioResource(source.stream, {
           metadata: this,
-          inputType: stream.type,
+          inputType: source.type,
         });
+        return audioResource;
       }
       default: {
         return new Promise((resolve, reject) => {
@@ -110,8 +120,8 @@ export default class Track {
     return { ...this.details };
   }
 
-  public async getAudioResource(): Promise<AudioResource> {
-    const audioResource = await this.createAudioResource();
+  public async getAudioResource(options: AudioResourceOptions = {}): Promise<AudioResource> {
+    const audioResource = await this.createAudioResource(options);
     return audioResource;
   }
 }
