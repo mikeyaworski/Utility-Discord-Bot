@@ -58,18 +58,13 @@ export async function listenForPlayerButtons(
 ): Promise<void> {
   try {
     const collector = interaction.channel?.createMessageComponentCollector({
-      filter: i => {
-        // Need to respond to all interactions, regardless of if they match the filter
-        i.deferUpdate().catch(() => {
-          // TODO: If there are multiple interactions and you press pause on one of them, this deferUpdate
-          // gets called for each one, since there are that many collectors. See if there is an alternative.
-          log('Could not defer update for interaction', i.customId);
-        });
-        return i.message.interaction?.id === interaction.id;
-      },
+      filter: i => i.message.interaction?.id === interaction.id,
       time: INTERACTION_MAX_TIMEOUT,
     });
     collector?.on('collect', i => {
+      i.deferUpdate().catch(() => {
+        log('Could not defer update for interaction', i.customId);
+      });
       switch (i.customId) {
         case 'shuffle': {
           session.shuffle();
