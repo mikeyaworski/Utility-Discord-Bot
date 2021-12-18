@@ -1,8 +1,7 @@
 import type { Command, IntentionalAny } from 'src/types';
 
-import dotenv from 'dotenv';
 import throttle from 'lodash.throttle';
-import { validateURL } from 'ytdl-core';
+import YouTubeSr from 'youtube-sr';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { Colors } from 'src/constants';
@@ -20,8 +19,6 @@ import {
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons } from './utils';
-
-dotenv.config();
 
 function respondWithEmbed(interaction: CommandInteraction, message: string) {
   return interaction.editReply({
@@ -131,12 +128,11 @@ const PlayCommand: Command = {
     if (!session) session = sessions.create(channel);
 
     if (youtubeLink) {
-      // TODO: Improve validation
-      if (!validateURL(youtubeLink) && !youtubeLink.includes('youtube.com/playlist')) {
+      if (!YouTubeSr.validate(youtubeLink, 'VIDEO') && !YouTubeSr.validate(youtubeLink, 'PLAYLIST')) {
         return interaction.editReply('Invalid YouTube link.');
       }
 
-      const tracks = youtubeLink.includes('/playlist')
+      const tracks = YouTubeSr.isPlaylist(youtubeLink)
         ? (await parseYoutubePlaylist(youtubeLink))
         : [new Track(youtubeLink, TrackVariant.YOUTUBE)];
 
@@ -145,10 +141,10 @@ const PlayCommand: Command = {
       return attachPlayerButtons(interaction, session);
     }
     if (spotifyLink) {
-      const { type, id } = parseSpotifyLink(spotifyLink);
+      const { type } = parseSpotifyLink(spotifyLink);
       switch (type) {
         case LinkType.PLAYLIST: {
-          const queries = await parseSpotifyPlaylist(id);
+          const queries = await parseSpotifyPlaylist(spotifyLink);
           if (queries.length > 1) {
             await enqueueQueries(session, queries, interaction);
             return attachPlayerButtons(interaction, session);
@@ -159,7 +155,7 @@ const PlayCommand: Command = {
           return attachPlayerButtons(interaction, session);
         }
         case LinkType.ALBUM: {
-          const queries = await parseSpotifyAlbum(id);
+          const queries = await parseSpotifyAlbum(spotifyLink);
           if (queries.length > 1) {
             return enqueueQueries(session, queries, interaction);
           }
@@ -169,7 +165,7 @@ const PlayCommand: Command = {
           return attachPlayerButtons(interaction, session);
         }
         case LinkType.TRACK: {
-          const query = await parseSpotifyTrack(id);
+          const query = await parseSpotifyTrack(spotifyLink);
           const tracks = await getTracksFromQueries([query]);
           const responseMessage = await enqueue(session, tracks, pushToFront);
           await respondWithEmbed(interaction, responseMessage);

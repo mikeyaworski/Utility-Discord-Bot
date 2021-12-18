@@ -3,6 +3,7 @@ import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
+import { CONCURRENCY_LIMIT } from 'src/constants';
 import type Session from './session';
 import sessions from './sessions';
 import { replyWithSessionButtons, attachPlayerButtons } from './utils';
@@ -83,9 +84,9 @@ async function handleList(interaction: CommandInteraction, session: Session): Pr
         title: string,
         position: number,
       }[];
-      // Limit the requests because doing all 10 at the same time causes a long audio hitch
-      // (probably exhausting the network bandwidth)
-      const limit = pLimit(1);
+      // Concurrency limit can be used if there is audio hitching while making requests.
+      // This was an issue in older implementations, but not anymore, which is why the limit is currently at 10.
+      const limit = pLimit(CONCURRENCY_LIMIT);
       const next10 = (await Promise.all(combinedQueue
         .slice(0, 10)
         .map((track, idx) => limit(async () => {

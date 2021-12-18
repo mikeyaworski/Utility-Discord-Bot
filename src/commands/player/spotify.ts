@@ -1,13 +1,61 @@
 import axios from 'axios';
+import Spotify from 'spotify-url-info';
 
-import { IntentionalAny } from 'src/types';
+import { error } from 'src/logging';
+import type { IntentionalAny } from 'src/types';
 import { MAX_SPOTIFY_PLAYLIST_PAGE_FETCHES, SPOTIFY_PLAYLIST_PAGE_SIZE } from 'src/constants';
 
 const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
+export enum LinkType {
+  PLAYLIST,
+  ALBUM,
+  TRACK,
+}
+
+interface ParsedLink {
+  type: LinkType,
+  id: string,
+}
+
+export function parseSpotifyLink(link: string): ParsedLink {
+  const url = new URL(link);
+  if (url.origin !== 'https://open.spotify.com') {
+    throw new Error('That is not a Spotify link.');
+  }
+  const [route, id] = url.pathname.substring(1).split('/');
+  switch (route) {
+    case 'playlist': {
+      return {
+        type: LinkType.PLAYLIST,
+        id,
+      };
+    }
+    case 'album': {
+      return {
+        type: LinkType.ALBUM,
+        id,
+      };
+    }
+    case 'track': {
+      return {
+        type: LinkType.TRACK,
+        id,
+      };
+    }
+    default: {
+      throw new Error('Could not parse Spotify link.');
+    }
+  }
+}
+
+function isSpotifySetUp() {
+  return spotifyClientId && spotifyClientSecret;
+}
+
 function getSpotifyAuth() {
-  if (!spotifyClientId || !spotifyClientSecret) throw new Error('Spotify API not configured.');
+  if (!isSpotifySetUp()) throw new Error('Spotify API not configured.');
   return `Basic ${
     Buffer.from(`${spotifyClientId}:${spotifyClientSecret}`).toString('base64')
   }`;
@@ -65,66 +113,47 @@ async function paginateSpotifyApi(route: string, params: [string, string][] = []
   return items;
 }
 
-export async function parseSpotifyPlaylist(playlistId: string): Promise<string[]> {
-  const items = await paginateSpotifyApi(`playlists/${playlistId}/tracks`, [
-    ['fields', 'next,items(track(name,artists))'],
-  ]);
-  return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item.track));
-}
-
-export async function parseSpotifyAlbum(albumId: string): Promise<string[]> {
-  const items = await paginateSpotifyApi(`albums/${albumId}/tracks`);
-  return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item));
-}
-
-export async function parseSpotifyTrack(trackId: string): Promise<string> {
-  const accessToken = await getSpotifyAccessToken();
-  const res = await axios.get(`https://api.spotify.com/v1/tracks/${trackId}`, {
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-    },
-  });
-  return getQueryFromSpotifyTrack(res.data);
-}
-
-export enum LinkType {
-  PLAYLIST,
-  ALBUM,
-  TRACK,
-}
-
-interface ParsedLink {
-  type: LinkType,
-  id: string,
-}
-
-export function parseSpotifyLink(link: string): ParsedLink {
-  const url = new URL(link);
-  if (url.origin !== 'https://open.spotify.com') {
-    throw new Error('That is not a Spotify link.');
+export async function parseSpotifyPlaylist(link: string): Promise<string[]> {
+  const { id: playlistId } = parseSpotifyLink(link);
+  try {
+    const items = await paginateSpotifyApi(`playlists/${playlistId}/tracks`, [
+      ['fields', 'next,items(track(name,artists))'],
+    ]);
+    return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item.track));
+  } catch (err) {
+    error(err);
+    // This is capped at 100
+    const tracks = await Spotify.getTracks(link);
+    return tracks.map(track => getQueryFromSpotifyTrack(track));
   }
-  const [route, id] = url.pathname.substring(1).split('/');
-  switch (route) {
-    case 'playlist': {
-      return {
-        type: LinkType.PLAYLIST,
-        id,
-      };
-    }
-    case 'album': {
-      return {
-        type: LinkType.ALBUM,
-        id,
-      };
-    }
-    case 'track': {
-      return {
-        type: LinkType.TRACK,
-        id,
-      };
-    }
-    default: {
-      throw new Error('Could not parse Spotify link.');
-    }
+}
+
+export async function parseSpotifyAlbum(link: string): Promise<string[]> {
+  const { id: albumId } = parseSpotifyLink(link);
+  try {
+    const items = await paginateSpotifyApi(`albums/${albumId}/tracks`);
+    return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item));
+  } catch (err) {
+    error(err);
+    // This is capped at 100
+    const tracks = await Spotify.getTracks(link);
+    return tracks.map(track => getQueryFromSpotifyTrack(track));
+  }
+}
+
+export async function parseSpotifyTrack(link: string): Promise<string> {
+  const { id: trackId } = parseSpotifyLink(link);
+  try {
+    const accessToken = await getSpotifyAccessToken();
+    const res = await axios.get(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return getQueryFromSpotifyTrack(res.data);
+  } catch (err) {
+    error(err);
+    const res = await Spotify.getData(link);
+    return getQueryFromSpotifyTrack(res);
   }
 }

@@ -17,7 +17,7 @@ This is a private bot. This bot does not have measures in place to handle scalin
 1. Add the Postgres add-on to your Heroku app: https://elements.heroku.com/addons/heroku-postgresql. This add-on will automatically add a `DATABASE_URL` config variable to your app, which the code uses to connect to your database. Easy!
 
 1. Add the following buildpacks to your Heroku app (in Settings):
-    - `https://github.com/jontewks/puppeteer-heroku-buildpack.git`
+    - (Not required if using the latest version) `https://github.com/jontewks/puppeteer-heroku-buildpack.git`
     - `https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git`
     - `heroku/python`
 
