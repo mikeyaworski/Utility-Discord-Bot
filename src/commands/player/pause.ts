@@ -1,4 +1,4 @@
-import type { Command } from 'src/types';
+import { Command, ContextMenuTypes } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { attachPlayerButtons } from './utils';
@@ -9,6 +9,27 @@ const NowPlayingCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('pause')
     .setDescription('Pause the player.'),
+  contextMenuData: {
+    type: ContextMenuTypes.USER,
+    name: 'pause/resume',
+  },
+  runContextMenu: async interaction => {
+    await interaction.deferReply({ ephemeral: true });
+    const session = sessions.get(interaction.guild!);
+
+    if (!session) {
+      await interaction.editReply('Session does not exist.');
+      return;
+    }
+
+    if (session.isPaused()) {
+      session.resume();
+      await interaction.editReply('Resumed.');
+    } else {
+      session.pause();
+      await interaction.editReply('Paused.');
+    }
+  },
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });

@@ -2,7 +2,7 @@ import { CommandInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
-
+import { ContextMenuTypes } from 'src/types';
 import { CONCURRENCY_LIMIT } from 'src/constants';
 import type Session from './session';
 import sessions from './sessions';
@@ -186,6 +186,23 @@ async function handleClear(interaction: CommandInteraction, session: Session): P
 const QueueCommand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
+  contextMenuData: {
+    type: ContextMenuTypes.USER,
+    name: 'queue list',
+  },
+  runContextMenu: async interaction => {
+    await interaction.deferReply({ ephemeral: true });
+
+    // This is a guild-only command
+    const guild = interaction.guild!;
+    const session = sessions.get(guild);
+    if (!session) {
+      await interaction.editReply('Session does not exist.');
+      return;
+    }
+    await handleList(interaction, session);
+  },
+
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
