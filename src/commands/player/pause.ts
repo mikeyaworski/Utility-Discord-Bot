@@ -5,27 +5,6 @@ import { ContextMenuInteraction } from 'discord.js';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
-async function pauseContextMenu(interaction: ContextMenuInteraction): Promise<IntentionalAny> {
-  await interaction.deferReply({ ephemeral: true });
-
-  const session = sessions.get(interaction.guild!);
-
-  if (!session) {
-    await interaction.editReply({
-      components: [],
-      embeds: [],
-      content: 'Session does not exist.',
-    });
-    return;
-  }
-
-  const success = session.pause();
-  if (!success) session.resume();
-  await interaction.editReply({
-    content: success ? 'Paused.' : 'Resumed.',
-  });
-}
-
 const NowPlayingCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()
@@ -35,7 +14,21 @@ const NowPlayingCommand: Command = {
     type: ContextMenuTypes.USER,
     name: 'pause/resume',
   },
-  runContextMenu: pauseContextMenu,
+  runContextMenu: async interaction => {
+    await interaction.deferReply({ ephemeral: true });
+    const session = sessions.get(interaction.guild!);
+
+    if (!session) {
+      await interaction.editReply('Session does not exist.');
+      return;
+    }
+
+    const success = session.pause();
+    if (!success) session.resume();
+    await interaction.editReply({
+      content: success ? 'Paused.' : 'Resumed.',
+    });
+  },
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });

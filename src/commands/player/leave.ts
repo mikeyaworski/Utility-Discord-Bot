@@ -1,5 +1,5 @@
-import type { CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import { Command, ContextMenuTypes, IntentionalAny } from 'src/types';
+import type { CommandInteraction } from 'discord.js';
+import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { usersHavePermission } from 'src/discord-utils';

@@ -14,7 +14,6 @@ import type {
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize, ModelCtor } from 'sequelize/types';
-import { Session } from 'inspector';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
