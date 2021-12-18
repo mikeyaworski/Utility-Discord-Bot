@@ -1,4 +1,4 @@
-import type { Command } from 'src/types';
+import { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import sessions from './sessions';
@@ -9,7 +9,6 @@ const NowPlayingCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('resume')
     .setDescription('Resume the player (unpause).'),
-
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 

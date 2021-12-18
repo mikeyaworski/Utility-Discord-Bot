@@ -46,7 +46,7 @@ export function listenToCommands(): void {
   client.on('interactionCreate', async interaction => {
     const command = commands.find(c => {
       if (interaction.isCommand()) {
-        return interaction.commandName === c.slashCommandData.name;
+        return interaction.commandName === c.slashCommandData?.name;
       }
       if (interaction.isContextMenu()) {
         return interaction.commandName === c.contextMenuData?.name;
@@ -54,7 +54,7 @@ export function listenToCommands(): void {
       if (interaction.isButton()) {
         return interaction.message.interaction
             && 'commandName' in interaction.message.interaction
-            && interaction.message.interaction.commandName === c.slashCommandData.name;
+            && interaction.message.interaction.commandName === c.slashCommandData?.name;
       }
       return false;
     });

@@ -1,11 +1,11 @@
-import type { Command } from 'src/types';
-import { ContextMenuTypes, IntentionalAny } from 'src/types';
+import { CommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { ContextMenuInteraction } from 'discord.js';
+import type { Command } from 'src/types';
+import { ContextMenuTypes } from 'src/types';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
-async function skipContextMenu(interaction:ContextMenuInteraction) : Promise<IntentionalAny> {
+async function run(interaction: CommandInteraction, shouldAttachButtons: boolean) {
   await interaction.deferReply({ ephemeral: true });
   const session = sessions.get(interaction.guild!);
   if (!session) return interaction.editReply('Session does not exist.');
@@ -20,7 +20,7 @@ async function skipContextMenu(interaction:ContextMenuInteraction) : Promise<Int
   } catch {
     await interaction.editReply('Skipped.');
   }
-  attachPlayerButtons(interaction, session);
+  if (shouldAttachButtons) attachPlayerButtons(interaction, session);
   return null;
 }
 
@@ -33,24 +33,11 @@ const SkipCommand: Command = {
     type: ContextMenuTypes.USER,
     name: 'skip',
   },
-  runContextMenu: skipContextMenu,
+  runContextMenu: async interaction => {
+    run(interaction, false);
+  },
   runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-    const session = sessions.get(interaction.guild!);
-    if (!session) return interaction.editReply('Session does not exist.');
-
-    await session.skip();
-    const newTrack = await session.getCurrentTrack();
-    if (!newTrack) return interaction.editReply('Skipped.');
-
-    try {
-      const { title } = await newTrack.getVideoDetails();
-      await interaction.editReply(`Skipped. Now playing: ${title}`);
-    } catch {
-      await interaction.editReply('Skipped.');
-    }
-    attachPlayerButtons(interaction, session);
-    return null;
+    run(interaction, true);
   },
 };
 
