@@ -13,7 +13,8 @@
     "shell:bot": "docker exec -it utility_discord_bot sh",
     "shell:db": "docker exec -it utility_discord_bot_db sh -c \"psql -d utility_discord_bot_db -U user\"",
     "dev": "nodemon",
-    "start": "ts-node --transpile-only --require tsconfig-paths/register src/index.ts"
+    "start": "ts-node --transpile-only --require tsconfig-paths/register src/index.ts",
+    "up": "docker-compose up"
   },
   "repository": {
     "type": "git",
@@ -49,12 +50,11 @@
     "node-notifier": "^9.0.0",
     "p-limit": "^3.1.0",
     "pg": "^8.5.1",
-    "puppeteer": "^10.4.0",
-    "puppeteer-cluster": "^0.22.0",
     "sequelize": "^6.3.5",
+    "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
     "youtube-dl-exec": "^2.0.2",
-    "ytdl-core": "^4.9.1"
+    "youtube-sr": "^4.1.11"
   },
   "devDependencies": {
     "@types/cron": "^1.7.3",
