@@ -17,6 +17,8 @@ import Pause from './player/pause';
 import Resume from './player/resume';
 import NowPlaying from './player/now-playing';
 import Queue from './player/queue';
+import Shuffle from './player/shuffle';
+import Loop from './player/loop';
 
 const commands = [
   Poll,
@@ -34,6 +36,8 @@ const commands = [
   NowPlaying,
   Queue,
   Leave,
+  Shuffle,
+  Loop,
 ];
 
 export default commands;

@@ -1,8 +1,8 @@
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
-
+import { ContextMenuTypes } from 'src/types';
 import type Session from './session';
 import sessions from './sessions';
 import { replyWithSessionButtons, attachPlayerButtons } from './utils';
@@ -182,9 +182,74 @@ async function handleClear(interaction: CommandInteraction, session: Session): P
   attachPlayerButtons(interaction, session);
 }
 
+async function queueContextMenu(interaction:ContextMenuInteraction) : Promise<IntentionalAny> {
+  await interaction.deferReply({ ephemeral: true });
+  const session = sessions.get(interaction.guild!);
+  await replyWithSessionButtons({
+    interaction,
+    session,
+    run: async s => {
+      const currentTrack = s.getCurrentTrack();
+      if (!currentTrack) {
+        return {
+          message: 'Nothing is playing',
+          showButtons: false,
+        };
+      }
+      const combinedQueue = s.isLooped() ? s.queue.concat(s.queueLoop) : s.queue;
+      type Next10 = {
+        title: string,
+        position: number,
+      }[];
+      // Limit the requests because doing all 10 at the same time causes a long audio hitch
+      // (probably exhausting the network bandwidth)
+      const limit = pLimit(1);
+      const next10 = (await Promise.all(combinedQueue
+        .slice(0, 10)
+        .map((track, idx) => limit(async () => {
+          try {
+            const details = await track.getVideoDetails();
+            return {
+              title: details.title,
+              position: idx + 1,
+            };
+          } catch {
+            return null;
+          }
+        })))).filter(Boolean) as Next10;
+      const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
+      const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
+      let message = `**__🔊 Now Playing__**: ${
+        nowPlayingTitle
+      }\n\n**__Looped__**? ${
+        s.isLooped() ? 'Yes' : 'No'
+      }\n**__Shuffled__**? ${
+        s.isShuffled() ? 'Yes' : 'No'
+      }`;
+
+      if (next10.length > 0) {
+        message = `${message}\n\n__Length of Queue__: ${
+          totalQueued
+        }\n__Queue__ (max 10 are shown):\n${
+          next10.map(details => `#${details.position}: ${details.title}`).join('\n')
+        }`;
+      }
+      return {
+        message,
+        title: '🎵 Queue List 🎵',
+      };
+    },
+  });
+}
+
 const QueueCommand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
+  contextMenuData: {
+    type: ContextMenuTypes.USER,
+    name: 'queue-list',
+  },
+  runContextMenu: queueContextMenu,
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
