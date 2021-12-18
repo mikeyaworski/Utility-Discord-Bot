@@ -1,7 +1,6 @@
-import { Command, ContextMenuTypes, IntentionalAny } from 'src/types';
+import { Command, ContextMenuTypes } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { ContextMenuInteraction } from 'discord.js';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
@@ -23,11 +22,13 @@ const NowPlayingCommand: Command = {
       return;
     }
 
-    const success = session.pause();
-    if (!success) session.resume();
-    await interaction.editReply({
-      content: success ? 'Paused.' : 'Resumed.',
-    });
+    if (session.isPaused()) {
+      session.resume();
+      await interaction.editReply('Resumed.');
+    } else {
+      session.pause();
+      await itneraction.editReply('Paused.');
+    }
   },
 
   runCommand: async interaction => {
