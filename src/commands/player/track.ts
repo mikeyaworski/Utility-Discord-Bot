@@ -5,6 +5,10 @@ import { exec as ytdl } from 'youtube-dl-exec';
 import { error } from 'src/logging';
 import { getTitleFromUrl } from './youtube';
 
+interface VideoDetails {
+  title: string,
+}
+
 export enum TrackVariant {
   YOUTUBE,
   TWITCH_VOD,
@@ -13,10 +17,12 @@ export enum TrackVariant {
 export default class Track {
   public readonly link: string;
   public readonly variant: TrackVariant;
+  private details: VideoDetails | undefined;
 
-  public constructor(link: string, variant: TrackVariant) {
+  public constructor(link: string, variant: TrackVariant, details?: VideoDetails) {
     this.link = link;
     this.variant = variant;
+    this.details = details;
   }
 
   public createAudioResource(): Promise<AudioResource<Track>> {
@@ -62,25 +68,30 @@ export default class Track {
     });
   }
 
-  public async getVideoDetails(): Promise<{ title: string }> {
+  public async getVideoDetails(): Promise<VideoDetails> {
+    if (this.details) return { ...this.details };
     switch (this.variant) {
       case TrackVariant.YOUTUBE: {
-        return {
+        this.details = {
           title: await getTitleFromUrl(this.link),
         };
+        break;
       }
       case TrackVariant.TWITCH_VOD: {
         // TODO: Add support for fetching Twitch titles
-        return {
+        this.details = {
           title: 'TODO',
         };
+        break;
       }
       default: {
-        return {
+        this.details = {
           title: 'TODO',
         };
+        break;
       }
     }
+    return { ...this.details };
   }
 
   public async getAudioResource(): Promise<AudioResource> {
