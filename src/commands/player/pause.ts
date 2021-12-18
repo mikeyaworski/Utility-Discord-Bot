@@ -27,7 +27,7 @@ const NowPlayingCommand: Command = {
       await interaction.editReply('Resumed.');
     } else {
       session.pause();
-      await itneraction.editReply('Paused.');
+      await interaction.editReply('Paused.');
     }
   },
 
