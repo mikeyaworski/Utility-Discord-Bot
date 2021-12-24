@@ -1,5 +1,5 @@
 import type { CommandInteraction, TextBasedChannels, User } from 'discord.js';
-import type { Command } from 'src/types';
+import type { Command, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
 
@@ -57,7 +57,7 @@ const intervalOption = (option: SlashCommandStringOption) => {
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('reminders')
-  .setDescription('Creates reminders.');
+  .setDescription('Message reminders.');
 commandBuilder.addSubcommand(subcommand => {
   subcommand
     .setName('create')
@@ -206,7 +206,7 @@ function checkReminderErrors(interaction: CommandInteraction, {
   }
 }
 
-async function handleUpsert(interaction: CommandInteraction) {
+export async function handleUpsert(interaction: CommandInteraction): Promise<IntentionalAny> {
   const id = interaction.options.getString('reminder_id', false); // Not present in creation
   const editing = Boolean(id);
   try {
@@ -255,10 +255,11 @@ async function handleUpsert(interaction: CommandInteraction) {
       return reminder;
     }));
     const response = reminders.reduce((acc, reminder) => {
+      const timerOrReminder = message ? 'Reminder' : 'Timer';
       const upsertPart = reminder.id === id ? 'updated' : 'created';
       const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
       const newlinePart = acc ? '\n' : '';
-      return `${acc}${newlinePart}Reminder (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`;
+      return `${acc}${newlinePart}${timerOrReminder} (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`;
     }, '');
     return interaction.editReply(response);
   } catch (err) {
