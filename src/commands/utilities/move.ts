@@ -1,4 +1,4 @@
-import type { DMChannel, PartialDMChannel, Message, TextBasedChannels, TextChannel, ContextMenuInteraction } from 'discord.js';
+import type { DMChannel, PartialDMChannel, Message, TextBasedChannel, TextChannel, ContextMenuInteraction } from 'discord.js';
 import {
   Command,
   CommandBeforeConfirmMethod,
@@ -25,11 +25,11 @@ import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 
 interface IntermediateResult {
   msgs: Message[],
-  toChannel: TextBasedChannels,
-  fromChannel: TextBasedChannels,
+  toChannel: TextBasedChannel,
+  fromChannel: TextBasedChannel,
 }
 
-async function moveMessage(channel: TextBasedChannels | TextChannel, msg: Message): Promise<void> {
+async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message): Promise<void> {
   await channel.sendTyping();
   const newMessage = new Discord.MessageEmbed({
     author: {

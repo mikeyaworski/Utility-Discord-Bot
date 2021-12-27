@@ -1,11 +1,11 @@
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import type { Command } from 'src/types';
 import { ContextMenuTypes } from 'src/types';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
-async function run(interaction: CommandInteraction, shouldAttachButtons: boolean) {
+async function run(interaction: CommandInteraction | ContextMenuInteraction, shouldAttachButtons: boolean) {
   await interaction.deferReply({ ephemeral: true });
   const session = sessions.get(interaction.guild!);
   if (!session) return interaction.editReply('Session does not exist.');

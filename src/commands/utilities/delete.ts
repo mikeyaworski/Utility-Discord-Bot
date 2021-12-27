@@ -1,4 +1,4 @@
-import type { Message, TextBasedChannels } from 'discord.js';
+import type { Message, TextBasedChannel } from 'discord.js';
 import type { Command, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
 import chunk from 'lodash.chunk';
@@ -17,7 +17,7 @@ import ConfirmationCommandRunner from 'src/commands/confirmation-command';
 
 interface IntermediateResult {
   msgs: Message[],
-  channel: TextBasedChannels,
+  channel: TextBasedChannel,
 }
 
 const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async interaction => {

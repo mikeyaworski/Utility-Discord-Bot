@@ -1,4 +1,4 @@
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
@@ -67,7 +67,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+async function handleList(interaction: CommandInteraction | ContextMenuInteraction, session: Session): Promise<IntentionalAny> {
   await replyWithSessionButtons({
     interaction,
     session,

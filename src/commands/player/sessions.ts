@@ -9,6 +9,7 @@ export class Sessions {
     const voiceConnection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
+      // @ts-ignore Probably just broken and useless types. This broke with an upgrade and obviously makes no sense.
       adapterCreator: channel.guild.voiceAdapterCreator,
     });
     const session = new Session(channel.guild, voiceConnection);

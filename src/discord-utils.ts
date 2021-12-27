@@ -1,5 +1,6 @@
 import type {
   Channel,
+  AnyChannel,
   Message,
   User,
   PermissionString,
@@ -7,7 +8,7 @@ import type {
   Guild,
   Role,
   CommandInteraction,
-  TextBasedChannels,
+  TextBasedChannel,
   GuildChannel,
   ButtonInteraction,
   ContextMenuInteraction,
@@ -57,8 +58,8 @@ export function eventuallyRemoveComponents(interaction: CommandInteraction): voi
 export async function findMessageInGuild(
   messageId: string,
   guild: Guild,
-  startingChannel?: TextBasedChannels | null,
-): Promise<[Message, TextBasedChannels] | []> {
+  startingChannel?: TextBasedChannel | null,
+): Promise<[Message, TextBasedChannel] | []> {
   if (startingChannel) {
     try {
       const foundMsg = await startingChannel.messages.fetch(messageId);
@@ -88,7 +89,7 @@ export async function findMessageInGuild(
  * Return type is of the form [msgs, stoppedFetchingEarly].
  */
 export async function getMessagesInRange(
-  channel: TextBasedChannels,
+  channel: TextBasedChannel,
   start: Message,
   end: Message,
 ): Promise<[Message[], boolean]> {
@@ -134,7 +135,7 @@ export function getChannelIdFromArg(channelArg: string): string | null {
   return null;
 }
 
-export async function getChannel(channelArg: string): Promise<Channel | null> {
+export async function getChannel(channelArg: string): Promise<AnyChannel | null> {
   const channelId = getChannelIdFromArg(channelArg);
   if (!channelId) return null;
   const channel = await client.channels.fetch(channelId);
@@ -157,7 +158,7 @@ export function getRoleMentions(msg: string, guild: Guild): Role[] {
 }
 
 export function usersHavePermission(
-  channel: TextBasedChannels | GuildChannel,
+  channel: TextBasedChannel | GuildChannel,
   userOrUsers: User | User[],
   permission: PermissionString | PermissionString[],
 ): boolean {
@@ -205,7 +206,7 @@ export function getLetterEmoji(offset: number): string {
   // ][offset];
 }
 
-export async function fetchMessageInGuild(guild: Guild, messageId: string, givenChannel?: TextBasedChannels): Promise<Message | null> {
+export async function fetchMessageInGuild(guild: Guild, messageId: string, givenChannel?: TextBasedChannel): Promise<Message | null> {
   await guild.fetch();
   if (givenChannel) {
     try {
@@ -243,10 +244,10 @@ export async function fetchMessageInGuild(guild: Guild, messageId: string, given
 }
 
 export async function getInfoFromCommandInteraction(
-  interaction: CommandInteraction,
+  interaction: CommandInteraction | ContextMenuInteraction,
   options: { ephemeral?: boolean } = {},
 ): Promise<{
-  channel: TextBasedChannels | null | undefined,
+  channel: TextBasedChannel | null | undefined,
   message: Message | null | undefined,
   author: User | null | undefined,
 }> {
@@ -274,7 +275,7 @@ export async function getInfoFromCommandInteraction(
   }
 
   // DM
-  const channel = await client.channels.fetch(interaction.channelId) as TextBasedChannels | null;
+  const channel = await client.channels.fetch(interaction.channelId) as TextBasedChannel | null;
   const author = interaction.user;
   const message = interactionMsg ? await channel?.messages.fetch(interactionMsg.id) : null;
   return {
@@ -288,12 +289,12 @@ export async function findOptionalChannel(
   interaction: CommandInteraction,
   channelArg: ReturnType<CommandInteraction['options']['getChannel']>,
 ): Promise<{
-  channel: TextBasedChannels | null | undefined,
+  channel: TextBasedChannel | null | undefined,
   message: Message | null | undefined,
   author: User | null | undefined,
 }> {
   const { channel: fetchedCurrentChannel, ...rest } = await getInfoFromCommandInteraction(interaction, { ephemeral: true });
-  let channel: TextBasedChannels | undefined | null = fetchedCurrentChannel;
+  let channel: TextBasedChannel | undefined | null = fetchedCurrentChannel;
   const channelIdArg = channelArg?.id;
   if (channelIdArg) {
     const fetchedArgChannel = await client.channels.fetch(channelIdArg);
@@ -308,7 +309,7 @@ export async function findOptionalChannel(
 /**
  * Naive argument parsing. Splits by whitespace, but quoted sections are treated as one entire argument.
  */
-export async function parseArguments(input: string, options: { parseChannels?: boolean } = {}): Promise<(string | Channel)[]> {
+export async function parseArguments(input: string, options: { parseChannels?: boolean } = {}): Promise<(string | AnyChannel)[]> {
   const { parseChannels = true } = options;
 
   // https://stackoverflow.com/a/16261693/2554605

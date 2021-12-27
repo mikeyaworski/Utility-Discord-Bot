@@ -1,4 +1,4 @@
-import Discord, { CommandInteraction } from 'discord.js';
+import Discord, { CommandInteraction, ContextMenuInteraction } from 'discord.js';
 import { IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
@@ -52,7 +52,7 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow {
 }
 
 export async function listenForPlayerButtons(
-  interaction: CommandInteraction,
+  interaction: CommandInteraction | ContextMenuInteraction,
   session: Session,
   cb?: () => Promise<unknown>,
 ): Promise<void> {
@@ -120,7 +120,7 @@ export async function listenForPlayerButtons(
   }
 }
 
-export function attachPlayerButtons(interaction: CommandInteraction, session: Session): void {
+export function attachPlayerButtons(interaction: CommandInteraction | ContextMenuInteraction, session: Session): void {
   // eventuallyRemoveComponents(interaction);
   async function populateButtons() {
     const buttons = getPlayerButtons(session);
@@ -139,7 +139,7 @@ export async function replyWithSessionButtons({
   session,
   run,
 }: {
-  interaction: CommandInteraction,
+  interaction: CommandInteraction | ContextMenuInteraction,
   session?: Session,
   run: (session: Session) => Promise<{
     message: string,
