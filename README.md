@@ -84,9 +84,6 @@ YOUTUBE_API_KEY=...
 
 # Slash Commands in Development
 SLASH_COMMANDS_GUILD_ID=...
-
-PORT=8080
-PING_HOST=http://localhost:8080
 ```
 
 # [Private Access] Invites
