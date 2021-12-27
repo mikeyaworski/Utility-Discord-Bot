@@ -10,6 +10,7 @@ import StreamerRules from './utilities/streamer-rules';
 import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
 import Timers from './utilities/timers';
+import Say from './utilities/say';
 
 import Play from './player/play';
 import Seek from './player/seek';
@@ -31,6 +32,7 @@ const commands = [
   ReactionRoles,
   Reminders,
   Timers,
+  Say,
 
   Play,
   Seek,

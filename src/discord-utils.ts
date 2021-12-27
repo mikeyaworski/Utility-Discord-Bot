@@ -19,7 +19,7 @@ import get from 'lodash.get';
 import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX, INTERACTION_MAX_TIMEOUT, ONE_MINUTE } from 'src/constants';
 import { error } from 'src/logging';
 import { client } from 'src/client';
-import { array } from 'src/utils';
+import { array, filterOutFalsy } from 'src/utils';
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
@@ -330,4 +330,37 @@ export async function parseArguments(input: string, options: { parseChannels?: b
     }
     return arg;
   }));
+}
+
+export function checkMessageErrors(interaction: CommandInteraction, {
+  message,
+  channel,
+  author,
+}: {
+  message: string | null,
+  channel: TextBasedChannel | null | undefined,
+  author: User,
+}): void {
+  const authorAndBot = filterOutFalsy([author, client.user]);
+
+  if (channel && !usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES')) {
+    throw new Error(`One of us does not have permission to send messages in <#${channel.id}>`);
+  }
+
+  // TODO: Remove this comment if it's outdated with v13
+  // Do not check against msg.mentions since putting the mentions like
+  // @everyone or <@&786840067103653931> won't register as a mention
+  // if the user does not have permission, but will register as a mention
+  // when the bot (with permission) posts the reminder.
+
+  if (message && channel && interaction.guild) {
+    if (checkMentionsEveryone(message) && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+      throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
+    }
+
+    const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
+    if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+      throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
+    }
+  }
 }

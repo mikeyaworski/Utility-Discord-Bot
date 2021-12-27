@@ -1,4 +1,4 @@
-import type { CommandInteraction, TextBasedChannels, User } from 'discord.js';
+import type { CommandInteraction } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
@@ -12,8 +12,7 @@ import { getModels } from 'src/models';
 import {
   usersHavePermission,
   getChannel,
-  checkMentionsEveryone,
-  getRoleMentions,
+  checkMessageErrors,
   findOptionalChannel,
   handleError,
 } from 'src/discord-utils';
@@ -173,39 +172,6 @@ async function parseReminderOptions(interaction: CommandInteraction, { editing }
   };
 }
 
-function checkReminderErrors(interaction: CommandInteraction, {
-  message,
-  channel,
-  author,
-}: {
-  message: string | null,
-  channel: TextBasedChannels | null | undefined,
-  author: User,
-}) {
-  const authorAndBot = filterOutFalsy([author, client.user]);
-
-  if (channel && !usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES')) {
-    throw new Error(`One of us does not have permission to send messages in <#${channel.id}>`);
-  }
-
-  // TODO: Remove this comment if it's outdated with v13
-  // Do not check against msg.mentions since putting the mentions like
-  // @everyone or <@&786840067103653931> won't register as a mention
-  // if the user does not have permission, but will register as a mention
-  // when the bot (with permission) posts the reminder.
-
-  if (message && channel && interaction.guild) {
-    if (checkMentionsEveryone(message) && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
-      throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
-    }
-
-    const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
-    if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
-      throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
-    }
-  }
-}
-
 export async function handleUpsert(interaction: CommandInteraction): Promise<IntentionalAny> {
   const id = interaction.options.getString('reminder_id', false); // Not present in creation
   const editing = Boolean(id);
@@ -219,7 +185,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
     } = await parseReminderOptions(interaction, { editing });
 
     // Throws if there is an issue
-    checkReminderErrors(interaction, {
+    checkMessageErrors(interaction, {
       channel,
       author,
       message,
