@@ -221,7 +221,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       return reminder;
     }));
     const response = reminders.reduce((acc, reminder) => {
-      const timerOrReminder = message ? 'Reminder' : 'Timer';
+      const timerOrReminder = !editing && !message ? 'Timer' : 'Reminder';
       const upsertPart = reminder.id === id ? 'updated' : 'created';
       const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
       const newlinePart = acc ? '\n' : '';
