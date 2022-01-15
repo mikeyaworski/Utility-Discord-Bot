@@ -39,7 +39,7 @@ async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message
     description: msg.content,
   });
   await channel.send({
-    embeds: [newMessage],
+    embeds: [newMessage].concat(msg.embeds),
     files: Array.from(msg.attachments.values()),
   });
   await msg.delete();
