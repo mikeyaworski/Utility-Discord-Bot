@@ -1,4 +1,4 @@
-import type { DMChannel, PartialDMChannel, Message, TextBasedChannel, TextChannel, ContextMenuInteraction } from 'discord.js';
+import type { Message, TextBasedChannel, TextChannel, ContextMenuInteraction } from 'discord.js';
 import {
   Command,
   CommandBeforeConfirmMethod,
