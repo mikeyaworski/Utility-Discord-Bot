@@ -39,7 +39,6 @@ export default class Track {
         const source = options.seek
           ? await play.stream(this.link, {
             seek: options.seek,
-            seekMode: 'precise',
           })
           : await play.stream(this.link);
         const audioResource = await createAudioResource(source.stream, {
