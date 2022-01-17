@@ -86,6 +86,7 @@ export function parseDelay(arg: string): number {
  * If there are multiple abbreviations, the preferredName arg will be used to figure out which abbreviation to prefer.
  */
 export function getTimezoneOffsetFromFilter(filter: string): number | null {
+  if (filter.toLowerCase() === 'utc') return 0;
   const timeZones = getTimeZones();
   const filteredZones = timeZones.filter(tz => {
     return (
