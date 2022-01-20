@@ -56,6 +56,7 @@ function getNextInvocationDate(time: number, interval: number | null): Date | nu
 
 export function setReminder(reminder: Reminder): void {
   const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
+  if (timeouts[reminder.id]) timeouts[reminder.id].stop();
   timeouts[reminder.id] = new CronJob({
     cronTime: nextInvocationDate || new Date(),
     start: true,
