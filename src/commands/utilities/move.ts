@@ -5,6 +5,8 @@ import {
   CommandAfterConfirmMethod,
   ContextMenuTypes,
   IntentionalAny,
+  StringMapping,
+  GenericMapping,
 } from 'src/types';
 
 import Discord from 'discord.js';
@@ -29,20 +31,22 @@ interface IntermediateResult {
   fromChannel: TextBasedChannel,
 }
 
-async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message): Promise<void> {
+async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message, replyTo?: Message): Promise<Message> {
   await channel.sendTyping();
-  const newMessage = new Discord.MessageEmbed({
+  const newMessageEmbed = new Discord.MessageEmbed({
     author: {
       name: msg.author.username,
       icon_url: msg.author.avatarURL() || undefined,
     },
     description: msg.content,
   });
-  await channel.send({
-    embeds: [newMessage].concat(msg.embeds),
+  const newMessageArgs = {
+    embeds: [newMessageEmbed].concat(msg.embeds),
     files: Array.from(msg.attachments.values()),
-  });
+  };
+  const newMessage = await (replyTo ? replyTo.reply(newMessageArgs) : channel.send(newMessageArgs));
   await msg.delete();
+  return newMessage;
 }
 
 const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async interaction => {
@@ -127,8 +131,15 @@ const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (inter
   await toChannel.send(`__Messages moved from__ <#${fromChannel.id}>`);
 
   // do these in order
+  const oldToNewMessageMapping: GenericMapping<Message> = {};
   for (let i = 0; i < msgs.length; i++) {
-    await moveMessage(toChannel, msgs[i]);
+    const msg = msgs[i];
+    const newMessage = await moveMessage(
+      toChannel,
+      msg,
+      msg.reference?.messageId ? oldToNewMessageMapping[msg.reference.messageId] : undefined,
+    );
+    oldToNewMessageMapping[msg.id] = newMessage;
   }
 
   return `${msgs.length} messages have been moved to <#${toChannel.id}>`;
