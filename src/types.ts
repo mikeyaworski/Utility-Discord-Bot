@@ -60,20 +60,20 @@ export interface Command {
 export type CommandRunMethod = Command['runCommand'];
 export type CommandButtonActionMethod = Command['buttonAction'];
 
-type BeforeConfirmResponse<T> = null | {
+export type BeforeConfirmResponse<T> = null | {
   intermediateResult: T,
   confirmPrompt?: string,
   workingMessage?: string,
   declinedMessage?: string;
 }
 
-export type CommandBeforeConfirmMethod<T2 = unknown> = (
+export type CommandBeforeConfirmMethod<T = unknown> = (
   interaction: CommandInteraction,
-) => Promise<BeforeConfirmResponse<T2>>;
+) => Promise<BeforeConfirmResponse<T>>;
 
-export type CommandAfterConfirmMethod<T2 = unknown> = (
+export type CommandAfterConfirmMethod<T = unknown> = (
   interaction: CommandInteraction,
-  beforeResult: T2,
+  beforeResult: T,
 ) => Promise<string | null>;
 
 // TODO: Get these triggers from the .on() overloads for CommandoClient. Something like:

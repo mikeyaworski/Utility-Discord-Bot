@@ -1,5 +1,5 @@
 import type { Message, TextBasedChannel } from 'discord.js';
-import type { Command, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
+import type { Command, CommandBeforeConfirmMethod, CommandAfterConfirmMethod, BeforeConfirmResponse } from 'src/types';
 
 import chunk from 'lodash.chunk';
 import { SlashCommandBuilder } from '@discordjs/builders';
@@ -66,12 +66,13 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   const confirmPrompt = `Are you sure you want to delete ${msgs.length} messages in <#${channel.id}>?${
     stoppedEarly ? '\nNote: Some messages in the range were not included due to a rate limit precaution.' : ''
   }`;
-  const workingPrompt = `Deleting ${msgs.length} messages in <#${channel.id}>...`;
-  return {
+  const workingMessage = `Deleting ${msgs.length} messages in <#${channel.id}>...`;
+  const res: BeforeConfirmResponse<IntermediateResult> = {
     intermediateResult: { msgs, channel },
     confirmPrompt,
-    workingPrompt,
+    workingMessage,
   };
+  return res;
 };
 
 const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (interaction, result) => {

@@ -5,7 +5,7 @@ import {
   CommandAfterConfirmMethod,
   ContextMenuTypes,
   IntentionalAny,
-  StringMapping,
+  BeforeConfirmResponse,
   GenericMapping,
 } from 'src/types';
 
@@ -116,12 +116,13 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   const confirmPrompt = `Are you sure you want to move ${msgs.length} messages to <#${toChannel.id}>?${
     stoppedEarly ? '\nNote: Some messages in the range were not included due to a rate limit precaution.' : ''
   }`;
-  const workingPrompt = `Moving ${msgs.length} messages to <#${toChannel.id}>...`;
-  return {
+  const workingMessage = `Moving ${msgs.length} messages to <#${toChannel.id}>...`;
+  const res: BeforeConfirmResponse<IntermediateResult> = {
     intermediateResult: { msgs, toChannel, fromChannel },
     confirmPrompt,
-    workingPrompt,
+    workingMessage,
   };
+  return res;
 };
 
 const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (interaction, result) => {
