@@ -104,7 +104,13 @@ export type EventTrigger = [
 
 // TODO: type this better than "any"
 type Model = ModelCtor<IntentionalAny>;
-export type ModelKey = 'streamer_rules' | 'streamer_rollback_roles' | 'reaction_roles' | 'reaction_messages_unique' | 'base_roles' | 'reminders';
+export type ModelKey = 'streamer_rules'
+  | 'streamer_rollback_roles'
+  | 'reaction_roles'
+  | 'reaction_messages_unique'
+  | 'base_roles'
+  | 'reminders'
+  | 'chess_games';
 export type ModelMapping = GenericMapping<Model, ModelKey>;
 export type ModelDefinition = (sequelize: Sequelize) => [
   ModelKey,
