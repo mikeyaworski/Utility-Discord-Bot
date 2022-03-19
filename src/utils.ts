@@ -123,6 +123,10 @@ export function isYoutubeLink(str: string): boolean {
   return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
 }
 
+export function getRandomElement<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 export function isTwitchVodLink(url: string): boolean {
   return /^https:\/\/(www\.)?twitch\.tv\/videos\/\d+$/.test(url);
 }
