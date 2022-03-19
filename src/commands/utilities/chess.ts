@@ -88,13 +88,12 @@ async function handleGameSelection({
       { white_user_id: interaction.user.id },
       { black_user_id: interaction.user.id },
     ],
+    guild_id: interaction.guild!.id,
   };
   if (gameStarted != null) {
     where = {
       ...where,
-      [Op.and]: [{
-        started: gameStarted,
-      }],
+      started: gameStarted,
     };
   }
   const chessGames = await model.findAll({
@@ -354,7 +353,7 @@ async function handleChallenge(interaction: CommandInteraction) {
           gameId: game.id,
           interaction,
           options: {
-            content: `Challenge accepted: <@${user.id}> vs <@${targetId}>, Please <@${currentTurnUser}> make the first move.`,
+            content: `Challenge accepted: <@${user.id}> vs <@${targetId}>. Please make the first move, <@${currentTurnUser}>.`,
             components: [],
             embeds: [getChessBoardEmbed(game)],
           },
