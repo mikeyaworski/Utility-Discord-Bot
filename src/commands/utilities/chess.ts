@@ -244,7 +244,7 @@ async function handleMove(interaction: CommandInteraction) {
           gameId,
           interaction,
           options: {
-            content: `${content} <@${game.white_user_id}> <@${game.black_user_id}>`,
+            content: `${content} <@${game.white_user_id}> <@${game.black_user_id}>\n\`\`\`${chess.pgn()}\`\`\``,
             embeds: [getChessBoardEmbed(game)],
           },
         });
@@ -391,7 +391,10 @@ async function handleForfeit(interaction: CommandInteraction) {
         gameId,
         interaction,
         options: {
-          content: `<@${user.id}> forfeited game with id: ${gameId}. <@${game.white_user_id}> <@${game.black_user_id}>`,
+          content: `<@${user.id}> forfeited game with id: ${gameId}. <@${game.white_user_id}> <@${game.black_user_id}>${
+            game.pgn ? `\n\`\`\`${game.pgn}\`\`\`` : ''
+          }`,
+          embeds: game.pgn ? [getChessBoardEmbed(game)] : undefined,
         },
       });
       await model.destroy({
