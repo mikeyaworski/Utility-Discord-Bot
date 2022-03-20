@@ -8,7 +8,6 @@ import { CONFIRMATION_DEFAULT_TIMEOUT, INTERACTION_MAX_TIMEOUT } from 'src/const
 import get from 'lodash.get';
 import { getModels } from 'src/models';
 import { ChessGame } from 'src/models/chess-games';
-import { client } from 'src/client';
 import { log } from 'src/logging';
 import { getRandomElement } from 'src/utils';
 
@@ -169,7 +168,6 @@ async function handleGameSelection({
 
 async function handleAccept(interaction: CommandInteraction) {
   const { user } = interaction;
-  const { channelId } = interaction;
 
   await handleGameSelection({
     gameStarted: false,
@@ -201,7 +199,6 @@ async function handleAccept(interaction: CommandInteraction) {
 
 async function handleMove(interaction: CommandInteraction) {
   const move = interaction.options.getString('move', true);
-  const { user } = interaction;
 
   await handleGameSelection({
     interaction,
@@ -344,7 +341,6 @@ async function handleChallenge(interaction: CommandInteraction) {
       case 'accept': {
         await buttonInteraction.reply('Accepting...');
         await challengeMsg.edit({ components: [] });
-        const chess = new Chess();
         await game.update({
           started: true,
         });
@@ -406,7 +402,6 @@ async function handleForfeit(interaction: CommandInteraction) {
 }
 
 async function handleShow(interaction: CommandInteraction) {
-  const { user } = interaction;
   await handleGameSelection({
     interaction,
     gameStarted: true,
@@ -428,7 +423,6 @@ async function handleShow(interaction: CommandInteraction) {
 
 async function handleUndo(interaction: CommandInteraction) {
   const { user } = interaction;
-  const { channelId } = interaction;
 
   await handleGameSelection({
     interaction,
@@ -550,7 +544,7 @@ commandBuilder.addSubcommand(subcommand => {
 });
 
 const ChessCommmand: Command = {
-  guildOnly: false,
+  guildOnly: true,
   slashCommandData: commandBuilder,
   runCommand: async interaction => {
     const subcommand = interaction.options.getSubcommand();
