@@ -368,13 +368,17 @@ async function handleChallenge(interaction: CommandInteraction) {
       }
       default: {
         // If we get here, then the interaction button was not clicked.
-        await challengeMsg.edit({ components: [] });
+        await challengeMsg.edit({ components: [] }).catch(() => {
+          // Assume the message was already deleted, so do nothing
+          log('Chess challenge message already deleted');
+        });
         break;
       }
     }
   } catch (err) {
-    await challengeMsg.edit({
-      components: [],
+    await interaction.followUp({
+      content: `Error: ${get(err, 'message', 'Something went wrong.')}`,
+      ephemeral: true,
     });
   }
 }
