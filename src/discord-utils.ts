@@ -82,6 +82,18 @@ export async function findMessageInGuild(
   return [];
 }
 
+export async function findMessageInChannel(
+  messageId: string,
+  channel: TextBasedChannel,
+): Promise<Message | null> {
+  try {
+    const foundMsg = await channel.messages.fetch(messageId);
+    return foundMsg;
+  } catch (err) {
+    return null;
+  }
+}
+
 /**
  * Fetch all messages between `start` and `end`, but stop fetching after reaching the `MAX_MESSAGES_FETCH` limit as a precaution.
  * If fetching was stopped due to reaching the limit, the second value in return tuple will be true.

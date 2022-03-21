@@ -9,6 +9,7 @@ import {
   getMessagesInRange,
   usersHavePermission,
   getInfoFromCommandInteraction,
+  findMessageInChannel,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -24,11 +25,23 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   const startId = interaction.options.getString('start_message_id', true);
   const endId = interaction.options.getString('end_message_id');
 
-  const [startMsg, channel] = await findMessageInGuild(
-    startId,
-    interaction.guild!,
-    interaction.channel,
-  );
+  if (!interaction.channel) {
+    await interaction.editReply('Could not find starting message.');
+    return null;
+  }
+
+  let startMsg: Message | undefined | null;
+  let channel: TextBasedChannel | undefined;
+  if (interaction.guild) {
+    [startMsg, channel] = await findMessageInGuild(
+      startId,
+      interaction.guild,
+      interaction.channel,
+    );
+  } else {
+    startMsg = await findMessageInChannel(startId, interaction.channel);
+    channel = interaction.channel;
+  }
 
   if (!startMsg || !channel) {
     await interaction.editReply('Could not find starting message.');
@@ -116,7 +129,7 @@ commandBuilder.addBooleanOption(option => {
 });
 
 const DeleteCommand: Command = {
-  guildOnly: true,
+  guildOnly: false,
   slashCommandData: commandBuilder,
   ...ConfirmationCommandRunner(
     beforeConfirm,
