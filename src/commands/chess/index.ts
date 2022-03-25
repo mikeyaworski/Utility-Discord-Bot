@@ -430,7 +430,7 @@ async function handleChallenge(interaction: CommandInteraction) {
               content: [
                 `Challenge accepted: <@${user.id}> vs <@${targetId}>`,
                 `Please make the first move, <@${currentTurnUser}>.`,
-                'Use `/chess play` to make a move and `/chess help` if you need help.',
+                'Use `/chess play` to make a move, or `/chess help` if you don\'t know how to type a move.',
               ].join('\n'),
               components: [],
               embeds: [getChessBoardEmbed(refetchedGame)],
