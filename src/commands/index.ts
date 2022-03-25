@@ -11,7 +11,8 @@ import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
 import Timers from './utilities/timers';
 import Say from './utilities/say';
-import Chess from './utilities/chess';
+
+import Chess from './chess';
 
 import Play from './player/play';
 import Seek from './player/seek';
@@ -34,6 +35,7 @@ const commands = [
   Reminders,
   Timers,
   Say,
+
   Chess,
 
   Play,

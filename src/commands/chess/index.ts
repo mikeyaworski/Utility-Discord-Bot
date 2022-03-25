@@ -1,6 +1,6 @@
 import { WhereOptions, Op } from 'sequelize';
-import { SlashCommandBuilder, SlashCommandStringOption, SlashCommandUserOption } from '@discordjs/builders';
-import Discord, { Message, TextChannel, CommandInteraction, Interaction } from 'discord.js';
+import { SlashCommandBuilder } from '@discordjs/builders';
+import Discord, { Message, TextChannel, CommandInteraction } from 'discord.js';
 import type { Command } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
