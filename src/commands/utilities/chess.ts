@@ -4,7 +4,7 @@ import Discord, { Message, TextChannel, CommandInteraction } from 'discord.js';
 import type { Command } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
-import { CONFIRMATION_DEFAULT_TIMEOUT, INTERACTION_MAX_TIMEOUT } from 'src/constants';
+import { Colors, CONFIRMATION_DEFAULT_TIMEOUT, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import get from 'lodash.get';
 import { getModels } from 'src/models';
 import { ChessGame } from 'src/models/chess-games';
@@ -26,10 +26,13 @@ function getChessBoardEmbed(game: ChessGame) {
   return new Discord.MessageEmbed({
     title: ':chess_pawn: Chess Game',
     color,
-    description: `<@${game.white_user_id}> vs <@${game.black_user_id}>\nID: ${game.id}${
+    description: `<@${game.white_user_id}> vs <@${game.black_user_id}>${
       lastMove ? `\nLast move: \`${lastMove}\`` : ''
     }`,
     image: { url: getChessImageUrl(chess) },
+    footer: {
+      text: `ID: ${game.id}`,
+    },
   });
 }
 
@@ -171,7 +174,7 @@ async function handleAccept(interaction: CommandInteraction) {
 
   await handleGameSelection({
     gameStarted: false,
-    noGamesMessage: 'You are currently not challenged by anyone.',
+    noGamesMessage: 'You are not currently challenged by anyone.',
     interaction,
     cb: async gameId => {
       const game: ChessGame = await model.findByPk(gameId);
@@ -185,12 +188,15 @@ async function handleAccept(interaction: CommandInteraction) {
 
       // @ts-expect-error TODO: Fix Sequelize model typing
       await game.update({ stated: true });
-      await interaction.followUp({ content: `Challenge accepted for game ${gameId}.` });
+      await interaction.followUp({ content: `Challenge accepted for game with ID: ${gameId}.` });
 
       const { currentTurnUser } = getTurnInfo(interaction, game);
       const channel = await interaction.guild?.channels.fetch(game.channel_id) as TextChannel;
       await channel.send({
-        content: `Make a move <@${currentTurnUser}>`,
+        content: [
+          `Please make the first move, <@${currentTurnUser}>.`,
+          'Use `/chess play` to make a move and `/chess help` if you need help.',
+        ].join('\n'),
         embeds: [getChessBoardEmbed(game)],
       });
     },
@@ -216,7 +222,7 @@ async function handleMove(interaction: CommandInteraction) {
       const chess = new Chess();
       chess.load_pgn(game.pgn);
 
-      const isValidMove = Boolean(chess.move(move));
+      const isValidMove = Boolean(chess.move(move, { sloppy: true }));
       if (!isValidMove) {
         await interaction.followUp({ content: 'That is not a valid move', ephemeral: true });
         return;
@@ -281,6 +287,7 @@ async function handleChallenge(interaction: CommandInteraction) {
   const authorColor: 'white' | 'black' = !color || !['white', 'black'].includes(color)
     ? getRandomElement(['white', 'black'])
     : color as 'white' | 'black';
+  const challengedUserColor = authorColor === 'black' ? 'white' : 'black';
 
   const buttonActionRow = new Discord.MessageActionRow({
     components: [
@@ -306,6 +313,9 @@ async function handleChallenge(interaction: CommandInteraction) {
 
   const chess = new Chess();
   if (startingPosition) chess.load_pgn(startingPosition);
+  chess.header('White', authorColor === 'white' ? user.username : challengedUser.username);
+  chess.header('Black', authorColor === 'black' ? user.username : challengedUser.username);
+  chess.header('Date Started', new Date().toDateString());
 
   const game = await model.create({
     guild_id: guildId,
@@ -318,11 +328,38 @@ async function handleChallenge(interaction: CommandInteraction) {
     started: false,
   });
 
+  const challengeEmbed = new Discord.MessageEmbed({
+    title: ':chess_pawn: Chess Challenge!',
+    color: Colors.SUCCESS,
+    description: `<@${user.id}> challenges <@${targetId}> to a game of chess!`,
+    fields: [
+      {
+        name: 'Accept',
+        value: 'Click a button within 15 mins, or use `/chess accept` to accept the challenge if 15 mins have passed.',
+        inline: false,
+      },
+      {
+        name: 'White',
+        value: `<@${whiteUserId}>`,
+        inline: true,
+      },
+      {
+        name: 'Black',
+        value: `<@${blackUserId}>`,
+        inline: true,
+      },
+    ],
+    footer: {
+      text: `ID: ${game.id}`,
+    },
+  });
+
   const challengeMsg = await followUp({
     interaction,
     gameId: game.id,
     options: {
-      content: `<@${user.id}> challenges <@${targetId}> to a game of chess! <@${user.id}> starts with color **${authorColor}**.\nID: ${game.id}`,
+      content: `<@${user.id}> <@${targetId}>`,
+      embeds: [challengeEmbed],
       components: [buttonActionRow],
     },
   });
@@ -349,7 +386,11 @@ async function handleChallenge(interaction: CommandInteraction) {
           gameId: game.id,
           interaction,
           options: {
-            content: `Challenge accepted: <@${user.id}> vs <@${targetId}>. Please make the first move, <@${currentTurnUser}>.`,
+            content: [
+              `Challenge accepted: <@${user.id}> vs <@${targetId}>`,
+              `Please make the first move, <@${currentTurnUser}>.`,
+              'Use `/chess play` to make a move and `/chess help` if you need help.',
+            ].join('\n'),
             components: [],
             embeds: [getChessBoardEmbed(game)],
           },
@@ -359,7 +400,12 @@ async function handleChallenge(interaction: CommandInteraction) {
         break;
       }
       case 'decline': {
-        await challengeMsg.delete();
+        await challengeMsg.edit({
+          components: [],
+        });
+        await challengeMsg.reply({
+          content: `Your challenge was declined <@${user.id}>`,
+        });
         break;
       }
       default: {
@@ -387,14 +433,17 @@ async function handleForfeit(interaction: CommandInteraction) {
     noGamesMessage: 'You do not have any games to forfeit.',
     cb: async gameId => {
       const game: ChessGame = await model.findByPk(gameId);
+      const chess = new Chess();
+      chess.load_pgn(game.pgn);
+      const hasMoves = chess.history().length > 0;
       await followUp({
         gameId,
         interaction,
         options: {
-          content: `<@${user.id}> forfeited game with id: ${gameId}. <@${game.white_user_id}> <@${game.black_user_id}>${
-            game.pgn ? `\n\`\`\`${game.pgn}\`\`\`` : ''
+          content: `<@${user.id}> forfeited game with ID: ${gameId}. <@${game.white_user_id}> <@${game.black_user_id}>${
+            hasMoves ? `\n\`\`\`${game.pgn}\`\`\`` : ''
           }`,
-          embeds: game.pgn ? [getChessBoardEmbed(game)] : undefined,
+          embeds: hasMoves ? [getChessBoardEmbed(game)] : undefined,
         },
       });
       await model.destroy({
@@ -471,6 +520,52 @@ async function handleUndo(interaction: CommandInteraction) {
   });
 }
 
+async function handleHelp(interaction: CommandInteraction) {
+  const acceptEmbed = new Discord.MessageEmbed({
+    title: 'Accept game',
+    color: Colors.SUCCESS,
+    description: [
+      'Click the Accept button within 15 mins of being challenged.',
+      'Or, type `/chess accept` if 15 mins have passed.',
+    ].join('\n'),
+  });
+  const playEmbed = new Discord.MessageEmbed({
+    title: 'Make a move',
+    color: Colors.SUCCESS,
+    description: 'Type `/chess move` and then provide the move in Standard Algebraic Notation.',
+    fields: [
+      {
+        name: '**Nooby Examples**',
+        value: [
+          'To move a piece, you can simply specify the starting square and the ending square:',
+          '`e2e4`: Your pawn moves from e2 to e4',
+          '`b1c3`: Your knight on b1 moves to c3',
+        ].join('\n'),
+      },
+      {
+        name: '**Advanced Examples**',
+        value: [
+          '`e4`: Your pawn moves to e4',
+          '`exd5`: Your pawn on the e file takes their pawn on d5',
+          '`Nxe5`: Your knight takes their piece on e5',
+          '`Ke5`: Your king moves to e5',
+          '`Be5`: Your queen moves to e5',
+          '`Qe5`: Your bishop moves to e5',
+          '`O-O`: Castle kingside',
+          '`O-O-O`: Castle queenside',
+          '`Rd1`: Your rook moves to d1',
+          '`Rad1`: Your rook from the a file moves to d1 (specification is needed if it\'s possible for a different rook to move to d1)',
+          '`e8=Q`: Promotes your pawn to a Queen',
+        ].join('\n'),
+      },
+    ],
+  });
+  await interaction.reply({
+    content: 'Type `/chess` to see all of the chess commands you can make.',
+    embeds: [acceptEmbed, playEmbed],
+  });
+}
+
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('chess')
@@ -512,7 +607,7 @@ commandBuilder.addSubcommand(subcommand => {
     .addStringOption(option => {
       return option
         .setName('move')
-        .setDescription('Make a move in algebraic notation. E.g. e5, Nf3, Nxf4, Nbe7')
+        .setDescription('Make a move in Standard Algebraic Notation. E.g. e5, Nf3, Nxf4, Nbe7, O-O')
         .setRequired(true);
     });
   return subcommand;
@@ -546,6 +641,13 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('help')
+    .setDescription('Info on how to make moves and accept games.');
+  return subcommand;
+});
+
 const ChessCommmand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
@@ -574,6 +676,10 @@ const ChessCommmand: Command = {
       }
       case 'undo': {
         await handleUndo(interaction);
+        return;
+      }
+      case 'help': {
+        await handleHelp(interaction);
         return;
       }
       default: {
