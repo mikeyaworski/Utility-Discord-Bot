@@ -1,6 +1,6 @@
 import { WhereOptions, Op } from 'sequelize';
 import { SlashCommandBuilder, SlashCommandStringOption, SlashCommandUserOption } from '@discordjs/builders';
-import Discord, { Message, TextChannel, CommandInteraction } from 'discord.js';
+import Discord, { Message, TextChannel, CommandInteraction, Interaction } from 'discord.js';
 import type { Command } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
@@ -34,6 +34,19 @@ function getChessBoardEmbed(game: ChessGame) {
       text: `ID: ${game.id}`,
     },
   });
+}
+
+async function getChessPgnWithHeaders(game: ChessGame, guild: Discord.Guild) {
+  const chess = new Chess();
+  chess.load_pgn(game.pgn);
+  const [white, black] = await Promise.all([
+    guild.members.fetch(game.white_user_id),
+    guild.members.fetch(game.black_user_id),
+  ]);
+  chess.header('White', white.user.tag);
+  chess.header('Black', black.user.tag);
+  chess.header('Date', new Date().toDateString());
+  return chess.pgn();
 }
 
 function getTurnInfo(interaction: CommandInteraction, game: ChessGame) {
@@ -177,7 +190,15 @@ async function handleAccept(interaction: CommandInteraction) {
     noGamesMessage: 'You are not currently challenged by anyone.',
     interaction,
     cb: async gameId => {
-      const game: ChessGame = await model.findByPk(gameId);
+      const game: ChessGame | null = await model.findByPk(gameId);
+      if (!game) {
+        await interaction.followUp({
+          content: 'This game has already completed or the challenge has been revoked.',
+          ephemeral: true,
+        });
+        return;
+      }
+
       if (user.id !== game.challenged_user_id) {
         await interaction.followUp({
           content: 'You cannot accept a game that you were not challenged to.',
@@ -186,8 +207,16 @@ async function handleAccept(interaction: CommandInteraction) {
         return;
       }
 
+      if (game.started) {
+        await interaction.followUp({
+          content: 'This game has already started.',
+          ephemeral: true,
+        });
+        return;
+      }
+
       // @ts-expect-error TODO: Fix Sequelize model typing
-      await game.update({ stated: true });
+      await game.update({ started: true });
       await interaction.followUp({ content: `Challenge accepted for game with ID: ${gameId}.` });
 
       const { currentTurnUser } = getTurnInfo(interaction, game);
@@ -195,7 +224,7 @@ async function handleAccept(interaction: CommandInteraction) {
       await channel.send({
         content: [
           `Please make the first move, <@${currentTurnUser}>.`,
-          'Use `/chess play` to make a move and `/chess help` if you need help.',
+          'Use `/chess play` to make a move, or `/chess help` if you don\'t know how to type a move.',
         ].join('\n'),
         embeds: [getChessBoardEmbed(game)],
       });
@@ -250,7 +279,9 @@ async function handleMove(interaction: CommandInteraction) {
           gameId,
           interaction,
           options: {
-            content: `${content} <@${game.white_user_id}> <@${game.black_user_id}>\n\`\`\`${chess.pgn()}\`\`\``,
+            content: `${content} <@${game.white_user_id}> <@${game.black_user_id}>\n\`\`\`${
+              await getChessPgnWithHeaders(game, interaction.guild!)
+            }\`\`\``,
             embeds: [getChessBoardEmbed(game)],
           },
         });
@@ -287,7 +318,6 @@ async function handleChallenge(interaction: CommandInteraction) {
   const authorColor: 'white' | 'black' = !color || !['white', 'black'].includes(color)
     ? getRandomElement(['white', 'black'])
     : color as 'white' | 'black';
-  const challengedUserColor = authorColor === 'black' ? 'white' : 'black';
 
   const buttonActionRow = new Discord.MessageActionRow({
     components: [
@@ -313,9 +343,6 @@ async function handleChallenge(interaction: CommandInteraction) {
 
   const chess = new Chess();
   if (startingPosition) chess.load_pgn(startingPosition);
-  chess.header('White', authorColor === 'white' ? user.username : challengedUser.username);
-  chess.header('Black', authorColor === 'black' ? user.username : challengedUser.username);
-  chess.header('Date Started', new Date().toDateString());
 
   const game = await model.create({
     guild_id: guildId,
@@ -377,24 +404,40 @@ async function handleChallenge(interaction: CommandInteraction) {
     switch (buttonInteraction?.customId) {
       case 'accept': {
         await buttonInteraction.reply('Accepting...');
-        await challengeMsg.edit({ components: [] });
-        await game.update({
-          started: true,
-        });
-        const { currentTurnUser } = getTurnInfo(interaction, game);
-        await followUp({
-          gameId: game.id,
-          interaction,
-          options: {
-            content: [
-              `Challenge accepted: <@${user.id}> vs <@${targetId}>`,
-              `Please make the first move, <@${currentTurnUser}>.`,
-              'Use `/chess play` to make a move and `/chess help` if you need help.',
-            ].join('\n'),
-            components: [],
-            embeds: [getChessBoardEmbed(game)],
-          },
-        });
+
+        // Refetch the game since the game could have been accepted/declined before this interaction occurs
+        const refetchedGame: ChessGame | null = await model.findByPk(game.id);
+        if (!refetchedGame) {
+          await buttonInteraction.followUp({
+            content: 'This game has already been completed or the challenge was declined.',
+            ephemeral: true,
+          });
+        } else if (refetchedGame.started) {
+          await buttonInteraction.followUp({
+            content: 'This game has already been accepted.',
+            ephemeral: true,
+          });
+        } else {
+          // @ts-expect-error TODO: Fix Sequelize model typing
+          await refetchedGame.update({
+            started: true,
+          });
+          const { currentTurnUser } = getTurnInfo(interaction, refetchedGame);
+          await followUp({
+            gameId: refetchedGame.id,
+            interaction,
+            options: {
+              content: [
+                `Challenge accepted: <@${user.id}> vs <@${targetId}>`,
+                `Please make the first move, <@${currentTurnUser}>.`,
+                'Use `/chess play` to make a move and `/chess help` if you need help.',
+              ].join('\n'),
+              components: [],
+              embeds: [getChessBoardEmbed(refetchedGame)],
+            },
+          });
+        }
+
         await buttonInteraction.deleteReply();
         await challengeMsg.delete();
         break;
@@ -403,9 +446,25 @@ async function handleChallenge(interaction: CommandInteraction) {
         await challengeMsg.edit({
           components: [],
         });
-        await challengeMsg.reply({
-          content: `Your challenge was declined <@${user.id}>`,
-        });
+        // Refetch the game since the game could have been accepted/declined before this interaction occurs
+        const refetchedGame: ChessGame | null = await model.findByPk(game.id);
+        if (!refetchedGame) {
+          await buttonInteraction.reply({
+            content: 'This game has already been completed or the challenge was declined.',
+            ephemeral: true,
+          });
+        } else if (refetchedGame.started) {
+          await buttonInteraction.reply({
+            content: 'This game has already been accepted.',
+            ephemeral: true,
+          });
+        } else {
+          await challengeMsg.reply({
+            content: `Your challenge was declined <@${user.id}>`,
+          });
+          // @ts-expect-error TODO: Fix Sequelize model typing
+          await refetchedGame.destroy();
+        }
         break;
       }
       default: {
@@ -432,7 +491,14 @@ async function handleForfeit(interaction: CommandInteraction) {
     gameStarted: null,
     noGamesMessage: 'You do not have any games to forfeit.',
     cb: async gameId => {
-      const game: ChessGame = await model.findByPk(gameId);
+      const game: ChessGame | null = await model.findByPk(gameId);
+      if (!game) {
+        await interaction.followUp({
+          content: 'This game has already completed or the challenge has been revoked.',
+          ephemeral: true,
+        });
+        return;
+      }
       const chess = new Chess();
       chess.load_pgn(game.pgn);
       const hasMoves = chess.history().length > 0;
@@ -441,7 +507,7 @@ async function handleForfeit(interaction: CommandInteraction) {
         interaction,
         options: {
           content: `<@${user.id}> forfeited game with ID: ${gameId}. <@${game.white_user_id}> <@${game.black_user_id}>${
-            hasMoves ? `\n\`\`\`${game.pgn}\`\`\`` : ''
+            hasMoves ? `\n\`\`\`${await getChessPgnWithHeaders(game, interaction.guild!)}\`\`\`` : ''
           }`,
           embeds: hasMoves ? [getChessBoardEmbed(game)] : undefined,
         },
