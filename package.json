@@ -16,6 +16,7 @@
     "start": "ts-node --transpile-only --require tsconfig-paths/register src/index.ts",
     "start:nohup": "nohup npm start > log 2>&1 &",
     "stop:nohup": "pkill -9 -f 'bin/ts-node'",
+    "restart:nohup": "npm run stop:nohup\nnpm run start:nohup",
     "up": "docker-compose up"
   },
   "repository": {
