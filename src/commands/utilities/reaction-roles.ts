@@ -1,6 +1,6 @@
-import type { CommandInteraction, Message } from 'discord.js';
 import type { Command, GenericMapping, BooleanMapping } from 'src/types';
 
+import { CommandInteraction, Message, MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import removeDuplicates from 'lodash.uniq';
 import get from 'lodash.get';
@@ -136,7 +136,6 @@ async function handleList(interaction: CommandInteraction) {
   });
 
   if (!rules.length) return interaction.editReply('There are no role reactions assigned!');
-  await interaction.editReply('Fetching...\nThis may take a minute.');
 
   const uniqueMapping = uniqueRules.reduce((acc, rule) => {
     return Object.assign(acc, {
@@ -146,12 +145,15 @@ async function handleList(interaction: CommandInteraction) {
 
   const messageMapping: GenericMapping<Message | null | undefined> = {};
   const messageIds = removeDuplicates(rules.map(rule => rule.message_id));
-  await Promise.all(messageIds.map(mId => {
+  const messages = await Promise.all(messageIds.map(mId => {
     if (interaction.channel) {
       return fetchMessageInGuild(interaction.guild!, mId, interaction.channel);
     }
     return null;
   }));
+  messages.forEach(m => {
+    if (m) messageMapping[m.id] = m;
+  });
 
   const responseMapping = rules.reduce((acc, rule) => {
     return {
@@ -176,16 +178,35 @@ async function handleList(interaction: CommandInteraction) {
     };
   });
 
-  const response = Object.keys(responseMapping).reduce((acc, mId) => {
-    const messageInfo = responseMapping[mId];
-    acc = `${acc}__${mId}__\nMessage text: ${messageInfo.messageText}\nUnique reactions? ${messageInfo.unique ? 'Yes' : 'No'}\n`;
-    const emojiResponse = Object.keys(messageInfo.emojis).reduce((emojiAcc, emoji) => {
-      return `${emojiAcc}${emoji} - ${messageInfo.emojis[emoji].map(roleId => `<@&${roleId}>`).join(' ')}\n`;
-    }, '');
-    return `${acc}${emojiResponse}\n`;
-  }, '');
+  const embeds = Object.entries(responseMapping).map(([mId, info]) => {
+    const emojiResponse = Object.entries(info.emojis).map(([emoji, roleIds]) => {
+      return `${emoji} - ${roleIds.map(roleId => `<@&${roleId}>`).join(' ')}`;
+    }).join('\n');
+    return new MessageEmbed({
+      title: 'Reaction Roles',
+      fields: [
+        {
+          name: 'Message Text',
+          value: info.messageText,
+        },
+        {
+          name: 'Unique reactions?',
+          value: info.unique ? 'Yes' : 'No',
+        },
+        {
+          name: 'Emojis',
+          value: emojiResponse,
+        },
+      ],
+      footer: {
+        text: mId,
+      },
+    });
+  });
 
-  return interaction.editReply(response);
+  return interaction.editReply({
+    embeds,
+  });
 }
 
 async function handleClear(interaction: CommandInteraction) {

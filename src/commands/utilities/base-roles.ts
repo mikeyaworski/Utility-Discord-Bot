@@ -1,7 +1,8 @@
-import type { CommandInteraction } from 'discord.js';
 import type { Command } from 'src/types';
 
+import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
+import humanizeDuration from 'humanize-duration';
 
 import { getModels } from 'src/models';
 import { handleError } from 'src/discord-utils';
@@ -60,11 +61,21 @@ async function handleList(interaction: CommandInteraction) {
   });
   if (!roles.length) return interaction.editReply('There are no base roles!');
 
-  const response = roles.reduce((acc, role) => {
-    return `${acc}\n<@&${role.role_id}>${role.delay ? ` - ${role.delay} millisecond delay` : ''}`;
-  }, 'The following roles will be added to new members:');
+  const embed = new MessageEmbed({
+    title: 'Base Roles',
+    description: roles.map(role => `<@&${
+      role.role_id
+    }>${
+      role.delay ? ` - ${humanizeDuration(role.delay)} delay` : ''
+    }`).join('\n'),
+    footer: {
+      text: 'These roles will be added to new members.',
+    },
+  });
 
-  return interaction.editReply(response);
+  return interaction.editReply({
+    embeds: [embed],
+  });
 }
 
 async function handleAdd(interaction: CommandInteraction) {

@@ -1,4 +1,4 @@
-import type { CommandInteraction } from 'discord.js';
+import { CommandInteraction, MessageEmbed } from 'discord.js';
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
@@ -65,16 +65,31 @@ async function handleList(interaction: CommandInteraction) {
 
   const rolesToAdd = rules.filter(row => row.add).map(row => row.role_id);
   const rolesToRemove = rules.filter(row => !row.add).map(row => row.role_id);
-  const addStr = rolesToAdd.length ? rolesToAdd.reduce(
-    (acc, roleId) => `${acc}\n<@&${roleId}>`,
-    'The following roles will be added to members who are streaming:',
-  ) : 'There are no roles being added to members who are streaming.';
-  const removeStr = rolesToRemove.length ? rolesToRemove.reduce(
-    (acc, roleId) => `${acc}\n<@&${roleId}>`,
-    'The following roles will be removed from members who are streaming:',
-  ) : 'There are no roles being removed from members who are streaming.';
 
-  return interaction.editReply(`${addStr}\n${removeStr}`);
+  const embed = new MessageEmbed({
+    title: 'Streamer Rules',
+    description: 'These roles will be added or removed from members who are streaming',
+    fields: [
+      {
+        name: 'Added',
+        value: rolesToAdd.length
+          ? rolesToAdd.map(roleId => `<@&${roleId}>`).join('\n')
+          : 'There are no roles being added to members who are streaming.',
+        inline: false,
+      },
+      {
+        name: 'Removed',
+        value: rolesToRemove.length
+          ? rolesToRemove.map(roleId => `<@&${roleId}>`).join('\n')
+          : 'There are no roles being removed from members who are streaming.',
+        inline: false,
+      },
+    ],
+  });
+
+  return interaction.editReply({
+    embeds: [embed],
+  });
 }
 
 async function handleCreate(interaction: CommandInteraction, { remove }: { remove: boolean }) {

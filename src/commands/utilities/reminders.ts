@@ -1,11 +1,13 @@
-import type { CommandInteraction } from 'discord.js';
+import type { CommandInteraction, MessageEmbedOptions } from 'discord.js';
 import type { Command, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
 
+import { MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
 import { Op } from 'sequelize';
+import humanizeDuration from 'humanize-duration';
 
 import { client } from 'src/client';
 import { getModels } from 'src/models';
@@ -115,6 +117,47 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
+function getReminderEmbed(reminder: Reminder, options: {
+  showChannel?: boolean,
+} = {}) {
+  const { showChannel = true } = options;
+  const isTimer = !reminder.message;
+  const fields: MessageEmbedOptions['fields'] = [];
+  if (reminder.message) {
+    fields.push({
+      name: 'Message',
+      value: reminder.message,
+      inline: false,
+    });
+  }
+  fields.push({
+    name: 'Time',
+    value: getDateString(reminder.time),
+    inline: true,
+  });
+  if (reminder.interval) {
+    fields.push({
+      name: 'Interval',
+      value: `${humanizeDuration(reminder.interval * 1000)}`,
+      inline: true,
+    });
+  }
+  if (showChannel) {
+    fields.push({
+      name: 'Channel',
+      value: `<#${reminder.channel_id}>`,
+      inline: false,
+    });
+  }
+  return new MessageEmbed({
+    title: isTimer ? 'Timer' : 'Reminder',
+    fields,
+    footer: {
+      text: reminder.id,
+    },
+  });
+}
+
 function parseTimesArg(timesArg: string | null, timeZone: string | null): number[] {
   if (!timesArg) return [];
   const tzOffset = getTimezoneOffsetFromFilter(timeZone || '') ?? getTimezoneOffsetFromFilter('America/Toronto');
@@ -220,14 +263,16 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       setReminder(reminder);
       return reminder;
     }));
-    const response = reminders.reduce((acc, reminder) => {
-      const timerOrReminder = !editing && !message ? 'Timer' : 'Reminder';
-      const upsertPart = reminder.id === id ? 'updated' : 'created';
-      const channelPart = interaction.inGuild() ? ` in channel <#${reminder.channel_id}>` : '';
-      const newlinePart = acc ? '\n' : '';
-      return `${acc}${newlinePart}${timerOrReminder} (ID: ${reminder.id}) ${upsertPart} for ${getDateString(reminder.time)}${channelPart}`;
-    }, '');
-    return interaction.editReply(response);
+    const content = editing ? (
+      reminders.length > 1 ? 'Reminders updated:' : 'Reminder updated:'
+    ) : (
+      reminders.length > 1 ? 'Reminders created:' : 'Reminder created:'
+    );
+    const embeds = reminders.map(reminder => getReminderEmbed(reminder, { showChannel: interaction.inGuild() }));
+    return interaction.editReply({
+      content,
+      embeds,
+    });
   } catch (err) {
     return handleError(err, interaction);
   }
@@ -299,20 +344,10 @@ async function handleList(interaction: CommandInteraction) {
     return interaction.editReply(`There are no reminders for <#${channel.id}>${filterPart}`);
   }
 
-  const filterPart = filter ? ` (using filter **${filter}**)` : '';
-  const response = reminders.reduce((acc, reminder) => {
-    return (
-      // eslint-disable-next-line prefer-template
-      `${acc}\n`
-      + `ID: ${reminder.id}\n`
-      + `Time: ${getDateString(reminder.time)}\n`
-      + (reminder.interval ? `Interval: ${reminder.interval} seconds\n` : '')
-      + (reminder.message ? `Message: ${reminder.message}` : '')
-      + '\n'
-    );
-  }, `__Reminders for <#${channel.id}>__${filterPart}\n`);
-
-  return interaction.editReply(response);
+  return interaction.editReply({
+    content: filter ? `Using filter: **${filter}**` : undefined,
+    embeds: reminders.map(reminder => getReminderEmbed(reminder, { showChannel: interaction.inGuild() })),
+  });
 }
 
 const RemindersCommand: Command = {
