@@ -10,6 +10,11 @@ type Timeouts = {
 };
 const timeouts: Timeouts = {};
 
+export function getNextInvocation(id: string): number | undefined {
+  const job = timeouts[id];
+  return job?.nextDate().unix() * 1000;
+}
+
 export async function removeReminder(id: string): Promise<void> {
   await Reminders.destroy({ where: { id } });
   if (timeouts[id]) {

@@ -19,7 +19,7 @@ import {
 } from 'src/discord-utils';
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
-import { setReminder, removeReminder } from 'src/jobs/reminders';
+import { setReminder, removeReminder, getNextInvocation } from 'src/jobs/reminders';
 
 const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
   return option
@@ -128,20 +128,31 @@ function getReminderEmbed(reminder: Reminder, options: {
     });
   }
   const remainingTime = (reminder.time * 1000) - Date.now();
-  const time = remainingTime > 0
+  const timeString = remainingTime > 0
     ? `${getDateString(reminder.time)}\n(${humanizeDuration(remainingTime)})`
     : getDateString(reminder.time);
   fields.push({
     name: 'Time',
-    value: time,
+    value: timeString,
     inline: true,
   });
   if (reminder.interval) {
     fields.push({
       name: 'Interval',
-      value: `${humanizeDuration(reminder.interval * 1000)}`,
+      value: humanizeDuration(reminder.interval * 1000),
       inline: true,
     });
+    const nextInvocation = getNextInvocation(reminder.id);
+    if (nextInvocation) {
+      const remainingTime = nextInvocation - Date.now();
+      if (remainingTime > 0) {
+        fields.push({
+          name: 'Next Run',
+          value: humanizeDuration(remainingTime),
+          inline: true,
+        });
+      }
+    }
   }
   if (showChannel) {
     fields.push({
