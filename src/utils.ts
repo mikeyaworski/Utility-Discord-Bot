@@ -1,4 +1,5 @@
 import { getTimeZones } from '@vvo/tzdb';
+import humanizeDurationUtil from 'humanize-duration';
 import type { Falsy } from 'src/types';
 
 export function array<T = unknown>(t: T | T[]): T[] {
@@ -105,6 +106,12 @@ export function getTimezoneOffsetFromFilter(filter: string): number | null {
  */
 export function getDateString(epochTime: number): string {
   return new Date(epochTime * 1000).toISOString();
+}
+
+export function humanizeDuration(durationMs: number): string {
+  return humanizeDurationUtil(durationMs, {
+    maxDecimalPoints: 0,
+  });
 }
 
 /**

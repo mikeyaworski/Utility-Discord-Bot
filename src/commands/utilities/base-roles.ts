@@ -2,11 +2,10 @@ import type { Command } from 'src/types';
 
 import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import humanizeDuration from 'humanize-duration';
 
 import { BaseRoles } from 'src/models/base-roles';
 import { handleError } from 'src/discord-utils';
-import { parseDelay } from 'src/utils';
+import { parseDelay, humanizeDuration } from 'src/utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder

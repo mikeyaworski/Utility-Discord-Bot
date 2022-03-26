@@ -7,7 +7,6 @@ import { MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
 import { Op } from 'sequelize';
-import humanizeDuration from 'humanize-duration';
 
 import { client } from 'src/client';
 import { Reminders } from 'src/models/reminders';
@@ -18,7 +17,7 @@ import {
   findOptionalChannel,
   handleError,
 } from 'src/discord-utils';
-import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy } from 'src/utils';
+import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder } from 'src/jobs/reminders';
 
@@ -128,9 +127,13 @@ function getReminderEmbed(reminder: Reminder, options: {
       inline: false,
     });
   }
+  const remainingTime = (reminder.time * 1000) - Date.now();
+  const time = remainingTime > 0
+    ? `${getDateString(reminder.time)}\n(${humanizeDuration(remainingTime)})`
+    : getDateString(reminder.time);
   fields.push({
     name: 'Time',
-    value: getDateString(reminder.time),
+    value: time,
     inline: true,
   });
   if (reminder.interval) {
