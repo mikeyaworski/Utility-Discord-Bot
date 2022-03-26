@@ -1,6 +1,6 @@
 import { client } from 'src/client';
 import { fetchMessageInGuild } from 'src/discord-utils';
-import { getModels } from 'src/models';
+import { ReactionMessagesUnique } from 'src/models/reaction-messages-unique';
 import { log, error } from 'src/logging';
 
 /**
@@ -10,8 +10,7 @@ import { log, error } from 'src/logging';
  */
 async function populateReactionMessageCaches(): Promise<void> {
   client.guilds.cache.forEach(async guild => {
-    type Rule = { message_id: string };
-    const rules: Rule[] = await getModels().reaction_messages_unique.findAll({
+    const rules = await ReactionMessagesUnique.findAll({
       where: {
         guild_id: guild.id,
         unique: true,

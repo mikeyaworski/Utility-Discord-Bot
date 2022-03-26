@@ -3,10 +3,8 @@ import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 
-import { getModels } from 'src/models';
+import { StreamerRules } from 'src/models/streamer-rules';
 import { handleError } from 'src/discord-utils';
-
-const model = getModels().streamer_rules;
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -55,7 +53,7 @@ commandBuilder.addSubcommand(subcommand => {
 
 async function handleList(interaction: CommandInteraction) {
   const guildId = interaction.guild!.id;
-  const rules = await model.findAll({
+  const rules = await StreamerRules.findAll({
     where: {
       guild_id: guildId,
     },
@@ -96,7 +94,7 @@ async function handleCreate(interaction: CommandInteraction, { remove }: { remov
   const role = interaction.options.getRole('role', true);
   const guildId = interaction.guild!.id;
   try {
-    await model.create({
+    await StreamerRules.create({
       guild_id: guildId,
       role_id: role.id,
       add: !remove,
@@ -115,14 +113,14 @@ async function handleClear(interaction: CommandInteraction) {
   const role = interaction.options.getRole('role', false);
 
   if (!role) {
-    await model.destroy({
+    await StreamerRules.destroy({
       where: {
         guild_id: guildId,
       },
     });
     return interaction.editReply('All streaming role relationships were removed!');
   }
-  await model.destroy({
+  await StreamerRules.destroy({
     where: {
       guild_id: guildId,
       role_id: role.id,

@@ -10,7 +10,7 @@ import { Op } from 'sequelize';
 import humanizeDuration from 'humanize-duration';
 
 import { client } from 'src/client';
-import { getModels } from 'src/models';
+import { Reminders } from 'src/models/reminders';
 import {
   usersHavePermission,
   getChannel,
@@ -21,8 +21,6 @@ import {
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder } from 'src/jobs/reminders';
-
-const model = getModels().reminders;
 
 const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
   return option
@@ -234,7 +232,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       message,
     });
 
-    const existingReminder = id ? await model.findByPk(id) : null;
+    const existingReminder = id ? await Reminders.findByPk(id) : null;
     if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
 
     if (existingReminder && !times.length) times.push(existingReminder.time);
@@ -259,7 +257,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
     if (id) reminderPayloads[0].id = id;
 
     const reminders = await Promise.all(reminderPayloads.map(async reminderPayload => {
-      const [reminder]: [Reminder, boolean | null] = await model.upsert(reminderPayload, { returning: true });
+      const [reminder] = await Reminders.upsert(reminderPayload as Reminder, { returning: true });
       setReminder(reminder);
       return reminder;
     }));
@@ -281,7 +279,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
 async function handleDelete(interaction: CommandInteraction) {
   const idsArg = interaction.options.getString('reminder_ids', true);
   const ids = idsArg.split(/[\s,]+/);
-  const reminders: Reminder[] = await model.findAll({
+  const reminders = await Reminders.findAll({
     where: {
       id: ids,
     },
@@ -338,7 +336,7 @@ async function handleList(interaction: CommandInteraction) {
       [Op.iLike]: `%${filter}%`,
     };
   }
-  const reminders: Reminder[] = await model.findAll({ where });
+  const reminders = await Reminders.findAll({ where });
   if (!reminders.length) {
     const filterPart = filter ? ' containing that message content.' : '.';
     return interaction.editReply(`There are no reminders for <#${channel.id}>${filterPart}`);

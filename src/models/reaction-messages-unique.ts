@@ -1,29 +1,40 @@
+import Sequelize, {
+  Model,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import type { ModelDefinition } from 'src/types';
-import Sequelize from 'sequelize';
 
-const ReactionMessagesUnique: ModelDefinition = sequelize => {
+export class ReactionMessagesUnique extends Model<
+  InferAttributes<ReactionMessagesUnique>, InferCreationAttributes<ReactionMessagesUnique>
+> {
+  declare guild_id: string;
+  declare message_id: string;
+  declare unique: boolean;
+}
+
+const ReactionMessagesUniqueDefinition: ModelDefinition = sequelize => {
   const tableName = 'reaction_messages_unique';
-  return [
+  ReactionMessagesUnique.init({
+    guild_id: {
+      type: Sequelize.STRING,
+      primaryKey: true,
+      allowNull: false,
+    },
+    message_id: {
+      type: Sequelize.STRING,
+      primaryKey: true,
+      allowNull: false,
+    },
+    unique: {
+      type: Sequelize.BOOLEAN,
+      allowNull: false,
+    },
+  }, {
+    sequelize,
     tableName,
-    sequelize.define(tableName, {
-      guild_id: {
-        type: Sequelize.STRING,
-        primaryKey: true,
-        allowNull: false,
-      },
-      message_id: {
-        type: Sequelize.STRING,
-        primaryKey: true,
-        allowNull: false,
-      },
-      unique: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-      },
-    }, {
-      freezeTableName: true,
-    }),
-  ];
+    freezeTableName: true,
+  });
 };
 
-export default ReactionMessagesUnique;
+export default ReactionMessagesUniqueDefinition;

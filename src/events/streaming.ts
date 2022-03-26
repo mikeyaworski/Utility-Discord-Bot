@@ -1,15 +1,11 @@
 import type { Presence, Collection, Role } from 'discord.js';
 import type { EventTrigger } from 'src/types';
 
-import { getModels } from 'src/models';
+import { StreamerRollbackRoles } from 'src/models/streamer-rollback-roles';
+import { StreamerRules } from 'src/models/streamer-rules';
 import { log } from 'src/logging';
 
-type Rule = {
-  role_id: string;
-  add: boolean;
-};
-
-function getNewRoles(existingRoles: Collection<string, Role>, rules: Rule[]): string[] {
+function getNewRoles(existingRoles: Collection<string, Role>, rules: (StreamerRules | StreamerRollbackRoles)[]): string[] {
   const rolesToAdd = rules.filter(rule => rule.add).map(rule => rule.role_id);
   const rolesToRemove = rules.filter(rule => !rule.add).map(rule => rule.role_id);
   return existingRoles
@@ -38,7 +34,7 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     // they've started streaming
     log('Now streaming:', member.user.username);
     log('Member has roles:', member.roles.cache.map(role => role.id).toString());
-    const rules: Rule[] = await getModels().streamer_rules.findAll({
+    const rules = await StreamerRules.findAll({
       where: {
         guild_id: guildId,
       },
@@ -49,14 +45,14 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
     await member.roles.set(newRoles, 'Roles added/removed once stream was started.');
     rules.forEach(async ({ role_id: roleId, add }) => {
       if (add !== existingRoles.has(roleId)) {
-        await getModels().streamer_rollback_roles.destroy({
+        await StreamerRollbackRoles.destroy({
           where: {
             guild_id: guildId,
             role_id: roleId,
             user_id: member.id,
           },
         });
-        await getModels().streamer_rollback_roles.create({
+        await StreamerRollbackRoles.create({
           guild_id: guildId,
           role_id: roleId,
           user_id: member.id,
@@ -78,13 +74,13 @@ const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Pres
       },
       attributes: ['role_id', 'add'],
     };
-    const rollbacks: Rule[] = await getModels().streamer_rollback_roles.findAll(rollbacksQuery);
+    const rollbacks = await StreamerRollbackRoles.findAll(rollbacksQuery);
     // Manually calculate the new roles and use `roles.set` instead of simply using `roles.add` and `roles.remove`
     // because the Discord API has super weird behavior where the API calls will clobber one another.
     const newRoles = getNewRoles(member.roles.cache, rollbacks);
     log(`New roles set for member ${member.user.username}:`, newRoles.toString());
     await member.roles.set(newRoles, 'Roles rolled back after stream was stopped.');
-    await getModels().streamer_rollback_roles.destroy(rollbacksQuery);
+    await StreamerRollbackRoles.destroy(rollbacksQuery);
   }
 }];
 

@@ -1,11 +1,9 @@
 import type { Reminder } from 'src/models/reminders';
 
 import { CronJob } from 'cron';
-import { getModels } from 'src/models';
+import { Reminders } from 'src/models/reminders';
 import { log } from 'src/logging';
 import { getChannel } from 'src/discord-utils';
-
-const model = getModels().reminders;
 
 type Timeouts = {
   [reminderId: string]: CronJob;
@@ -13,7 +11,7 @@ type Timeouts = {
 const timeouts: Timeouts = {};
 
 export async function removeReminder(id: string): Promise<void> {
-  await model.destroy({ where: { id } });
+  await Reminders.destroy({ where: { id } });
   if (timeouts[id]) {
     timeouts[id].stop();
     delete timeouts[id];
@@ -88,7 +86,7 @@ export function setReminder(reminder: Reminder): void {
 }
 
 async function loadReminders(): Promise<void> {
-  const reminders: Reminder[] = await model.findAll();
+  const reminders = await Reminders.findAll();
   reminders.forEach(reminder => setReminder(reminder));
 }
 

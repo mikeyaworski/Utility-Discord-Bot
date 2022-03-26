@@ -1,65 +1,70 @@
+import Sequelize, {
+  CreationOptional,
+  Model,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import type { ModelDefinition } from 'src/types';
 
-import Sequelize from 'sequelize';
-
-export interface ChessGame {
-  id: number,
-  guild_id: string,
-  channel_id: string,
-  white_user_id: string,
-  black_user_id: string,
-  owner_user_id: string,
-  challenged_user_id: string,
-  pgn: string,
-  started: boolean,
+export class ChessGames extends Model<
+  InferAttributes<ChessGames>, InferCreationAttributes<ChessGames>
+> {
+  declare id: CreationOptional<number>;
+  declare guild_id: string;
+  declare channel_id: string;
+  declare white_user_id: string | null;
+  declare black_user_id: string | null;
+  declare owner_user_id: string;
+  declare challenged_user_id: string | null;
+  declare pgn: string;
+  declare started: boolean;
 }
 
-const ChessGames: ModelDefinition = sequelize => {
+const ChessGamesDefinition: ModelDefinition = sequelize => {
   const tableName = 'chess_games';
-  return [
+  ChessGames.init({
+    id: {
+      type: Sequelize.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    guild_id: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    channel_id: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    white_user_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    black_user_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    owner_user_id: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    challenged_user_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    pgn: {
+      type: Sequelize.TEXT,
+      allowNull: false,
+    },
+    started: {
+      type: Sequelize.BOOLEAN,
+      allowNull: false,
+    },
+  }, {
+    sequelize,
     tableName,
-    sequelize.define(tableName, {
-      id: {
-        type: Sequelize.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      guild_id: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      channel_id: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      white_user_id: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      black_user_id: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      owner_user_id: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      challenged_user_id: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      pgn: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-      },
-      started: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-      },
-    }, {
-      freezeTableName: true,
-    }),
-  ];
+    freezeTableName: true,
+  });
 };
 
-export default ChessGames;
+export default ChessGamesDefinition;

@@ -4,11 +4,9 @@ import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import humanizeDuration from 'humanize-duration';
 
-import { getModels } from 'src/models';
+import { BaseRoles } from 'src/models/base-roles';
 import { handleError } from 'src/discord-utils';
 import { parseDelay } from 'src/utils';
-
-const model = getModels().base_roles;
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -50,10 +48,7 @@ commandBuilder.addSubcommand(subcommand => {
 
 async function handleList(interaction: CommandInteraction) {
   const guildId = interaction.guild!.id;
-  const roles: {
-    role_id: string;
-    delay: number | null;
-  }[] = await model.findAll({
+  const roles = await BaseRoles.findAll({
     where: {
       guild_id: guildId,
     },
@@ -86,7 +81,7 @@ async function handleAdd(interaction: CommandInteraction) {
   const roleId = role.id;
   try {
     const delayMs = delay ? parseDelay(delay) : null;
-    await model.create({
+    await BaseRoles.create({
       guild_id: guildId,
       role_id: roleId,
       delay: delayMs,
@@ -104,14 +99,14 @@ async function handleClear(interaction: CommandInteraction) {
   const role = interaction.options.getRole('role', false);
 
   if (!role) {
-    await model.destroy({
+    await BaseRoles.destroy({
       where: {
         guild_id: guildId,
       },
     });
     return interaction.editReply('All base roles were removed!');
   }
-  await model.destroy({
+  await BaseRoles.destroy({
     where: {
       guild_id: guildId,
       role_id: role.id,

@@ -5,13 +5,11 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import removeDuplicates from 'lodash.uniq';
 import get from 'lodash.get';
 
-import { getModels } from 'src/models';
+import { ReactionMessagesUnique } from 'src/models/reaction-messages-unique';
+import { ReactionRoles } from 'src/models/reaction-roles';
 import { fetchMessageInGuild, handleError } from 'src/discord-utils';
 import { shorten } from 'src/utils';
 import { MESSAGE_PREVIEW_LENGTH } from 'src/constants';
-
-const reactionMessagesUnique = getModels().reaction_messages_unique;
-const reactionRoles = getModels().reaction_roles;
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -115,18 +113,11 @@ async function handleList(interaction: CommandInteraction) {
   };
   if (messageId) baseWhere.message_id = messageId;
 
-  const rules: {
-    role_id: string;
-    emoji: string;
-    message_id: string;
-  }[] = await reactionRoles.findAll({
+  const rules = await ReactionRoles.findAll({
     where: baseWhere,
     attributes: ['role_id', 'emoji', 'message_id'],
   });
-  const uniqueRules: {
-    unique: boolean;
-    message_id: string;
-  }[] = await reactionMessagesUnique.findAll({
+  const uniqueRules = await ReactionMessagesUnique.findAll({
     where: {
       ...baseWhere,
       // no need to return the rows which are false, since we can just treat them the same as undefined
@@ -214,13 +205,13 @@ async function handleClear(interaction: CommandInteraction) {
   const messageId = interaction.options.getString('message_id', true);
 
   await Promise.all([
-    reactionRoles.destroy({
+    ReactionRoles.destroy({
       where: {
         guild_id: guildId,
         message_id: messageId,
       },
     }),
-    reactionMessagesUnique.destroy({
+    ReactionMessagesUnique.destroy({
       where: {
         guild_id: guildId,
         message_id: messageId,
@@ -247,7 +238,7 @@ async function handleAdd(interaction: CommandInteraction) {
   if (!message) return interaction.editReply('Could not find message!');
   await message.react(emoji);
   try {
-    await reactionRoles.create({
+    await ReactionRoles.create({
       guild_id: guildId,
       role_id: role.id,
       emoji,
@@ -265,7 +256,7 @@ async function handleRemove(interaction: CommandInteraction) {
 
   const guildId = interaction.guild!.id;
   if (!emoji) return interaction.editReply('Specify an emoji.');
-  await reactionRoles.destroy({
+  await ReactionRoles.destroy({
     where: {
       guild_id: guildId,
       message_id: messageId,
@@ -280,7 +271,7 @@ async function handleUnique(interaction: CommandInteraction) {
   const messageId = interaction.options.getString('message_id', true);
   const unique = interaction.options.getBoolean('is_unique', true);
 
-  await reactionMessagesUnique.upsert({
+  await ReactionMessagesUnique.upsert({
     guild_id: guildId,
     message_id: messageId,
     unique,

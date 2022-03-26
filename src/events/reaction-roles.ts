@@ -1,7 +1,8 @@
 import type { MessageReaction, User, Message, Collection, Snowflake } from 'discord.js';
 import type { EventTrigger } from 'src/types';
 
-import { getModels } from 'src/models';
+import { ReactionRoles } from 'src/models/reaction-roles';
+import { ReactionMessagesUnique } from 'src/models/reaction-messages-unique';
 import { error } from 'src/logging';
 import { getResolvableEmoji } from 'src/discord-utils';
 
@@ -43,20 +44,20 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
   }
 
   const [uniqueRule, rules] = await Promise.all([
-    getModels().reaction_messages_unique.findOne({
+    ReactionMessagesUnique.findOne({
       where: {
         guild_id: guildId,
         message_id: messageId,
       },
       attributes: ['unique'],
-    }) as Promise<UniqueRule | null>,
-    getModels().reaction_roles.findAll({
+    }),
+    ReactionRoles.findAll({
       where: {
         guild_id: guildId,
         message_id: messageId,
       },
       attributes: ['role_id', 'emoji'],
-    }) as Promise<Rule[]>,
+    }),
   ]);
 
   const rolesToAdd = rules.filter(rule => rule.emoji === messageReaction.emoji.toString()).map(rule => rule.role_id);
@@ -111,7 +112,7 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
     user,
     force: true,
   });
-  const rules = await getModels().reaction_roles.findAll({
+  const rules = await ReactionRoles.findAll({
     where: {
       guild_id: guildId,
       message_id: messageId,
@@ -119,7 +120,7 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
     },
     attributes: ['role_id'],
   });
-  const roleIds: string[] = rules.map(rule => rule.role_id);
+  const roleIds = rules.map(rule => rule.role_id);
   try {
     await member.roles.remove(roleIds);
   } catch (err) {
@@ -131,13 +132,13 @@ const ReactionRemoveEvent: EventTrigger = ['messageReactionRemove', async (messa
 const MessageDeleteEvent: EventTrigger = ['messageDelete', async (message: Message): Promise<void> => {
   if (!message.guild) return;
   await Promise.all([
-    getModels().reaction_roles.destroy({
+    ReactionRoles.destroy({
       where: {
         guild_id: message.guild.id,
         message_id: message.id,
       },
     }),
-    getModels().reaction_messages_unique.destroy({
+    ReactionMessagesUnique.destroy({
       where: {
         guild_id: message.guild.id,
         message_id: message.id,

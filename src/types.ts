@@ -13,7 +13,13 @@ import type {
   ContextMenuInteraction,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
-import type { Sequelize, ModelCtor } from 'sequelize/types';
+import type {
+  Sequelize,
+  ModelCtor,
+  Model as SequelizeModel,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
@@ -102,21 +108,4 @@ export type EventTrigger = [
   (member: GuildMember) => void
 ];
 
-// TODO: type this better than "any"
-type Model = ModelCtor<IntentionalAny>;
-export type ModelKey = 'streamer_rules'
-  | 'streamer_rollback_roles'
-  | 'reaction_roles'
-  | 'reaction_messages_unique'
-  | 'base_roles'
-  | 'reminders'
-  | 'chess_games';
-export type ModelMapping = GenericMapping<Model, ModelKey>;
-export type ModelDefinition = (sequelize: Sequelize) => [
-  ModelKey,
-  Model,
-  (models: ModelMapping) => void, // associations
-] | [
-  ModelKey,
-  Model,
-];
+export type ModelDefinition = (sequelize: Sequelize) => void;
