@@ -23,7 +23,7 @@
     "docker-pull-latest": "docker pull mikeyaworski/utility-discord-bot:latest",
     "docker-start": "docker run -d --env-file .env --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
     "docker-stop": "docker stop utility-discord-bot && docker rm utility-discord-bot",
-    "docker-logs": "docker logs utility-discord-bot"
+    "docker-logs": "docker logs -f utility-discord-bot"
   },
   "repository": {
     "type": "git",

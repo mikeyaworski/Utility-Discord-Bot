@@ -1,4 +1,10 @@
+docs
+README.md
+Procfile
+requirements.txt
+docker-push.sh
+docker-compose.yml
 node_modules
 .git
 .github
-.env
+.env*

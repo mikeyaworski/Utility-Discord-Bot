@@ -2,46 +2,48 @@
 
 These instructions describe a process for manually hosting the bot on GCE. This will not have automated deployments.
 
+Note: These instructions were written before Docker images were created for this project. Check the AWS instructions to get a general idea of how to run a Docker container instead.
+
 ## Startup:
 
 1. Create a VM instance under the Google Compute Engine.
-2. Use an `e2-micro` instance in a free region if you want to remain in the free tier. For example, the `us-central1` region.
-3. (Optional) Choose an Ubuntu machine (latest version).
-4. SSH into the instance.
-5. 
+1. Use an `e2-micro` instance in a free region if you want to remain in the free tier. For example, the `us-central1` region.
+1. (Optional) Choose an Ubuntu machine (latest version).
+1. SSH into the instance.
+1. 
    ```
    sudo apt update
    ```
-6. 
+1. 
    ```
    sudo apt install python ffmpeg
    ```
-7. 
+1. 
    ```
    curl -fsSL https://deb.nodesource.com/setup_16.x | sudo bash -
    ```
-8. 
+1. 
    ```
    sudo apt install -y nodejs
    ```
-9.  
+1.  
     ```
     git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
     ```
-10. 
+1. 
     ```
     cd ~/Utility-Discord-Bot
     ```
-11. 
+1. 
     ```
     npm ci`
-12. Retrieve your `DATABASE_URL` environment variable with:
+1. Retrieve your `DATABASE_URL` environment variable with:
     ```
     heroku config:get DATABASE_URL -a miky-utility-discord-bot
     ```
     Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
-13. Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
-14. 
+1. Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
+1. 
     ```
     npm run start:nohup
     ```
