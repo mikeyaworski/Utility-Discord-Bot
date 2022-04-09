@@ -19,11 +19,12 @@
     "restart:nohup": "npm run stop:nohup\nnpm run start:nohup",
     "up": "docker-compose up",
     "docker-push": "./docker-push.sh",
-    "docker-push-latest": "./docker-push.sh latest",
-    "docker-pull-latest": "docker pull mikeyaworski/utility-discord-bot:latest",
-    "docker-start": "docker run -d --env-file .env --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
-    "docker-stop": "docker stop utility-discord-bot && docker rm utility-discord-bot",
-    "docker-logs": "docker logs -f utility-discord-bot"
+    "docker-push:latest": "./docker-push.sh latest",
+    "docker-pull": "docker pull mikeyaworski/utility-discord-bot:latest",
+    "start:docker": "docker run -d --env-file .env --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
+    "stop:docker": "docker stop utility-discord-bot && docker rm utility-discord-bot",
+    "logs:docker": "docker logs -f utility-discord-bot",
+    "restart:docker": "npm run stop:docker && npm run start:docker"
   },
   "repository": {
     "type": "git",
