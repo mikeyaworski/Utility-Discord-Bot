@@ -25,3 +25,5 @@ RUN apk add --no-cache python2 ffmpeg alpine-sdk
 RUN npm ci --quiet
 
 COPY . .
+
+CMD ["npm", "start"]
