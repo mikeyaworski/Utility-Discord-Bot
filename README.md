@@ -86,6 +86,18 @@ YOUTUBE_API_KEY=...
 SLASH_COMMANDS_GUILD_ID=...
 ```
 
+## Hosting it on AWS or GCP
+
+- [AWS instructions](/docs/AWS-Instructions.md)
+- [GCE instructions](/docs/GCE-Instructions.md)
+
+
+## Public Docker Images
+
+The best way to run this bot on a VM (like an EC2 instance or GCE instance) is to run a docker container. This is not necessary for Heroku. Instructions for how to do this on AWS are in the [AWS instructions](/docs/AWS-Instructions.md).
+
+If you would like to make your own code changes and build your own Docker images, instructions are [here](/docs/Create-Docker-Images.md).
+
 # [Private Access] Invites
 
 This repository is linked to a Heroku app which automatically deploys updates to the privately hosted bot when commits are made to `master`. The following invites will only work for myself and whitelisted members.
