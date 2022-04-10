@@ -11,6 +11,8 @@ import type {
   GuildChannel,
   ButtonInteraction,
   ContextMenuInteraction,
+  MessageEmbed,
+  InteractionReplyOptions,
 } from 'discord.js';
 import type { IntentionalAny } from 'src/types';
 
@@ -20,6 +22,7 @@ import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGE
 import { error } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
+import chunk from 'lodash.chunk';
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
@@ -373,6 +376,36 @@ export function checkMessageErrors(interaction: CommandInteraction, {
     const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
     if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
       throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
+    }
+  }
+}
+
+export async function replyWithEmbeds({
+  interaction,
+  embeds,
+  messageArgs,
+  ephemeral,
+}: {
+  interaction: CommandInteraction,
+  embeds: MessageEmbed[],
+  messageArgs?: InteractionReplyOptions,
+  ephemeral?: boolean,
+}): Promise<void> {
+  // 10 is the max number of embeds per message
+  const chunkedEmbeds = chunk(embeds, 10);
+  // These need to be done sequentially because there would otherwise be a race condition between editing and following up
+  for (let i = 0; i < chunkedEmbeds.length; i++) {
+    if (i > 0) {
+      await interaction.followUp({
+        ...messageArgs,
+        embeds: chunkedEmbeds[i],
+        ephemeral,
+      });
+    } else {
+      await interaction.editReply({
+        ...messageArgs,
+        embeds: chunkedEmbeds[i],
+      });
     }
   }
 }

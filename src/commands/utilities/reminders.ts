@@ -16,6 +16,7 @@ import {
   checkMessageErrors,
   findOptionalChannel,
   handleError,
+  replyWithEmbeds,
 } from 'src/discord-utils';
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
@@ -281,9 +282,13 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       reminders.length > 1 ? 'Reminders created:' : 'Reminder created:'
     );
     const embeds = reminders.map(reminder => getReminderEmbed(reminder, { showChannel: interaction.inGuild() }));
-    return interaction.editReply({
-      content,
+    return replyWithEmbeds({
+      interaction,
       embeds,
+      messageArgs: {
+        content,
+      },
+      ephemeral: true,
     });
   } catch (err) {
     return handleError(err, interaction);
@@ -356,9 +361,14 @@ async function handleList(interaction: CommandInteraction) {
     return interaction.editReply(`There are no reminders for <#${channel.id}>${filterPart}`);
   }
 
-  return interaction.editReply({
-    content: filter ? `Using filter: **${filter}**` : undefined,
-    embeds: reminders.map(reminder => getReminderEmbed(reminder, { showChannel: interaction.inGuild() })),
+  const embeds = reminders.map(reminder => getReminderEmbed(reminder, { showChannel: interaction.inGuild() }));
+  return replyWithEmbeds({
+    interaction,
+    embeds,
+    messageArgs: {
+      content: filter ? `Using filter: **${filter}**` : undefined,
+    },
+    ephemeral: true,
   });
 }
 
