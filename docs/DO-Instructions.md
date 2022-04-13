@@ -6,7 +6,7 @@ These instructions do not mention how to gather your environment variables. You 
 
 These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
 
-## Startup:
+## Startup
 
 1. Choose a Linux distrubution, e.g. Ubuntu. The supported platforms are `linux/amd64`, `linux/arm64`, and `linux/arm/v7`. The rest of the instructions assume you chose **Ubuntu**.
 1. For the cheapest viable option, choose a shared CPU (Basic), with the cheaper processor and no volumes. Choose whatever datacenter you want, leave the VPC network to default, and preferrably use SSH keys for authentication (follow their instructions). You won't need to manually SSH into the droplet, so adding authentication is optional.
@@ -67,7 +67,7 @@ cd ~/Utility-Discord-Bot
 npm run restart:docker
 ```
 
-## Updating:
+## Updating
 
 ```
 cd ~/Utility-Discord-Bot
@@ -75,7 +75,7 @@ npm run docker-pull
 npm run restart:docker
 ```
 
-## Stopping:
+## Stopping
 
 ```
 cd ~/Utility-Discord-Bot

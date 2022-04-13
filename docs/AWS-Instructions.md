@@ -6,7 +6,7 @@ These instructions do not mention how to gather your environment variables. You 
 
 These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
 
-## Startup:
+## Startup
 
 1. Navigate to the EC2 section of the dashboard in your preferred region, and launch an instance.
 1. Choose `Amazon Linux 2 AMI (HVM) - Kernel 5.10` for the AMI (or a new version) and select `Arm` for the processor.
@@ -84,7 +84,7 @@ cd ~/Utility-Discord-Bot
 npm run restart:docker
 ```
 
-## Updating:
+## Updating
 
 ```
 cd ~/Utility-Discord-Bot
@@ -92,7 +92,7 @@ npm run docker-pull
 npm run restart:docker
 ```
 
-## Stopping:
+## Stopping
 
 ```
 cd ~/Utility-Discord-Bot

@@ -8,7 +8,7 @@ These instructions do not mention how to gather your environment variables. You 
 
 These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
 
-## Startup:
+## Startup
 
 1. Create a VM instance under the Google Compute Engine.
 1. Use an `e2-micro` instance in a free region if you want to remain in the free tier. For example, the `us-central1` region.
@@ -74,7 +74,7 @@ npm run stop:nohup
 npm run start:nohup
 ```
 
-## Updating:
+## Updating
 
 ```
 cd ~/Utility-Discord-Bot
@@ -89,7 +89,7 @@ npm ci
 npm run start:nohup
 ```
 
-## Stopping:
+## Stopping
 
 ```
 cd ~/Utility-Discord-Bot
