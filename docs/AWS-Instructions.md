@@ -19,23 +19,23 @@ These instructions describe a process for manually hosting the bot on GCE. This 
    ```
    ssh -i "/myDriveLetter/.../utility-discord-bot.pem ec2-user@ec2-...compute.amazonaws.com
    ```
-2. Install Node, Git and Docker. Node and Git are optional, but the benefit is that you may run scripts from `package.json` from the Git repository.
+1. Install Node, Git and Docker. Node and Git are optional, but the benefit is that you may run scripts from `package.json` from the Git repository.
    ```
    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
    sudo yum install nodejs docker git
    ```
-3.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
+1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
     git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
     cd Utility-Discord-Bot
     ```
-4. Start Docker and give yourself (`ec2-user`) permission to run Docker commands. If you skip the command `sudo usermod -a -G docker ec2-user`, then you need to run `sudo docker ...` every time (you would also need to update `package.json`).
+1. Start Docker and give yourself (`ec2-user`) permission to run Docker commands. If you skip the command `sudo usermod -a -G docker ec2-user`, then you need to run `sudo docker ...` every time (you would also need to update `package.json`).
     ```
     sudo service docker start
     sudo usermod -a -G docker ec2-user
     ``` 
 1. Exit the ssh session and reconnect, so that user permissions get updated. Otherwise, you will need to use `sudo` for every `docker` command.
-2. Pull the latest Docker image.
+1. Pull the latest Docker image.
     ```
     cd ~/Utility-Discord-Bot
     npm run docker-pull
@@ -45,27 +45,27 @@ These instructions describe a process for manually hosting the bot on GCE. This 
     docker pull mikeyaworski/utility-discord-bot:...
     ```
     If you are wanting to use a specific tag, you will also need to update the `start:docker` script to use that tag.
-3.  Retrieve your `DATABASE_URL` environment variable with:
+1.  Retrieve your `DATABASE_URL` environment variable with:
     ```
     heroku config:get DATABASE_URL -a miky-utility-discord-bot
     ```
     Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
-4.  Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
+1.  Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
 
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
     1. Create it on your local computer and copy the contents of the file.
-    2. In your SSH session, run `vi .env` (make sure you are inside the `Utility-Discord-Bot` folder).
-    3. Press `i` to enter Insert mode
-    4. Paste. This pastes the content of the `.env` file. If on Windows WSL, you may need to right click your WSL bar, click Properties and check "Use Ctrl+Shift+C/V as Copy/Paste" first. And then use `Ctrl + Shift + V` to paste.
-    5. Type `:x` to save and quit.
+    1. In your SSH session, run `vi .env` (make sure you are inside the `Utility-Discord-Bot` folder).
+    1. Press `i` to enter Insert mode
+    1. Paste. This pastes the content of the `.env` file. If on Windows WSL, you may need to right click your WSL bar, click Properties and check "Use Ctrl+Shift+C/V as Copy/Paste" first. And then use `Ctrl + Shift + V` to paste.
+    1. Type `:x` to save and quit.
 
     You can use something like nano instead of vim if you struggle with the instructions above.
-5.  Start the bot:
+1.  Start the bot:
     ```
     npm run start:docker
     ```
-6. View logs to see if everything is successful:
+1. View logs to see if everything is successful:
    ```
    npm run logs:docker
    ```
