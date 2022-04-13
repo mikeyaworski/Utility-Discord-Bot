@@ -1,8 +1,12 @@
-# How to run on Google Compute Engine
+# Hosting it on a Google Compute Engine instance
 
 These instructions describe a process for manually hosting the bot on GCE. This will not have automated deployments.
 
-Note: These instructions were written before Docker images were created for this project. Check the AWS instructions to get a general idea of how to run a Docker container instead.
+Note: These instructions were written before Docker images were created for this project. Check the [AWS instructions](./AWS-Instructions.md) to get a general idea of how to run a Docker container instead.
+
+These instructions do not mention how to gather your environment variables. You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather them in the [Heroku instructions](./Heroku-Instructions.md).
+
+These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
 
 ## Startup:
 
@@ -41,8 +45,22 @@ Note: These instructions were written before Docker images were created for this
     ```
     heroku config:get DATABASE_URL -a miky-utility-discord-bot
     ```
-    Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
+    Where `miky-utility-discord-bot` is replaced to whatever your Heroku app is named. Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
+
+    As previously mentioned, these instructions assume you have gone through the [Heroku instructions](./Heroku-Instructions.md) to create a Heroku app with a free PostgreSQL database.
 1. Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
+
+    You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather the environment variables in the [Heroku instructions](./Heroku-Instructions.md).
+
+    If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
+
+    1. Create it on your local computer and copy the contents of the file.
+    1. In your SSH session, run `vi .env` (make sure you are inside the `Utility-Discord-Bot` folder).
+    1. Press `i` to enter Insert mode
+    1. Paste. This pastes the content of the `.env` file. If on Windows WSL, you may need to right click your WSL bar, click Properties and check "Use Ctrl+Shift+C/V as Copy/Paste" first. And then use `Ctrl + Shift + V` to paste.
+    1. Type `:x` to save and quit.
+
+    You can use something like nano instead of vim if you struggle with the instructions above.
 1. 
     ```
     npm run start:nohup

@@ -1,6 +1,6 @@
-# Hosting it on an AWS EC2 instance
+# Hosting it on a Digital Ocean Droplet
 
-These instructions describe a process for manually hosting the bot on GCE. This will not have automated deployments.
+These instructions describe a process for manually hosting the bot on a Digital Ocean Droplet. This will not have automated deployments.
 
 These instructions do not mention how to gather your environment variables. You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather them in the [Heroku instructions](./Heroku-Instructions.md).
 
@@ -8,38 +8,19 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
 
 ## Startup:
 
-1. Navigate to the EC2 section of the dashboard in your preferred region, and launch an instance.
-1. Choose `Amazon Linux 2 AMI (HVM) - Kernel 5.10` for the AMI (or a new version) and select `Arm` for the processor.
-1. Choose a `t4g.micro` or `t4g.nano` for the instance type (not free), or `t2.micro`/`t3.micro` if you are looking to stay in the free tier. Opt for the `t4g` if not staying in the free tier, since they are cheaper (weird). Obviously, you can choose a totally different one depending on your needs, but all of the aforementioned instance types work well for small server usage.
-1. Create a security group called "connect" (or whatever you want) and use it for your instance. The security group will let you SSH into your instance, which is not something that the default security group would let you do.
-   1. Create two inbound rules. Both types are `SSH`.
-   1. Change the source on one of them to be `Anywhere-IPv4` and the other to be `Anywhere-IPv6`.
-1. Everything else can be left default. Finish launching the instance and create your key pair that allows you to SSH into your new instance. Either key pair type is fine (RSA or ED25519). Download the private key as it describes.
-1. Click on your instance, then click Connect. Connect to the instance with your SSH client (instructions will be listed and you will need to use your private key). For example, on a Windows machine in WSL:
+1. Choose a Linux distrubution, e.g. Ubuntu. The supported platforms are `linux/amd64`, `linux/arm64`, and `linux/arm/v7`. The rest of the instructions assume you chose **Ubuntu**.
+1. For the cheapest viable option, choose a shared CPU (Basic), with the cheaper processor and no volumes. Choose whatever datacenter you want, leave the VPC network to default, and preferrably use SSH keys for authentication (follow their instructions). You won't need to manually SSH into the droplet, so adding authentication is optional.
+1. Click on your droplet, go to Access and then click "Launch Droplet Console" to connect your droplet on the web. You can SSH into your droplet manually if you want, but this is unnecessary work.
+1. Assuming you chose Ubuntu for your distribution, Git will already be installed and you will have access to `apt`. If you use another distribution, you may need to install this software in different ways (e.g. your distribution may not have APT). At the end of the day, you need to have Docker installed and running. NPM and Git are optional, but they allow you to conveniently run scripts from the Git repo. So we will make sure all three are installed.
    ```
-   ssh -i "/mnt/myDriveLetter/.../utility-discord-bot.pem" ec2-user@ec2-...compute.amazonaws.com
-   ```
-   If you are trying to SSH from a Windows WSL, you will probably run into permission errors since `chmod 400 ...` doesn't work by default on WSL. If on Windows, I recommend using Git Bash instead. The command will be something like:
-   ```
-   ssh -i "/myDriveLetter/.../utility-discord-bot.pem ec2-user@ec2-...compute.amazonaws.com
-   ```
-1. Install Node, Git and Docker. Node and Git are optional, but the benefit is that you may run scripts from `package.json` from the Git repository.
-   ```
-   curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
-   sudo yum install nodejs docker git
+   apt install docker.io npm
    ```
 1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
     git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
     cd Utility-Discord-Bot
     ```
-1. Start Docker and give yourself (`ec2-user`) permission to run Docker commands. If you skip the command `sudo usermod -a -G docker ec2-user`, then you need to run `sudo docker ...` every time (you would also need to update `package.json`).
-    ```
-    sudo service docker start
-    sudo usermod -a -G docker ec2-user
-    ``` 
-1. Exit the ssh session and reconnect, so that user permissions get updated. Otherwise, you will need to use `sudo` for every `docker` command.
-1. Pull the latest Docker image.
+1.  Pull the latest Docker image.
     ```
     cd ~/Utility-Discord-Bot
     npm run docker-pull
@@ -57,6 +38,8 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
 
     As previously mentioned, these instructions assume you have gone through the [Heroku instructions](./Heroku-Instructions.md) to create a Heroku app with a free PostgreSQL database.
 1.  Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
+
+    You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather the environment variables in the [Heroku instructions](./Heroku-Instructions.md).
 
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
