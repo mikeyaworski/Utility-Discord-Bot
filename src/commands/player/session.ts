@@ -119,15 +119,9 @@ export default class Session {
     return this.shuffled;
   }
 
-  private shuffleArray<T = Track>(array: T[]): void {
-    const shuffledArray = Array.from(array);
-    shuffleArray(shuffledArray);
-    array.splice(0, array.length, ...shuffledArray);
-  }
-
   public shuffle(): void {
-    this.shuffleArray(this.queue);
-    this.shuffleArray(this.queueLoop);
+    shuffleArray(this.queue);
+    shuffleArray(this.queueLoop);
     this.shuffled = true;
   }
 
@@ -222,7 +216,7 @@ export default class Session {
     if (!this.queue.length && this.isLooped()) {
       this.queue.push(...this.queueLoop);
       const newQueueLoop = this.duplicateTracks(this.queueLoop);
-      if (this.shuffled) this.shuffleArray(newQueueLoop);
+      if (this.shuffled) shuffleArray(newQueueLoop);
       this.queueLoop.splice(0, this.queueLoop.length, ...newQueueLoop);
     }
 
