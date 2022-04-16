@@ -6,7 +6,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction, MessageEmbed } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
-import { isTwitchVodLink } from 'src/utils';
+import { isTwitchVodLink, shuffleArray } from 'src/utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
 import Session from './session';
@@ -54,6 +54,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
 }
 
 async function enqueueQueries(session: Session, queries: string[], interaction: CommandInteraction): Promise<IntentionalAny> {
+  if (session.isShuffled()) shuffleArray(queries);
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
   const firstTrackPartialMessage = await enqueue(session, [firstTrack], false);
@@ -89,7 +90,8 @@ const PlayCommand: Command = {
     .addStringOption(option => option.setName('link').setDescription('YouTube, Spotify, Twitch. No livestreams.').setRequired(false))
     .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube.').setRequired(false))
     .addStringOption(option => option.setName('stream').setDescription('YouTube livestream. Twitch is not currently supported.').setRequired(false))
-    .addBooleanOption(option => option.setName('front').setDescription('Push song (singular) to the front of the queue.').setRequired(false)),
+    .addBooleanOption(option => option.setName('front').setDescription('Push song (singular) to the front of the queue.').setRequired(false))
+    .addBooleanOption(option => option.setName('shuffle').setDescription('Shuffle the queue.').setRequired(false)),
 
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
@@ -97,6 +99,7 @@ const PlayCommand: Command = {
     const streamLink = interaction.options.getString('stream');
     const queryStr = interaction.options.getString('query');
     const pushToFront = interaction.options.getBoolean('front') ?? false;
+    const shuffle = interaction.options.getBoolean('shuffle') ?? false;
 
     const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
 
@@ -124,6 +127,8 @@ const PlayCommand: Command = {
     }
 
     if (!session) session = sessions.create(channel);
+
+    if (shuffle) session.shuffle();
 
     if (vodLink) {
       if (isTwitchVodLink(vodLink)) {

@@ -154,6 +154,7 @@ export default class Session {
   }
 
   public enqueue(tracks: Track[], pushToFront = false): Promise<void> {
+    if (this.isShuffled()) shuffleArray(tracks);
     if (pushToFront) {
       this.queue.unshift(...tracks);
     } else {
