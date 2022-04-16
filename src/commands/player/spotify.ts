@@ -1,9 +1,12 @@
+import dotenv from 'dotenv';
 import axios from 'axios';
 import Spotify from 'spotify-url-info';
 
 import { error } from 'src/logging';
 import type { IntentionalAny } from 'src/types';
 import { MAX_SPOTIFY_PLAYLIST_PAGE_FETCHES, SPOTIFY_PLAYLIST_PAGE_SIZE } from 'src/constants';
+
+dotenv.config();
 
 const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
