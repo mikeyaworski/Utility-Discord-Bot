@@ -240,6 +240,8 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       author,
     } = await parseReminderOptions(interaction, { editing });
 
+    const timeIsInPast = times.some(time => time < Date.now() / 1000);
+
     // Throws if there is an issue
     checkMessageErrors(interaction, {
       channel,
@@ -249,6 +251,10 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
 
     const existingReminder = id ? await Reminders.findByPk(id) : null;
     if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
+
+    if (timeIsInPast && !interval && !existingReminder?.interval) {
+      return interaction.editReply('You cannot create a reminder in the past.');
+    }
 
     if (existingReminder && !times.length) times.push(existingReminder.time);
 
