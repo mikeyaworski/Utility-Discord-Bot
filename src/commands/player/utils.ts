@@ -3,6 +3,7 @@ import { IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import { log } from 'src/logging';
+import { filterOutFalsy } from 'src/utils';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
@@ -145,6 +146,7 @@ export async function replyWithSessionButtons({
     message: string,
     title?: string,
     hideButtons?: boolean,
+    link?: string,
   }>,
 }): Promise<IntentionalAny> {
   if (!session) {
@@ -162,13 +164,14 @@ export async function replyWithSessionButtons({
       message,
       title,
       hideButtons,
+      link,
     } = await run(session);
     const embeds = title ? [new Discord.MessageEmbed({
       author: {
         name: title,
       },
       color: Colors.SUCCESS,
-      description: message,
+      description: filterOutFalsy([message, link]).join('\n'),
     })] : [];
     const content = title ? undefined : message;
     const components = hideButtons ? [] : [getPlayerButtons(session)];

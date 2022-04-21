@@ -29,6 +29,7 @@ const NowPlayingCommand: Command = {
         return {
           title: '🔊 Now Playing',
           message: videoDetails.title,
+          link: currentTrack.link,
         };
       },
     });
