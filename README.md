@@ -17,6 +17,8 @@ This is a private bot. To get this bot in your server, please host this yourself
 1. Make sure you are using Node v14 or above, since some of our dependencies require this.
 
 ## Environment Variables
+Create a `.env` file in the root of your project folder.
+
 Fill in your own `DISCORD_BOT_CLIENT_ID` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
 
 Optional variables:

@@ -6,7 +6,7 @@
     ```
     https://discord.com/api/oauth2/authorize?client_id=<YOUR_CLIENT_ID>&permissions=536320928976&scope=applications.commands%20bot
     ```
-    The bot token and client ID will need to be used as the `DISCORD_BOT_TOKEN` and `DISCORD_BOT_CLIENT_ID` environment variable on both Heroku and in your `.env` file (see the section below).
+    The bot token and client ID will need to be used as the `DISCORD_BOT_TOKEN` and `DISCORD_BOT_CLIENT_ID` environment variable on both Heroku and in your `.env` file (see the [Environment Variables section](../README.md#environment-variables)).
 
 1. Go to https://heroku.com and create an app (free version is fine). This bot will actually ping itself every 20 minutes so that the bot does not sleep automatically. When configuring the dyno, you can use `web npm start`.
 
