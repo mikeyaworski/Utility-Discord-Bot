@@ -12,7 +12,7 @@ async function run(interaction: CommandInteraction | ContextMenuInteraction, sho
 
   let extraSkips = 0;
   if (interaction.isCommand()) {
-    const amount = interaction.options.getNumber('amount', false) || 1;
+    const amount = interaction.options.getInteger('amount', false) || 1;
     extraSkips = Math.max(0, amount - 1);
   }
 
@@ -35,7 +35,7 @@ const SkipCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('skip')
     .setDescription('Skip the current track.')
-    .addNumberOption(option => option.setName('amount').setDescription('Number of songs to skip.').setRequired(false)),
+    .addIntegerOption(option => option.setName('amount').setDescription('Number of songs to skip.').setRequired(false)),
   contextMenuData: {
     type: ContextMenuTypes.USER,
     name: 'skip',
