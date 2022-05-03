@@ -10,7 +10,13 @@ async function run(interaction: CommandInteraction | ContextMenuInteraction, sho
   const session = sessions.get(interaction.guild!);
   if (!session) return interaction.editReply('Session does not exist.');
 
-  await session.skip();
+  let extraSkips = 0;
+  if (interaction.isCommand()) {
+    const amount = interaction.options.getNumber('amount', false) || 1;
+    extraSkips = Math.max(0, amount - 1);
+  }
+
+  await session.skip(extraSkips);
   const newTrack = await session.getCurrentTrack();
   if (!newTrack) return interaction.editReply('Skipped.');
 
@@ -28,7 +34,8 @@ const SkipCommand: Command = {
   guildOnly: true,
   slashCommandData: new SlashCommandBuilder()
     .setName('skip')
-    .setDescription('Skip the current track.'),
+    .setDescription('Skip the current track.')
+    .addNumberOption(option => option.setName('amount').setDescription('Number of songs to skip.').setRequired(false)),
   contextMenuData: {
     type: ContextMenuTypes.USER,
     name: 'skip',

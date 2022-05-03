@@ -188,7 +188,11 @@ export default class Session {
     this.audioPlayer.stop(true);
   }
 
-  public skip(): Promise<void> {
+  /**
+   * @param extraSkips If provided, will skip additional songs in the queue instead of just the current track
+   */
+  public skip(extraSkips = 0): Promise<void> {
+    this.queue.splice(0, extraSkips);
     return this.processQueue(true);
   }
 
