@@ -15,6 +15,7 @@ import Say from './utilities/say';
 import Chess from './chess';
 
 import Play from './player/play';
+import Connect from './player/connect';
 import Seek from './player/seek';
 import Skip from './player/skip';
 import Leave from './player/leave';
@@ -39,6 +40,7 @@ const commands = [
   Chess,
 
   Play,
+  Connect,
   Seek,
   Skip,
   Pause,
