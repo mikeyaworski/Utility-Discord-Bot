@@ -6,6 +6,7 @@ jobs:
   push:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
     - name: Create SHA variable
       id: vars
       run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
