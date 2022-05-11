@@ -13,13 +13,13 @@ jobs:
       with:
         username: mikeyaworski
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Build and push latest
-      uses: docker/build-push-action@v3
-      with:
-        push: true
-        tags: mikeyaworski/utility-discord-bot:latest
     - name: Build and push SHA
       uses: docker/build-push-action@v3
       with:
         push: true
         tags: mikeyaworski/utility-discord-bot:$(git rev-parse --short HEAD)
+    - name: Build and push latest
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: mikeyaworski/utility-discord-bot:latest
