@@ -13,6 +13,8 @@ jobs:
     - name: Create SHA variable
       id: vars
       run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Log In to Docker Hub
