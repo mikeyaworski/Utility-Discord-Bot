@@ -6,6 +6,9 @@ jobs:
   push:
     runs-on: ubuntu-latest
     steps:
+    - name: Create SHA variable
+      id: vars
+      run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Log In to Docker Hub
@@ -17,7 +20,7 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: mikeyaworski/utility-discord-bot:${GITHUB_SHA::7}
+        tags: mikeyaworski/utility-discord-bot:${{ steps.vars.outputs.sha }}
     - name: Build and push latest
       uses: docker/build-push-action@v3
       with:
