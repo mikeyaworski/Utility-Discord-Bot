@@ -17,7 +17,7 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: mikeyaworski/utility-discord-bot:${{ github.sha }}
+        tags: mikeyaworski/utility-discord-bot:${GITHUB_SHA::7}
     - name: Build and push latest
       uses: docker/build-push-action@v3
       with:
