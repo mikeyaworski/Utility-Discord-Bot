@@ -25,7 +25,7 @@ jobs:
       with:
         push: true
         tags: mikeyaworski/utility-discord-bot:${{ steps.vars.outputs.sha }}
-        platforms: linux/amd64
+        platforms: linux/arm64
 #     - name: Build and push latest
 #       uses: docker/build-push-action@v3
 #       with:
