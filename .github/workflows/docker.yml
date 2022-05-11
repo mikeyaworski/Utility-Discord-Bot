@@ -7,9 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
-      with:
-        node-version: 14.x
     - name: Create SHA variable
       id: vars
       run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
@@ -27,10 +24,10 @@ jobs:
       with:
         push: true
         tags: mikeyaworski/utility-discord-bot:${{ steps.vars.outputs.sha }}
-        platforms: linux/arm64
-#     - name: Build and push latest
-#       uses: docker/build-push-action@v3
-#       with:
-#         push: true
-#         tags: mikeyaworski/utility-discord-bot:latest
-#         platforms: linux/amd64,linux/arm64,linux/arm/v7
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+    - name: Build and push latest
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: mikeyaworski/utility-discord-bot:latest
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
