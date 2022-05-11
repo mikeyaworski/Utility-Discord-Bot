@@ -27,6 +27,7 @@ import Shuffle from './player/shuffle';
 import Loop from './player/loop';
 
 const commands = [
+  // Utilities
   Poll,
   Move,
   Delete,
@@ -37,8 +38,7 @@ const commands = [
   Timers,
   Say,
 
-  Chess,
-
+  // Player
   Play,
   Connect,
   Seek,
@@ -50,6 +50,9 @@ const commands = [
   Leave,
   Shuffle,
   Loop,
+
+  // Chess
+  Chess,
 ];
 
 export default commands;
