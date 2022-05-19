@@ -10,7 +10,7 @@ import { parseDelay, humanizeDuration } from 'src/utils';
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('base-roles')
-  .setDescription('Moves a range of messages to another channel.');
+  .setDescription('Adds base roles to new members.');
 commandBuilder.addSubcommand(subcommand => {
   subcommand.setName('list');
   subcommand.setDescription('List the current roles being added to new members.');

@@ -12,9 +12,7 @@ const LeaveCommand: Command = {
     .setName('leave')
     .setDescription('Disconnect the bot from voice channels.'),
   runCommand: async interaction => {
-    await interaction.deferReply({
-      ephemeral: true,
-    });
+    await interaction.deferReply({ ephemeral: true });
 
     // Assert guild since this is a guild-only command
     const guild = interaction.guild!;

@@ -11,9 +11,7 @@ const NowPlayingCommand: Command = {
     .setDescription('Display the title of the track that is currently playing.'),
 
   runCommand: async interaction => {
-    await interaction.deferReply({
-      ephemeral: true,
-    });
+    await interaction.deferReply({ ephemeral: true });
     return replyWithSessionButtons({
       interaction,
       session: sessions.get(interaction.guild!),
