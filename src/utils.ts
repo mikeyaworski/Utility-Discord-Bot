@@ -50,11 +50,11 @@ export function shorten(msg: string, length: number): string {
 export function parseDelay(arg: string): number {
   arg = arg.trim();
   const pureDigits = /^\d+$/;
-  const milliseconds = /\d+\s(ms|milliseconds?)$/;
-  const secs = /\d+\s(s|secs?|seconds?)$/;
-  const mins = /\d+\s(m|mins?|minutes?)$/;
-  const hours = /\d+\s(hr?|hours?)$/;
-  const days = /\d+\s(d|days?)$/;
+  const milliseconds = /\d+\s?(ms|milliseconds?)$/;
+  const secs = /\d+\s?(s|secs?|seconds?)$/;
+  const mins = /\d+\s?(m|mins?|minutes?)$/;
+  const hours = /\d+\s?(hr?|hours?)$/;
+  const days = /\d+\s?(d|days?)$/;
   if (pureDigits.test(arg)) {
     return parseInt(arg, 10);
   }

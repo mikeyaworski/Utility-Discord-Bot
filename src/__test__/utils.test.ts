@@ -69,6 +69,7 @@ describe('utils', () => {
       expect(parseDelay('10 ms')).toEqual(expected);
       expect(parseDelay('10 milliseconds')).toEqual(expected);
       expect(parseDelay('10 millisecond')).toEqual(expected);
+      expect(parseDelay('10ms')).toEqual(expected);
     });
     test('seconds', () => {
       const expected = 10 * 1000;
@@ -76,6 +77,7 @@ describe('utils', () => {
       expect(parseDelay('10 secs')).toEqual(expected);
       expect(parseDelay('10 sec')).toEqual(expected);
       expect(parseDelay('10 s')).toEqual(expected);
+      expect(parseDelay('10s')).toEqual(expected);
     });
     test('minutes', () => {
       const expected = 10 * 60 * 1000;
@@ -83,6 +85,7 @@ describe('utils', () => {
       expect(parseDelay('10 minute')).toEqual(expected);
       expect(parseDelay('10 mins')).toEqual(expected);
       expect(parseDelay('10 min')).toEqual(expected);
+      expect(parseDelay('10min')).toEqual(expected);
     });
     test('hours', () => {
       const expected = 10 * 60 * 60 * 1000;
@@ -90,12 +93,14 @@ describe('utils', () => {
       expect(parseDelay('10 hour')).toEqual(expected);
       expect(parseDelay('10 hr')).toEqual(expected);
       expect(parseDelay('10 h')).toEqual(expected);
+      expect(parseDelay('10h')).toEqual(expected);
     });
     test('days', () => {
       const expected = 10 * 24 * 60 * 60 * 1000;
       expect(parseDelay('10 days')).toEqual(expected);
       expect(parseDelay('10 day')).toEqual(expected);
       expect(parseDelay('10 d')).toEqual(expected);
+      expect(parseDelay('10d')).toEqual(expected);
     });
     test('throws for invalid input', () => {
       expect(() => parseDelay('random')).toThrowError();
