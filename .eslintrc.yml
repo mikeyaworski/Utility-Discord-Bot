@@ -90,3 +90,4 @@ rules:
   no-continue: off # this can be clean
   no-shadow: off # broken with TS enums
   no-nested-ternary: off # these are readable and are actually better in many cases
+  prefer-destructuring: off # this is often just super hard to read
