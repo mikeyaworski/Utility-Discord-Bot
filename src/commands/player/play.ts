@@ -226,6 +226,13 @@ const PlayCommand: Command = {
   modalLabels: {
     stream: 'YouTube livestream. (Not Twitch).',
   },
+  modalPlaceholders: {
+    link: 'https://...',
+    query: 'A song',
+    stream: 'https://...',
+    front: 'yes/no',
+    shuffle: 'yes/no',
+  },
 
   runModal: async interaction => {
     await interaction.deferReply({ ephemeral: true });
