@@ -65,6 +65,14 @@ export function initClient(): Promise<IntentionalAny> {
           Routes.applicationGuildCommands(clientId, slashCommandsGuildId),
           { body },
         );
+        // Delete annoying global commands
+        // Comment out if testing slash commands in DMs, since that requires it to be globally registered.
+        const globalCommands: IntentionalAny = await rest.get(Routes.applicationCommands(clientId));
+        globalCommands?.forEach(async (command: IntentionalAny) => {
+          log('Deleting global command', command.id);
+          await rest.delete(`${Routes.applicationCommands(clientId)}/${command.id}`);
+          log('Deleted global command', command.id);
+        });
       } else {
         await rest.put(
           Routes.applicationCommands(clientId),
