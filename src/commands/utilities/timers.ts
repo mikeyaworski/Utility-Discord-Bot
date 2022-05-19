@@ -1,6 +1,8 @@
-import type { Command } from 'src/types';
+import type { CommandInteraction, ModalSubmitInteraction } from 'discord.js';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
+import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { getSubcommand } from 'src/discord-utils';
 import { handleUpsert } from './reminders';
 
 const timeOption = (option: SlashCommandStringOption) => {
@@ -36,21 +38,34 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
+async function run(interaction: CommandInteraction | ModalSubmitInteraction): Promise<IntentionalAny> {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'create': {
+      return handleUpsert(interaction, commandBuilder);
+    }
+    default: {
+      return interaction.editReply('What??');
+    }
+  }
+}
+
 const TimerCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'create': {
-        return handleUpsert(interaction);
-      }
-      default: {
-        return interaction.editReply('What??');
-      }
-    }
+  runCommand: run,
+  runModal: run,
+  modalLabels: {
+    times: 'The delay for the timer. Commas for multiple.',
+    channel: 'The channel to send the message in.',
+    interval: 'Interval to repeat timer.',
+  },
+  modalPlaceholders: {
+    times: 'E.g. "5 mins" or "5 mins, 10 mins"',
+    channel: 'Defaults to current one',
+    interval: 'E.g. "24 hours" or "8640000"',
   },
 };
 

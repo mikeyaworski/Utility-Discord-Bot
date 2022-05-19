@@ -19,6 +19,7 @@ import {
   usersHavePermission,
   getInfoFromCommandInteraction,
   getChannel,
+  parseInput,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -30,6 +31,29 @@ interface IntermediateResult {
   toChannel: TextBasedChannel,
   fromChannel: TextBasedChannel,
 }
+
+const commandBuilder = new SlashCommandBuilder();
+commandBuilder
+  .setName('move')
+  .setDescription('Moves a range of messages to another channel.');
+commandBuilder.addChannelOption(option => {
+  return option
+    .setName('to_channel')
+    .setDescription('Channel to move message(s) to.')
+    .setRequired(true);
+});
+commandBuilder.addStringOption(option => {
+  return option
+    .setName('start_message_id')
+    .setDescription('Message ID for the starting message.')
+    .setRequired(true);
+});
+commandBuilder.addStringOption(option => {
+  return option
+    .setName('end_message_id')
+    .setDescription('Message ID for the ending message (creates a range). Leave blank to only move the starting message.')
+    .setRequired(false);
+});
 
 async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message, replyTo?: Message): Promise<Message> {
   await channel.sendTyping();
@@ -50,9 +74,22 @@ async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message
 }
 
 const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async interaction => {
-  const channelId = interaction.options.getChannel('to_channel', true).id;
-  const startId = interaction.options.getString('start_message_id', true);
-  const endId = interaction.options.getString('end_message_id');
+  let channelId: string;
+  let startId: string;
+  let endId: string | null;
+  if (interaction.isModalSubmit()) {
+    const inputs = await parseInput({
+      slashCommandData: commandBuilder,
+      interaction,
+    });
+    channelId = inputs.to_channel.id;
+    startId = inputs.start_message_id;
+    endId = inputs.end_message_id;
+  } else {
+    channelId = interaction.options.getChannel('to_channel', true).id;
+    startId = interaction.options.getString('start_message_id', true);
+    endId = interaction.options.getString('end_message_id');
+  }
 
   const toChannel = await interaction.guild!.channels.fetch(channelId);
   if (!toChannel || !toChannel.isText()) {
@@ -194,14 +231,14 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   const row = new Discord.MessageActionRow({
     components: [menu],
   });
-  await interaction.editReply({
+  const msg = await interaction.editReply({
     content: 'Select a channel to move the message to.',
     components: [row],
   });
 
   try {
     const selectInteraction = await interaction.channel?.awaitMessageComponent({
-      filter: i => i.message.interaction?.id === interaction.id,
+      filter: i => i.message.id === msg.id,
       time: CONFIRMATION_DEFAULT_TIMEOUT,
     }).catch(() => {
       // Intentionally empty catch
@@ -232,28 +269,16 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   }
 }
 
-const commandBuilder = new SlashCommandBuilder();
-commandBuilder
-  .setName('move')
-  .setDescription('Moves a range of messages to another channel.');
-commandBuilder.addChannelOption(option => {
-  return option
-    .setName('to_channel')
-    .setDescription('Channel to move message(s) to.')
-    .setRequired(true);
-});
-commandBuilder.addStringOption(option => {
-  return option
-    .setName('start_message_id')
-    .setDescription('Message ID for the starting message.')
-    .setRequired(true);
-});
-commandBuilder.addStringOption(option => {
-  return option
-    .setName('end_message_id')
-    .setDescription('Message ID for the ending message (creates a range). Leave blank to only move the starting message.')
-    .setRequired(false);
-});
+const confirmationCommandRunner = ConfirmationCommandRunner(
+  beforeConfirm,
+  afterConfirm,
+  {
+    workingMessage: 'Fetching...\nThis may take a minute.',
+    declinedMessage: 'No messages were moved.',
+    ephemeral: true,
+    useFallbackModal: true,
+  },
+);
 
 const MoveCommand: Command = {
   guildOnly: true,
@@ -263,15 +288,10 @@ const MoveCommand: Command = {
     name: 'move',
   },
   runContextMenu: handleContextMenu,
-  ...ConfirmationCommandRunner(
-    beforeConfirm,
-    afterConfirm,
-    {
-      workingMessage: 'Fetching...\nThis may take a minute.',
-      declinedMessage: 'No messages were moved.',
-      ephemeral: true,
-    },
-  ),
+  ...confirmationCommandRunner,
+  modalLabels: {
+    end_message_id: '(Optional) Message ID for the ending message.',
+  },
 };
 
 export default MoveCommand;

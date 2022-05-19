@@ -1,5 +1,5 @@
-import type { CommandInteraction, MessageEmbedOptions } from 'discord.js';
-import type { Command, IntentionalAny } from 'src/types';
+import type { MessageEmbedOptions } from 'discord.js';
+import type { AnyInteraction, AnyMapping, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
 
@@ -17,6 +17,8 @@ import {
   findOptionalChannel,
   handleError,
   replyWithEmbeds,
+  parseInput,
+  getSubcommand,
 } from 'src/discord-utils';
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
@@ -62,10 +64,10 @@ commandBuilder.addSubcommand(subcommand => {
     .setName('create')
     .setDescription('Create a reminder or timer (timer is if there is no message).')
     .addStringOption(timeOption({ required: true }))
-    .addStringOption(timeZoneOption)
     .addStringOption(messageOption)
+    .addStringOption(intervalOption)
     .addChannelOption(channelOption)
-    .addStringOption(intervalOption);
+    .addStringOption(timeZoneOption);
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
@@ -191,12 +193,20 @@ function parseTimesArg(timesArg: string | null, timeZone: string | null): number
   return times;
 }
 
-async function parseReminderOptions(interaction: CommandInteraction, { editing }: { editing: boolean }) {
-  const time = interaction.options.getString('times', false); // Optional for editing
-  const timeZone = interaction.options.getString('time_zone', false);
-  const message = interaction.options.getString('message', false);
-  const channelArg = interaction.options.getChannel('channel', false);
-  const intervalArg = interaction.options.getString('interval', false);
+async function parseReminderOptions({
+  interaction,
+  inputs,
+  editing,
+}: {
+  inputs: AnyMapping,
+  interaction: AnyInteraction,
+  editing: boolean
+}) {
+  const time = inputs.times; // Optional for editing
+  const timeZone = inputs.time_zone;
+  const { message } = inputs;
+  const channelArg = inputs.channel;
+  const intervalArg = inputs.interval;
 
   const fetchResults = await findOptionalChannel(interaction, channelArg);
   const { author } = fetchResults;
@@ -228,8 +238,16 @@ async function parseReminderOptions(interaction: CommandInteraction, { editing }
   };
 }
 
-export async function handleUpsert(interaction: CommandInteraction): Promise<IntentionalAny> {
-  const id = interaction.options.getString('reminder_id', false); // Not present in creation
+export async function handleUpsert(
+  interaction: AnyInteraction,
+  // used by TimerCommand since it has a different set of options that need to be parsed differently by our util
+  slashCommandData?: Command['slashCommandData'],
+): Promise<IntentionalAny> {
+  const inputs = await parseInput({
+    slashCommandData: slashCommandData || commandBuilder,
+    interaction,
+  });
+  const id: string | null = inputs.reminder_id; // Not present in creation
   const editing = Boolean(id);
   try {
     const {
@@ -238,7 +256,7 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
       times,
       channel,
       author,
-    } = await parseReminderOptions(interaction, { editing });
+    } = await parseReminderOptions({ interaction, inputs, editing });
 
     const timeIsInPast = times.some(time => time < Date.now() / 1000);
 
@@ -301,8 +319,9 @@ export async function handleUpsert(interaction: CommandInteraction): Promise<Int
   }
 }
 
-async function handleDelete(interaction: CommandInteraction) {
-  const idsArg = interaction.options.getString('reminder_ids', true);
+async function handleDelete(interaction: AnyInteraction) {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const idsArg: string = inputs.reminder_ids;
   const ids = idsArg.split(/[\s,]+/);
   const reminders = await Reminders.findAll({
     where: {
@@ -331,9 +350,10 @@ async function handleDelete(interaction: CommandInteraction) {
   return interaction.editReply(messageResponse);
 }
 
-async function handleList(interaction: CommandInteraction) {
-  const channelArg = interaction.options.getChannel('channel', false);
-  const filter = interaction.options.getString('filter', false);
+async function handleList(interaction: AnyInteraction) {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const channelArg = inputs.channel;
+  const filter: string | null = inputs.filter;
   const { channel, author } = await findOptionalChannel(interaction, channelArg);
 
   if (!channel) return interaction.editReply('Channel not found!');
@@ -378,28 +398,49 @@ async function handleList(interaction: CommandInteraction) {
   });
 }
 
+const run: CommandOrModalRunMethod = async interaction => {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'list': {
+      return handleList(interaction);
+    }
+    case 'edit':
+    case 'create': {
+      return handleUpsert(interaction);
+    }
+    case 'delete': {
+      return handleDelete(interaction);
+    }
+    default: {
+      return interaction.editReply('What??');
+    }
+  }
+};
+
 const RemindersCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'list': {
-        return handleList(interaction);
-      }
-      case 'edit':
-      case 'create': {
-        return handleUpsert(interaction);
-      }
-      case 'delete': {
-        return handleDelete(interaction);
-      }
-      default: {
-        return interaction.editReply('What??');
-      }
-    }
+  runCommand: run,
+  runModal: run,
+  modalLabels: {
+    times: 'The delay for the timer. Commas for multiple.',
+    channel: 'The channel to send the message in.',
+    interval: 'Interval to repeat timer.',
+    reminder_id: 'The ID of the reminder.',
+    reminder_ids: 'The ID(s) of the reminder (can use commas).',
+    message: 'The message of the reminder.',
+    time_zone: 'Time zone name abbreviation.',
+  },
+  modalPlaceholders: {
+    times: 'E.g. "5 mins" or "5 mins, 10 mins"',
+    channel: 'Defaults to current one',
+    interval: 'E.g. "24 hours" or "8640000"',
+    reminder_id: 'Use "/reminders list" to find IDs',
+    reminder_ids: 'Use "/reminders list" to find IDs',
+    message: 'Defaults to "Time is up!"',
+    time_zone: 'E.g. "America/New_York" or "EST". Defaults to Toronto.',
   },
 };
 

@@ -1,9 +1,10 @@
 import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import type { Command, IntentionalAny } from 'src/types';
+import type { AnyInteraction, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
 import { CONCURRENCY_LIMIT } from 'src/constants';
+import { getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
 import { replyWithSessionButtons, attachPlayerButtons } from './utils';
@@ -49,13 +50,13 @@ commandBuilder.addSubcommand(subcommand => {
   subcommand.setDescription('Move an item in the queue.');
   subcommand.addIntegerOption(option => {
     return option
-      .setName('current-position')
+      .setName('current_position')
       .setDescription('The position of the item.')
       .setRequired(true);
   });
   subcommand.addIntegerOption(option => {
     return option
-      .setName('new-position')
+      .setName('new_position')
       .setDescription('The position to move the item to.')
       .setRequired(true);
   });
@@ -67,7 +68,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: CommandInteraction | ContextMenuInteraction, session: Session): Promise<IntentionalAny> {
+async function handleList(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
   await replyWithSessionButtons({
     interaction,
     session,
@@ -125,8 +126,9 @@ async function handleList(interaction: CommandInteraction | ContextMenuInteracti
   });
 }
 
-async function handleLoop(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  const loop = interaction.options.getBoolean('loop', true);
+async function handleLoop(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const loop: boolean = inputs.loop;
   if (loop) session.loop();
   else session.unloop();
   await replyWithSessionButtons({
@@ -140,14 +142,15 @@ async function handleLoop(interaction: CommandInteraction, session: Session): Pr
   });
 }
 
-async function handleShuffle(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+async function handleShuffle(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
   session.shuffle();
   await interaction.editReply('Queue shuffled.');
   attachPlayerButtons(interaction, session);
 }
 
-async function handleRemove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  const position = interaction.options.getInteger('position', true);
+async function handleRemove(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const position: number = inputs.position;
   if (position < 1) return interaction.editReply('Queue position must be at least 1.');
   const removedTrack = session.remove(position - 1);
   if (!removedTrack) return interaction.editReply('Could not find track.');
@@ -161,9 +164,10 @@ async function handleRemove(interaction: CommandInteraction, session: Session): 
   return null;
 }
 
-async function handleMove(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
-  const currentPosition = interaction.options.getInteger('current-position', true);
-  const newPosition = interaction.options.getInteger('new-position', true);
+async function handleMove(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const currentPosition: number = inputs.current_position;
+  const newPosition: number = inputs.new_position;
   if (currentPosition < 1 || newPosition < 1) return interaction.editReply('Queue position must be at least 1.');
   const movedTrack = session.move(currentPosition - 1, newPosition - 1);
   if (!movedTrack) return interaction.editReply('Could not find track.');
@@ -177,11 +181,54 @@ async function handleMove(interaction: CommandInteraction, session: Session): Pr
   return null;
 }
 
-async function handleClear(interaction: CommandInteraction, session: Session): Promise<IntentionalAny> {
+async function handleClear(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
   session.clear();
   await interaction.editReply('Queue cleared.');
   attachPlayerButtons(interaction, session);
 }
+
+const run: CommandOrModalRunMethod = async interaction => {
+  await interaction.deferReply({ ephemeral: true });
+
+  // This is a guild-only command
+  const guild = interaction.guild!;
+  const session = sessions.get(guild);
+  if (!session) {
+    await interaction.editReply('Session does not exist.');
+    return;
+  }
+
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'list': {
+      await handleList(interaction, session);
+      break;
+    }
+    case 'loop': {
+      await handleLoop(interaction, session);
+      break;
+    }
+    case 'shuffle': {
+      await handleShuffle(interaction, session);
+      break;
+    }
+    case 'remove': {
+      await handleRemove(interaction, session);
+      break;
+    }
+    case 'move': {
+      await handleMove(interaction, session);
+      break;
+    }
+    case 'clear': {
+      await handleClear(interaction, session);
+      break;
+    }
+    default: {
+      await interaction.editReply('What??');
+    }
+  }
+};
 
 const QueueCommand: Command = {
   guildOnly: true,
@@ -190,6 +237,8 @@ const QueueCommand: Command = {
     type: ContextMenuTypes.USER,
     name: 'queue list',
   },
+  runCommand: run,
+  runModal: run,
   runContextMenu: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
@@ -201,49 +250,6 @@ const QueueCommand: Command = {
       return;
     }
     await handleList(interaction, session);
-  },
-
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    // This is a guild-only command
-    const guild = interaction.guild!;
-    const session = sessions.get(guild);
-    if (!session) {
-      await interaction.editReply('Session does not exist.');
-      return;
-    }
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'list': {
-        await handleList(interaction, session);
-        break;
-      }
-      case 'loop': {
-        await handleLoop(interaction, session);
-        break;
-      }
-      case 'shuffle': {
-        await handleShuffle(interaction, session);
-        break;
-      }
-      case 'remove': {
-        await handleRemove(interaction, session);
-        break;
-      }
-      case 'move': {
-        await handleMove(interaction, session);
-        break;
-      }
-      case 'clear': {
-        await handleClear(interaction, session);
-        break;
-      }
-      default: {
-        await interaction.editReply('What??');
-      }
-    }
   },
 };
 

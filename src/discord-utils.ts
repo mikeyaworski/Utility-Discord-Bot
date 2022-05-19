@@ -13,35 +13,56 @@ import type {
   ContextMenuInteraction,
   MessageEmbed,
   InteractionReplyOptions,
+  ModalSubmitInteraction,
+  CommandInteractionOption,
 } from 'discord.js';
-import type { IntentionalAny } from 'src/types';
+import type { IntentionalAny, Command, AnyInteraction, AnyMapping } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
-import { BULK_MESSAGES_LIMIT, MAX_MESSAGES_FETCH, DIGITS_REGEX, CHANNEL_ARG_REGEX, INTERACTION_MAX_TIMEOUT, ONE_MINUTE } from 'src/constants';
+import {
+  BULK_MESSAGES_LIMIT,
+  MAX_MESSAGES_FETCH,
+  DIGITS_REGEX,
+  CHANNEL_ARG_REGEX,
+  INTERACTION_MAX_TIMEOUT,
+  ONE_MINUTE,
+  ROLE_ARG_REGEX,
+  USER_ARG_REGEX,
+  USER_DISCRIMINATOR_REGEX,
+} from 'src/constants';
 import { error } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
+import { APIApplicationCommandOption } from 'discord-api-types/v9';
 
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
  * This can be used as a fallback after any custom error handling for the use case.
  */
-export function handleError(
+export async function handleError(
   err: unknown,
-  interaction: CommandInteraction | ButtonInteraction | ContextMenuInteraction,
+  interaction: CommandInteraction | ButtonInteraction | ContextMenuInteraction | ModalSubmitInteraction,
 ): Promise<IntentionalAny> {
+  // Modal interactions are really broken, so we need to defer and then edit the reply. Replying immediately doesn't work.
+  async function sendResponse(msg: string) {
+    if (interaction.isModalSubmit()) {
+      await interaction.deferReply({ ephemeral: true });
+      return interaction.editReply(msg);
+    }
+    return interaction.editReply(msg);
+  }
   const name: string | undefined = get(err, 'name');
   const message: string | undefined = get(err, 'message');
   if (name === 'SequelizeUniqueConstraintError') {
-    return interaction.editReply('That is a duplicate entry in our database!');
+    return sendResponse('That is a duplicate entry in our database!');
   }
   if (message === 'Unknown Emoji') {
-    return interaction.editReply('I\'m not able to use that emoji!');
+    return sendResponse('I\'m not able to use that emoji!');
   }
   error(err);
-  return interaction.editReply(message || 'Something went wrong...');
+  return sendResponse(message || 'Something went wrong...');
 }
 
 export function eventuallyRemoveComponents(interaction: CommandInteraction): void {
@@ -145,6 +166,26 @@ export function getChannelIdFromArg(channelArg: string): string | null {
   }
   if (CHANNEL_ARG_REGEX.test(channelArg)) {
     return channelArg.match(/\d+/)?.[0] || null;
+  }
+  return null;
+}
+
+export function getRoleIdFromArg(roleArg: string): string | null {
+  if (DIGITS_REGEX.test(roleArg)) {
+    return roleArg;
+  }
+  if (ROLE_ARG_REGEX.test(roleArg)) {
+    return roleArg.match(/\d+/)?.[0] || null;
+  }
+  return null;
+}
+
+export function getUserIdFromArg(userArg: string): string | null {
+  if (DIGITS_REGEX.test(userArg)) {
+    return userArg;
+  }
+  if (USER_ARG_REGEX.test(userArg)) {
+    return userArg.match(/\d+/)?.[0] || null;
   }
   return null;
 }
@@ -258,7 +299,7 @@ export async function fetchMessageInGuild(guild: Guild, messageId: string, given
 }
 
 export async function getInfoFromCommandInteraction(
-  interaction: CommandInteraction | ContextMenuInteraction,
+  interaction: AnyInteraction,
   options: { ephemeral?: boolean } = {},
 ): Promise<{
   channel: TextBasedChannel | null | undefined,
@@ -267,6 +308,15 @@ export async function getInfoFromCommandInteraction(
 }> {
   const { ephemeral = false } = options;
   const interactionMsg = !ephemeral ? await interaction.fetchReply() : null;
+
+  if (!interaction.channelId) {
+    const author = interaction.user;
+    return {
+      message: null,
+      channel: null,
+      author,
+    };
+  }
 
   // Guild
   if (interaction.inGuild()) {
@@ -300,7 +350,7 @@ export async function getInfoFromCommandInteraction(
 }
 
 export async function findOptionalChannel(
-  interaction: CommandInteraction,
+  interaction: AnyInteraction,
   channelArg: ReturnType<CommandInteraction['options']['getChannel']>,
 ): Promise<{
   channel: TextBasedChannel | null | undefined,
@@ -347,7 +397,7 @@ export async function parseArguments(input: string, options: { parseChannels?: b
   }));
 }
 
-export function checkMessageErrors(interaction: CommandInteraction, {
+export function checkMessageErrors(interaction: AnyInteraction, {
   message,
   channel,
   author,
@@ -386,7 +436,7 @@ export async function replyWithEmbeds({
   messageArgs,
   ephemeral,
 }: {
-  interaction: CommandInteraction,
+  interaction: AnyInteraction,
   embeds: MessageEmbed[],
   messageArgs?: InteractionReplyOptions,
   ephemeral?: boolean,
@@ -408,4 +458,219 @@ export async function replyWithEmbeds({
       });
     }
   }
+}
+
+export function getCommandInfoFromInteraction(interaction: ModalSubmitInteraction): {
+  commandName: string,
+  subcommand: string | null,
+} {
+  const matches = interaction.customId.match(/(.+)\s(.+)/);
+  if (!matches) return { commandName: interaction.customId, subcommand: null };
+  return { commandName: matches[1], subcommand: matches[2] };
+}
+
+/**
+ * TODO: Type the response
+ */
+export async function parseInput({
+  slashCommandData,
+  interaction,
+}: {
+  slashCommandData: NonNullable<Command['slashCommandData']>,
+  interaction: AnyInteraction,
+}): Promise<AnyMapping> {
+  const resolvedInputs: AnyMapping = {};
+  function parseCommandOption(option: CommandInteractionOption) {
+    if (!interaction.isCommand()) return;
+    if (option.type === 'SUB_COMMAND') {
+      option.options?.forEach(option => {
+        parseCommandOption(option);
+      });
+    } else {
+      const { options } = interaction;
+      switch (option.type) {
+        case 'ROLE': {
+          resolvedInputs[option.name] = options.getRole(option.name);
+          break;
+        }
+        case 'CHANNEL': {
+          resolvedInputs[option.name] = options.getChannel(option.name);
+          break;
+        }
+        case 'INTEGER': {
+          resolvedInputs[option.name] = options.getInteger(option.name);
+          break;
+        }
+        case 'NUMBER': {
+          resolvedInputs[option.name] = options.getNumber(option.name);
+          break;
+        }
+        case 'MENTIONABLE': {
+          resolvedInputs[option.name] = options.getMentionable(option.name);
+          break;
+        }
+        case 'STRING': {
+          resolvedInputs[option.name] = options.getString(option.name);
+          break;
+        }
+        case 'USER': {
+          resolvedInputs[option.name] = options.getUser(option.name);
+          break;
+        }
+        default: {
+          resolvedInputs[option.name] = option.value;
+        }
+      }
+    }
+  }
+
+  if (interaction.isCommand()) {
+    interaction.options.data.forEach(option => {
+      parseCommandOption(option);
+    });
+    return resolvedInputs;
+  }
+
+  async function parseModalOption(option: APIApplicationCommandOption) {
+    if (!interaction.isModalSubmit()) return;
+    let input: string;
+    try {
+      input = interaction.fields.getTextInputValue(option.name);
+    } catch (err) {
+      error(err);
+      return;
+    }
+    switch (option.type) {
+      case 4: { // Integer
+        const int = parseInt(input, 10);
+        if (Number.isNaN(int)) throw new Error(`Could not parse "${input}" to an integer.`);
+        resolvedInputs[option.name] = int;
+        break;
+      }
+      case 10: { // Number
+        const num = Number(input);
+        if (Number.isNaN(num)) throw new Error(`Could not parse "${input}" to a number.`);
+        resolvedInputs[option.name] = num;
+        break;
+      }
+      case 5: { // Boolean
+        if (input) {
+          let bool: boolean | null = null;
+          if (/^(t|true|y|yes|ya|yea|yeah)$/i.test(input)) bool = true;
+          if (/^(f|false|n|no|nope|nah|naw)$/i.test(input)) bool = false;
+          if (bool == null) throw new Error(`Could not parse "${input}" to a boolean.`);
+          resolvedInputs[option.name] = bool;
+        }
+        break;
+      }
+      case 6: { // User
+        if (!interaction.guild || !input) break;
+        const userId = getChannelIdFromArg(input);
+        if (userId) {
+          const member = await interaction.guild.members.fetch(userId);
+          if (!member) throw new Error(`Could not find member with ID: ${userId}`);
+          resolvedInputs[option.name] = member;
+        } else {
+          let discriminator: string | undefined;
+          let formattedInput = input.toLowerCase().replace('@', '');
+          const matches = formattedInput.match(USER_DISCRIMINATOR_REGEX);
+          if (matches) {
+            formattedInput = matches[1];
+            discriminator = matches[2];
+          }
+          // These have an order of preference, because nicknames can be duplicates
+          let member = await interaction.guild.members.cache.find(member => {
+            const username = member.user.username.toLowerCase();
+            if (discriminator) return member.user.discriminator === discriminator && username === formattedInput;
+            return username === formattedInput;
+          });
+          if (!member && !discriminator) {
+            member = await interaction.guild.members.cache.find(member => {
+              return member.displayName.toLowerCase() === formattedInput;
+            });
+          }
+          if (!member && !discriminator) {
+            member = await interaction.guild.members.cache.find(member => {
+              return member.nickname?.toLowerCase() === formattedInput;
+            });
+          }
+          if (!member) throw new Error(`Could not find member with name: ${input}`);
+          resolvedInputs[option.name] = member;
+        }
+        break;
+      }
+      case 9: { // Mentionable
+        // TODO
+        // We don't currently have a command which uses this, so build this out later.
+        resolvedInputs[option.name] = input;
+        break;
+      }
+      case 7: { // Channel
+        if (!interaction.guild || !input) break;
+        const channelId = getChannelIdFromArg(input);
+        if (channelId) {
+          const channel = await interaction.guild.channels.fetch(channelId);
+          if (!channel) throw new Error(`Could not find channel with ID: ${channelId}`);
+          resolvedInputs[option.name] = channel;
+        } else {
+          const formattedInput = input.toLowerCase().replace('#', '');
+          const channel = await interaction.guild.channels.cache.find(channel => {
+            return get(channel, 'name')?.toLowerCase() === formattedInput;
+          });
+          if (!channel) throw new Error(`Could not find channel with name: ${input}`);
+          resolvedInputs[option.name] = channel;
+        }
+        break;
+      }
+      case 8: { // Role
+        if (!interaction.guild || !input) break;
+        const roleId = getRoleIdFromArg(input);
+        if (roleId) {
+          const role = await interaction.guild.roles.fetch(roleId);
+          if (!role) throw new Error(`Could not find role with ID: ${roleId}`);
+          resolvedInputs[option.name] = role;
+        } else {
+          const role = await interaction.guild.roles.cache.find(role => {
+            return role.name.toLowerCase() === input.toLowerCase();
+          });
+          if (!role) throw new Error(`Could not find role with name: ${input}`);
+          resolvedInputs[option.name] = role;
+        }
+        break;
+      }
+      case 3: // String
+      default: {
+        resolvedInputs[option.name] = input;
+      }
+    }
+  }
+
+  if (interaction.isModalSubmit()) {
+    const { subcommand } = getCommandInfoFromInteraction(interaction);
+    await Promise.all(slashCommandData.options.map(async option => {
+      const json = option.toJSON();
+      if (json.type === 1) { // subcommand
+        if (!json.options || (subcommand && option.toJSON().name !== subcommand)) return;
+        await Promise.all(json.options.map(async option => {
+          // @ts-ignore Useless TS
+          await parseModalOption(option);
+        }));
+      } else {
+        // @ts-ignore Useless TS
+        await parseModalOption(json);
+      }
+    }));
+  }
+
+  return resolvedInputs;
+}
+
+export function getSubcommand(interaction: CommandInteraction | ModalSubmitInteraction): string | null {
+  let subcommand: string | null;
+  if (interaction.isModalSubmit()) {
+    subcommand = getCommandInfoFromInteraction(interaction).subcommand;
+  } else {
+    subcommand = interaction.options.getSubcommand();
+  }
+  return subcommand;
 }

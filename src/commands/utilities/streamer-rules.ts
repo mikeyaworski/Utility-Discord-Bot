@@ -1,10 +1,11 @@
-import { CommandInteraction, MessageEmbed } from 'discord.js';
-import type { Command } from 'src/types';
+import { MessageEmbed, Role } from 'discord.js';
+import type { AnyInteraction, Command, CommandOrModalRunMethod } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 
 import { StreamerRules } from 'src/models/streamer-rules';
-import { handleError } from 'src/discord-utils';
+import { getSubcommand, parseInput } from 'src/discord-utils';
+import { APIRole } from 'discord-api-types/v9';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -51,7 +52,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: CommandInteraction) {
+async function handleList(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
   const rules = await StreamerRules.findAll({
     where: {
@@ -90,27 +91,31 @@ async function handleList(interaction: CommandInteraction) {
   });
 }
 
-async function handleCreate(interaction: CommandInteraction, { remove }: { remove: boolean }) {
-  const role = interaction.options.getRole('role', true);
+async function handleCreate(interaction: AnyInteraction, { remove }: { remove: boolean }) {
+  const inputs = await parseInput({
+    slashCommandData: commandBuilder,
+    interaction,
+  });
+  const role: Role | APIRole = inputs.role;
   const guildId = interaction.guild!.id;
-  try {
-    await StreamerRules.create({
-      guild_id: guildId,
-      role_id: role.id,
-      add: !remove,
-    });
-    const reply = remove
-      ? `Users who are streaming will now have the <@&${role.id}> role removed.`
-      : `Users who are streaming will now be given the <@&${role.id}> role.`;
-    return interaction.editReply(reply);
-  } catch (err) {
-    return handleError(err, interaction);
-  }
+  await StreamerRules.create({
+    guild_id: guildId,
+    role_id: role.id,
+    add: !remove,
+  });
+  const reply = remove
+    ? `Users who are streaming will now have the <@&${role.id}> role removed.`
+    : `Users who are streaming will now be given the <@&${role.id}> role.`;
+  await interaction.editReply(reply);
 }
 
-async function handleClear(interaction: CommandInteraction) {
+async function handleClear(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
-  const role = interaction.options.getRole('role', false);
+  const inputs = await parseInput({
+    slashCommandData: commandBuilder,
+    interaction,
+  });
+  const role: Role | APIRole | null = inputs.role;
 
   if (!role) {
     await StreamerRules.destroy({
@@ -129,33 +134,36 @@ async function handleClear(interaction: CommandInteraction) {
   return interaction.editReply(`Streaming role relationship for <@&${role.id}> was removed.`);
 }
 
+const run: CommandOrModalRunMethod = async interaction => {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'list': {
+      return handleList(interaction);
+    }
+    case 'add': {
+      return handleCreate(interaction, { remove: false });
+    }
+    case 'remove': {
+      return handleCreate(interaction, { remove: true });
+    }
+    case 'clear': {
+      return handleClear(interaction);
+    }
+    default: {
+      return interaction.editReply('What??');
+    }
+  }
+};
+
 const StreamerRulesCommand: Command = {
   guildOnly: true,
   userPermissions: 'MANAGE_ROLES',
   clientPermissions: 'MANAGE_ROLES',
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'list': {
-        return handleList(interaction);
-      }
-      case 'add': {
-        return handleCreate(interaction, { remove: false });
-      }
-      case 'remove': {
-        return handleCreate(interaction, { remove: true });
-      }
-      case 'clear': {
-        return handleClear(interaction);
-      }
-      default: {
-        return interaction.editReply('What??');
-      }
-    }
-  },
+  runCommand: run,
+  runModal: run,
 };
 
 export default StreamerRulesCommand;

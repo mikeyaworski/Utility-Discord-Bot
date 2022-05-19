@@ -1,15 +1,16 @@
-import type { Command, GenericMapping, BooleanMapping } from 'src/types';
+import type { Command, GenericMapping, BooleanMapping, AnyInteraction, CommandOrModalRunMethod } from 'src/types';
 
-import { CommandInteraction, Message, MessageEmbed } from 'discord.js';
+import { CommandInteraction, Message, MessageEmbed, Role } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import removeDuplicates from 'lodash.uniq';
 import get from 'lodash.get';
 
 import { ReactionMessagesUnique } from 'src/models/reaction-messages-unique';
 import { ReactionRoles } from 'src/models/reaction-roles';
-import { fetchMessageInGuild, handleError } from 'src/discord-utils';
+import { fetchMessageInGuild, getSubcommand, handleError, parseInput } from 'src/discord-utils';
 import { shorten } from 'src/utils';
 import { MESSAGE_PREVIEW_LENGTH } from 'src/constants';
+import { APIRole } from 'discord-api-types/v9';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -99,9 +100,10 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: CommandInteraction) {
+async function handleList(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
-  const messageId = interaction.options.getString('message_id', false);
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const messageId: string | null = inputs.message_id;
 
   // message_id specifically cannot be undefined when querying, for some reason
   const baseWhere: {
@@ -200,9 +202,10 @@ async function handleList(interaction: CommandInteraction) {
   });
 }
 
-async function handleClear(interaction: CommandInteraction) {
+async function handleClear(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
-  const messageId = interaction.options.getString('message_id', true);
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const messageId: string = inputs.message_id;
 
   await Promise.all([
     ReactionRoles.destroy({
@@ -221,11 +224,12 @@ async function handleClear(interaction: CommandInteraction) {
   return interaction.editReply('Role reactions have been removed from the message.');
 }
 
-async function handleAdd(interaction: CommandInteraction) {
+async function handleAdd(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
-  const messageId = interaction.options.getString('message_id', true);
-  const emoji = interaction.options.getString('emoji', true);
-  const role = interaction.options.getRole('role', true);
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const messageId: string = inputs.message_id;
+  const emoji: string = inputs.emoji;
+  const role: Role | APIRole = inputs.role;
 
   if (!interaction.guild!.roles.cache.has(role.id) || role.name === '@everyone') {
     return interaction.editReply('Invalid role');
@@ -250,9 +254,10 @@ async function handleAdd(interaction: CommandInteraction) {
   return interaction.editReply(`Role <@&${role.id}> will be added when reacting with emoji ${emoji}!`);
 }
 
-async function handleRemove(interaction: CommandInteraction) {
-  const messageId = interaction.options.getString('message_id', true);
-  const emoji = interaction.options.getString('emoji', true);
+async function handleRemove(interaction: AnyInteraction) {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const messageId: string = inputs.message_id;
+  const emoji: string = inputs.emoji;
 
   const guildId = interaction.guild!.id;
   if (!emoji) return interaction.editReply('Specify an emoji.');
@@ -266,10 +271,11 @@ async function handleRemove(interaction: CommandInteraction) {
   return interaction.editReply(`Roles for emoji ${emoji} have been removed from the message.`);
 }
 
-async function handleUnique(interaction: CommandInteraction) {
+async function handleUnique(interaction: AnyInteraction) {
   const guildId = interaction.guild!.id;
-  const messageId = interaction.options.getString('message_id', true);
-  const unique = interaction.options.getBoolean('is_unique', true);
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const messageId: string = inputs.message_id;
+  const unique: boolean = inputs.is_unique;
 
   await ReactionMessagesUnique.upsert({
     guild_id: guildId,
@@ -282,36 +288,39 @@ async function handleUnique(interaction: CommandInteraction) {
   return interaction.editReply(response);
 }
 
+const run: CommandOrModalRunMethod = async interaction => {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'list': {
+      return handleList(interaction);
+    }
+    case 'add': {
+      return handleAdd(interaction);
+    }
+    case 'remove': {
+      return handleRemove(interaction);
+    }
+    case 'clear': {
+      return handleClear(interaction);
+    }
+    case 'toggle-unique': {
+      return handleUnique(interaction);
+    }
+    default: {
+      return interaction.editReply('What??');
+    }
+  }
+};
+
 const ReactionRolesCommand: Command = {
   guildOnly: true,
   userPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
   clientPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'list': {
-        return handleList(interaction);
-      }
-      case 'add': {
-        return handleAdd(interaction);
-      }
-      case 'remove': {
-        return handleRemove(interaction);
-      }
-      case 'clear': {
-        return handleClear(interaction);
-      }
-      case 'toggle-unique': {
-        return handleUnique(interaction);
-      }
-      default: {
-        return interaction.editReply('What??');
-      }
-    }
-  },
+  runCommand: run,
+  runModal: run,
 };
 
 export default ReactionRolesCommand;

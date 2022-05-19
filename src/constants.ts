@@ -7,6 +7,9 @@ export const INTERACTION_MAX_TIMEOUT = ONE_MINUTE * 14;
 
 export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;
+export const ROLE_ARG_REGEX = /^<@&\d+>$/;
+export const USER_ARG_REGEX = /^<@\d+>$/;
+export const USER_DISCRIMINATOR_REGEX = /^(.+)#(\d{4})$/;
 
 export const Colors = Object.freeze({
   SUCCESS: '#208637',

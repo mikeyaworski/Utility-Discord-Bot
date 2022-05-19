@@ -1,5 +1,5 @@
-import Discord, { CommandInteraction, ContextMenuInteraction } from 'discord.js';
-import { IntentionalAny } from 'src/types';
+import Discord, { CommandInteraction, ContextMenuInteraction, ModalSubmitInteraction } from 'discord.js';
+import { AnyInteraction, IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import { log } from 'src/logging';
@@ -7,7 +7,7 @@ import { filterOutFalsy } from 'src/utils';
 import Session from './session';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
-  const buttons = new Discord.MessageActionRow({
+  const buttons = new Discord.MessageActionRow<Discord.MessageButton>({
     components: [
       session.isPaused()
         ? new Discord.MessageButton({
@@ -53,13 +53,14 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow {
 }
 
 export async function listenForPlayerButtons(
-  interaction: CommandInteraction | ContextMenuInteraction,
+  interaction: AnyInteraction,
   session: Session,
   cb?: () => Promise<unknown>,
 ): Promise<void> {
   try {
+    const msg = await interaction.fetchReply();
     const collector = interaction.channel?.createMessageComponentCollector({
-      filter: i => i.message.interaction?.id === interaction.id,
+      filter: i => i.message.id === msg.id,
       time: INTERACTION_MAX_TIMEOUT,
     });
     collector?.on('collect', i => {
@@ -121,7 +122,10 @@ export async function listenForPlayerButtons(
   }
 }
 
-export function attachPlayerButtons(interaction: CommandInteraction | ContextMenuInteraction, session: Session): void {
+export function attachPlayerButtons(
+  interaction: AnyInteraction,
+  session: Session,
+): void {
   // eventuallyRemoveComponents(interaction);
   async function populateButtons() {
     const buttons = getPlayerButtons(session);
@@ -140,7 +144,7 @@ export async function replyWithSessionButtons({
   session,
   run,
 }: {
-  interaction: CommandInteraction | ContextMenuInteraction,
+  interaction: AnyInteraction,
   session?: Session,
   run: (session: Session) => Promise<{
     message: string,

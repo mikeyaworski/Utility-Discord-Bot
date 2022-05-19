@@ -56,7 +56,28 @@ export function initClient(): Promise<IntentionalAny> {
       client.login(token);
     }),
     (async () => {
-      const slashCommands = commands.map(command => command.slashCommandData?.toJSON());
+      const slashCommands = commands.map(command => {
+        const data = command.slashCommandData?.toJSON();
+        if (command.runModal && data) {
+          data.options = data?.options.map(option => {
+            if (option.type === 1) {
+              return {
+                ...option,
+                required: false,
+                options: option.options?.map(nestedOption => ({
+                  ...nestedOption,
+                  required: false,
+                })),
+              };
+            }
+            return {
+              ...option,
+              required: false,
+            };
+          });
+        }
+        return data;
+      });
       const contextMenus = commands.map(command => command.contextMenuData);
       // TODO: Improve typing
       const body = filterOutFalsy(slashCommands.concat(contextMenus as IntentionalAny));

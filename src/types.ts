@@ -9,17 +9,12 @@ import type {
   GuildMember,
   CommandInteraction,
   ButtonInteraction,
+  ModalSubmitInteraction,
   PermissionString,
   ContextMenuInteraction,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
-import type {
-  Sequelize,
-  ModelCtor,
-  Model as SequelizeModel,
-  InferAttributes,
-  InferCreationAttributes,
-} from 'sequelize/types';
+import type { Sequelize } from 'sequelize/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
@@ -37,6 +32,7 @@ export type GenericMapping<T1, T2 extends string = string> = {
 export type StringMapping = GenericMapping<string>;
 export type BooleanMapping = GenericMapping<boolean>;
 export type UnknownMapping = GenericMapping<unknown>;
+export type AnyMapping = GenericMapping<IntentionalAny>;
 
 export type ClientType = Client;
 
@@ -57,13 +53,22 @@ export interface Command {
   },
   runCommand?: (interaction: CommandInteraction) => Promise<IntentionalAny>,
   runContextMenu?: (interaction: ContextMenuInteraction) => Promise<IntentionalAny>,
+  runModal?: (interaction: ModalSubmitInteraction) => Promise<IntentionalAny>,
+  modalLabels?: StringMapping,
+  modalPlaceholders?: StringMapping,
+  showModalWithNoArgs?: boolean,
   buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
   guildOnly?: boolean,
   userPermissions?: PermissionString | PermissionString[],
   clientPermissions?: PermissionString | PermissionString[],
 }
 
+export type AnyInteraction = CommandInteraction | ContextMenuInteraction | ModalSubmitInteraction;
+
+export type CommandOrModalRunMethod = (interaction: CommandInteraction | ModalSubmitInteraction) => Promise<IntentionalAny>;
 export type CommandRunMethod = Command['runCommand'];
+export type ModalRunMethod = Command['runModal'];
+export type AnyRunMethod = CommandRunMethod | ModalRunMethod;
 export type CommandButtonActionMethod = Command['buttonAction'];
 
 export type BeforeConfirmResponse<T> = null | {
@@ -74,11 +79,11 @@ export type BeforeConfirmResponse<T> = null | {
 }
 
 export type CommandBeforeConfirmMethod<T = unknown> = (
-  interaction: CommandInteraction,
+  interaction: CommandInteraction | ModalSubmitInteraction,
 ) => Promise<BeforeConfirmResponse<T>>;
 
 export type CommandAfterConfirmMethod<T = unknown> = (
-  interaction: CommandInteraction,
+  interaction: CommandInteraction | ModalSubmitInteraction,
   beforeResult: T,
 ) => Promise<string | null>;
 

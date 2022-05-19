@@ -10,6 +10,7 @@ import {
   usersHavePermission,
   getInfoFromCommandInteraction,
   findMessageInChannel,
+  parseInput,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -21,9 +22,43 @@ interface IntermediateResult {
   channel: TextBasedChannel,
 }
 
+const commandBuilder = new SlashCommandBuilder();
+commandBuilder
+  .setName('delete')
+  .setDescription('Deletes a range of messages.');
+commandBuilder.addStringOption(option => {
+  return option
+    .setName('start_message_id')
+    .setDescription('Message ID for the starting message.')
+    .setRequired(true);
+});
+commandBuilder.addStringOption(option => {
+  return option
+    .setName('end_message_id')
+    .setDescription('Message ID for the ending message (creates a range). Leave blank to only move the starting message.')
+    .setRequired(false);
+});
+commandBuilder.addBooleanOption(option => {
+  return option
+    .setName('is_old')
+    .setDescription('Whether any of the messages are over 14 days old.')
+    .setRequired(false);
+});
+
 const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async interaction => {
-  const startId = interaction.options.getString('start_message_id', true);
-  const endId = interaction.options.getString('end_message_id');
+  let startId: string;
+  let endId: string | null;
+  if (interaction.isModalSubmit()) {
+    const inputs = await parseInput({
+      slashCommandData: commandBuilder,
+      interaction,
+    });
+    startId = inputs.start_message_id;
+    endId = inputs.end_message_id;
+  } else {
+    startId = interaction.options.getString('start_message_id', true);
+    endId = interaction.options.getString('end_message_id');
+  }
 
   if (!interaction.channel) {
     await interaction.editReply('Could not find starting message.');
@@ -90,7 +125,13 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
 
 const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (interaction, result) => {
   const { msgs, channel } = result;
-  const isOld = Boolean(interaction.options.getBoolean('is_old'));
+  let isOld: boolean;
+  if (interaction.isModalSubmit()) {
+    const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+    isOld = inputs.is_old;
+  } else {
+    isOld = Boolean(interaction.options.getBoolean('is_old'));
+  }
   let numDeletedMessages = msgs.length;
   if (!isOld && 'bulkDelete' in channel) {
     const msgIds = msgs.map(msg => msg.id);
@@ -105,29 +146,6 @@ const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (inter
   return `${numDeletedMessages} messages have been deleted.`;
 };
 
-const commandBuilder = new SlashCommandBuilder();
-commandBuilder
-  .setName('delete')
-  .setDescription('Deletes a range of messages.');
-commandBuilder.addStringOption(option => {
-  return option
-    .setName('start_message_id')
-    .setDescription('Message ID for the starting message.')
-    .setRequired(true);
-});
-commandBuilder.addStringOption(option => {
-  return option
-    .setName('end_message_id')
-    .setDescription('Message ID for the ending message (creates a range). Leave blank to only move the starting message.')
-    .setRequired(false);
-});
-commandBuilder.addBooleanOption(option => {
-  return option
-    .setName('is_old')
-    .setDescription('Whether any of the messages are over 14 days old.')
-    .setRequired(false);
-});
-
 const DeleteCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
@@ -138,8 +156,13 @@ const DeleteCommand: Command = {
       workingMessage: 'Fetching...\nThis may take a minute.',
       declinedMessage: 'No messages were deleted.',
       ephemeral: true,
+      useFallbackModal: true,
     },
   ),
+  modalLabels: {
+    is_old: 'Whether any of the msgs are over 14 days old.',
+    end_message_id: '(Optional) Message ID for the ending message.',
+  },
 };
 
 export default DeleteCommand;

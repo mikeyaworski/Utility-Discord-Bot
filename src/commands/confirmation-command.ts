@@ -1,6 +1,6 @@
-import type { CommandRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
+import type { CommandRunMethod, ModalRunMethod, AnyRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
-import Discord from 'discord.js';
+import Discord, { CommandInteraction, ModalSubmitInteraction } from 'discord.js';
 import get from 'lodash.get';
 
 import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
@@ -11,11 +11,13 @@ interface Options {
   workingMessage?: string;
   confirmPrompt?: string;
   declinedMessage?: string;
+  useFallbackModal?: boolean,
 }
 
 const DEFAULT_OPTIONS = {
   ephemeral: true,
   timeout: CONFIRMATION_DEFAULT_TIMEOUT,
+  useFallbackModal: false,
 };
 
 /**
@@ -32,10 +34,12 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
   partialOptions: Partial<Options> = { ...DEFAULT_OPTIONS },
 ): {
   runCommand: CommandRunMethod,
+  runModal?: ModalRunMethod,
 } {
-  const runCommand: CommandRunMethod = async interaction => {
-    const options: Options = { ...DEFAULT_OPTIONS, ...partialOptions };
-    const { ephemeral = true } = options;
+  const options: Options = { ...DEFAULT_OPTIONS, ...partialOptions };
+  const { ephemeral = true } = options;
+  // Can't use "run: AnyRunMethod" because TS is really stupid here
+  const run = async (interaction: ModalSubmitInteraction | CommandInteraction) => {
     await interaction.deferReply({ ephemeral });
 
     if (options.workingMessage) {
@@ -67,14 +71,14 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
         }),
       ],
     });
-    await interaction.editReply({
+    const msg = await interaction.editReply({
       content: confirmPrompt,
       components: [buttonActionRow],
     });
 
     try {
       const buttonInteraction = await interaction.channel?.awaitMessageComponent({
-        filter: i => i.message.interaction?.id === interaction.id,
+        filter: i => i.message.id === msg.id,
         time: options.timeout,
       }).catch(() => {
         // Intentionally empty catch
@@ -117,7 +121,16 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
     }
   };
 
+  const runCommand: CommandRunMethod = interaction => {
+    return run(interaction);
+  };
+
+  const runModal: ModalRunMethod = interaction => {
+    return run(interaction);
+  };
+
   return {
     runCommand,
+    runModal: options.useFallbackModal ? runModal : undefined,
   };
 }

@@ -1,11 +1,12 @@
-import type { Command } from 'src/types';
+import type { Command, CommandOrModalRunMethod } from 'src/types';
 
-import { CommandInteraction, MessageEmbed } from 'discord.js';
+import { CommandInteraction, MessageEmbed, ModalSubmitInteraction, Role } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 
 import { BaseRoles } from 'src/models/base-roles';
-import { handleError } from 'src/discord-utils';
+import { getSubcommand, handleError, parseInput } from 'src/discord-utils';
 import { parseDelay, humanizeDuration } from 'src/utils';
+import { APIRole } from 'discord-api-types/v9';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -45,7 +46,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: CommandInteraction) {
+async function handleList(interaction: CommandInteraction | ModalSubmitInteraction) {
   const guildId = interaction.guild!.id;
   const roles = await BaseRoles.findAll({
     where: {
@@ -72,9 +73,10 @@ async function handleList(interaction: CommandInteraction) {
   });
 }
 
-async function handleAdd(interaction: CommandInteraction) {
-  const role = interaction.options.getRole('role', true);
-  const delay = interaction.options.getString('delay');
+async function handleAdd(interaction: CommandInteraction | ModalSubmitInteraction) {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const role: Role | APIRole = inputs.role;
+  const delay: string | null = inputs.delay;
 
   const guildId = interaction.guild!.id;
   const roleId = role.id;
@@ -93,9 +95,10 @@ async function handleAdd(interaction: CommandInteraction) {
   }
 }
 
-async function handleClear(interaction: CommandInteraction) {
+async function handleClear(interaction: CommandInteraction | ModalSubmitInteraction) {
   const guildId = interaction.guild!.id;
-  const role = interaction.options.getRole('role', false);
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const role: Role | APIRole | null = inputs.role;
 
   if (!role) {
     await BaseRoles.destroy({
@@ -114,29 +117,39 @@ async function handleClear(interaction: CommandInteraction) {
   return interaction.editReply(`Base role for <@&${role.id}> was removed.`);
 }
 
+const run: CommandOrModalRunMethod = async interaction => {
+  await interaction.deferReply({ ephemeral: true });
+
+  const subcommand = getSubcommand(interaction);
+
+  switch (subcommand) {
+    case 'list': {
+      return handleList(interaction);
+    }
+    case 'add': {
+      return handleAdd(interaction);
+    }
+    case 'clear': {
+      return handleClear(interaction);
+    }
+    default: {
+      return interaction.editReply('What??');
+    }
+  }
+};
+
 const BaseRolesCommand: Command = {
   guildOnly: true,
   userPermissions: 'MANAGE_ROLES',
   clientPermissions: 'MANAGE_ROLES',
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'list': {
-        return handleList(interaction);
-      }
-      case 'add': {
-        return handleAdd(interaction);
-      }
-      case 'clear': {
-        return handleClear(interaction);
-      }
-      default: {
-        return interaction.editReply('What??');
-      }
-    }
+  runCommand: run,
+  runModal: run,
+  modalLabels: {
+    delay: 'Delay before role is added to a new member.',
+  },
+  modalPlaceholders: {
+    delay: 'E.g. "5 mins"',
   },
 };
 

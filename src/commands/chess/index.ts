@@ -1,7 +1,7 @@
 import { WhereOptions, Op } from 'sequelize';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import Discord, { Message, TextChannel, CommandInteraction } from 'discord.js';
-import type { Command } from 'src/types';
+import Discord, { GuildMember, Message, TextChannel } from 'discord.js';
+import type { Command, CommandOrModalRunMethod, AnyInteraction } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
 import { Colors, CONFIRMATION_DEFAULT_TIMEOUT, INTERACTION_MAX_TIMEOUT } from 'src/constants';
@@ -9,6 +9,89 @@ import get from 'lodash.get';
 import { ChessGames } from 'src/models/chess-games';
 import { log } from 'src/logging';
 import { getRandomElement } from 'src/utils';
+import { getSubcommand, parseInput } from 'src/discord-utils';
+
+const commandBuilder = new SlashCommandBuilder();
+commandBuilder
+  .setName('chess')
+  .setDescription('Play a game of chess with someone.');
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('challenge')
+    .setDescription('Challenge a user.')
+    .addUserOption(option => {
+      return option
+        .setName('user')
+        .setDescription('Mention the user you want to challenge.')
+        .setRequired(true);
+    })
+    .addStringOption(option => {
+      return option
+        .setName('color')
+        .setDescription('Choose your color.')
+        .addChoices([
+          ['White', 'white'],
+          ['Black', 'black'],
+          ['Random', 'random'],
+        ])
+        .setRequired(false);
+    })
+    .addStringOption(option => {
+      return option
+        .setName('starting_position')
+        .setDescription('PGN for starting position. Note: FEN is NOT supported.')
+        .setRequired(false);
+    });
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('play')
+    .setDescription('Make the next move.')
+    .addStringOption(option => {
+      return option
+        .setName('move')
+        .setDescription('Make a move in Standard Algebraic Notation. E.g. e5, Nf3, Nxf4, Nbe7, O-O')
+        .setRequired(true);
+    });
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('accept')
+    .setDescription('Accept a challenge. A select box will appear to choose the game.');
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('forfeit')
+    .setDescription('Forfeit the game. A select box will appear to choose the game.');
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('show')
+    .setDescription('Shows a game. A select box will appear to choose the game.');
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('undo')
+    .setDescription('Undo the last half-move (yours).');
+  return subcommand;
+});
+
+commandBuilder.addSubcommand(subcommand => {
+  subcommand
+    .setName('help')
+    .setDescription('Info on how to make moves and accept games.');
+  return subcommand;
+});
 
 function getChessImageUrl(game: ChessInstance): string {
   return `https://fen2png.com/api/?fen=${encodeURIComponent(game.fen())}&raw=true`;
@@ -46,7 +129,7 @@ async function getChessPgnWithHeaders(game: ChessGames, guild: Discord.Guild) {
   return chess.pgn();
 }
 
-function getTurnInfo(interaction: CommandInteraction, game: ChessGames) {
+function getTurnInfo(interaction: AnyInteraction, game: ChessGames) {
   const chess = new Chess();
   chess.load_pgn(game.pgn);
   const currentTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
@@ -61,9 +144,9 @@ async function followUp({
   gameId,
   options,
 }: {
-  interaction: CommandInteraction,
+  interaction: AnyInteraction,
   gameId: number,
-  options: string | Discord.MessagePayload | Discord.InteractionReplyOptions
+  options: string | Discord.MessageOptions
 }): Promise<Message | null> {
   const game = await ChessGames.findByPk(gameId);
   if (!game) {
@@ -92,7 +175,7 @@ async function handleGameSelection({
   gameStarted,
 }: {
   noGamesMessage: string,
-  interaction: CommandInteraction,
+  interaction: AnyInteraction,
   cb: (game: ChessGames) => void,
   gameStarted: boolean | null, // null indicates it doesn't matter
 }) {
@@ -161,14 +244,14 @@ async function handleGameSelection({
     components: [menu],
   });
 
-  await interaction.editReply({
+  const selectMsg = await interaction.editReply({
     content: 'Select a game.',
     components: [row],
   });
 
   try {
     const selectInteraction = await interaction.channel?.awaitMessageComponent({
-      filter: i => i.message.interaction?.id === interaction.id && i.user.id === interaction.user.id,
+      filter: i => i.message.id === selectMsg.id && i.user.id === interaction.user.id,
       time: CONFIRMATION_DEFAULT_TIMEOUT,
     }).catch(() => {
       // Intentionally empty catch
@@ -201,7 +284,7 @@ async function handleGameSelection({
   }
 }
 
-async function handleAccept(interaction: CommandInteraction) {
+async function handleAccept(interaction: AnyInteraction) {
   const { user } = interaction;
 
   await handleGameSelection({
@@ -241,8 +324,9 @@ async function handleAccept(interaction: CommandInteraction) {
   });
 }
 
-async function handleMove(interaction: CommandInteraction) {
-  const move = interaction.options.getString('move', true);
+async function handleMove(interaction: AnyInteraction) {
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const move: string = inputs.move;
 
   await handleGameSelection({
     interaction,
@@ -311,17 +395,19 @@ async function handleMove(interaction: CommandInteraction) {
   });
 }
 
-async function handleChallenge(interaction: CommandInteraction) {
+async function handleChallenge(interaction: AnyInteraction) {
   // This is a guild-only command
   const guildId = interaction.guild!.id;
 
-  const challengedUser = interaction.options.getUser('user', true);
-  const startingPosition = interaction.options.getString('starting-position');
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const challengedUser: GuildMember = inputs.user;
+  const startingPosition: string | null = inputs.starting_position;
   const targetId = challengedUser.id;
-  const { user } = interaction;
-  const { channelId } = interaction;
+  const { user, channelId } = interaction;
 
-  const color = interaction.options.getString('color')?.toLowerCase();
+  if (!channelId) throw new Error('Cannot create a channel from outside of a channel');
+
+  const color: string | null = inputs.color?.toLowerCase();
   const authorColor: 'white' | 'black' = !color || !['white', 'black'].includes(color)
     ? getRandomElement(['white', 'black'])
     : color as 'white' | 'black';
@@ -489,7 +575,7 @@ async function handleChallenge(interaction: CommandInteraction) {
   }
 }
 
-async function handleForfeit(interaction: CommandInteraction) {
+async function handleForfeit(interaction: AnyInteraction) {
   const { user } = interaction;
   await handleGameSelection({
     interaction,
@@ -516,7 +602,7 @@ async function handleForfeit(interaction: CommandInteraction) {
   });
 }
 
-async function handleShow(interaction: CommandInteraction) {
+async function handleShow(interaction: AnyInteraction) {
   await handleGameSelection({
     interaction,
     gameStarted: true,
@@ -535,7 +621,7 @@ async function handleShow(interaction: CommandInteraction) {
   });
 }
 
-async function handleUndo(interaction: CommandInteraction) {
+async function handleUndo(interaction: AnyInteraction) {
   const { user } = interaction;
 
   await handleGameSelection({
@@ -579,7 +665,7 @@ async function handleUndo(interaction: CommandInteraction) {
   });
 }
 
-async function handleHelp(interaction: CommandInteraction) {
+async function handleHelp(interaction: AnyInteraction) {
   const acceptEmbed = new Discord.MessageEmbed({
     title: 'Accept game',
     color: Colors.SUCCESS,
@@ -625,126 +711,57 @@ async function handleHelp(interaction: CommandInteraction) {
   });
 }
 
-const commandBuilder = new SlashCommandBuilder();
-commandBuilder
-  .setName('chess')
-  .setDescription('Play a game of chess with someone.');
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('challenge')
-    .setDescription('Challenge a user.')
-    .addUserOption(option => {
-      return option
-        .setName('user')
-        .setDescription('Mention the user you want to challenge.')
-        .setRequired(true);
-    })
-    .addStringOption(option => {
-      return option
-        .setName('color')
-        .setDescription('Choose your color.')
-        .addChoices([
-          ['White', 'white'],
-          ['Black', 'black'],
-          ['Random', 'random'],
-        ])
-        .setRequired(false);
-    })
-    .addStringOption(option => {
-      return option
-        .setName('starting-position')
-        .setDescription('PGN for starting position. Note: FEN is NOT supported.')
-        .setRequired(false);
-    });
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('play')
-    .setDescription('Make the next move.')
-    .addStringOption(option => {
-      return option
-        .setName('move')
-        .setDescription('Make a move in Standard Algebraic Notation. E.g. e5, Nf3, Nxf4, Nbe7, O-O')
-        .setRequired(true);
-    });
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('accept')
-    .setDescription('Accept a challenge. A select box will appear to choose the game.');
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('forfeit')
-    .setDescription('Forfeit the game. A select box will appear to choose the game.');
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('show')
-    .setDescription('Shows a game. A select box will appear to choose the game.');
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('undo')
-    .setDescription('Undo the last half-move (yours).');
-  return subcommand;
-});
-
-commandBuilder.addSubcommand(subcommand => {
-  subcommand
-    .setName('help')
-    .setDescription('Info on how to make moves and accept games.');
-  return subcommand;
-});
+const run: CommandOrModalRunMethod = async interaction => {
+  const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'play': {
+      await handleMove(interaction);
+      return;
+    }
+    case 'show': {
+      await handleShow(interaction);
+      return;
+    }
+    case 'challenge': {
+      await handleChallenge(interaction);
+      return;
+    }
+    case 'accept': {
+      await handleAccept(interaction);
+      return;
+    }
+    case 'forfeit': {
+      await handleForfeit(interaction);
+      return;
+    }
+    case 'undo': {
+      await handleUndo(interaction);
+      return;
+    }
+    case 'help': {
+      await handleHelp(interaction);
+      return;
+    }
+    default: {
+      await interaction.editReply('What??');
+    }
+  }
+};
 
 const ChessCommmand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
-  runCommand: async interaction => {
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'play': {
-        await handleMove(interaction);
-        return;
-      }
-      case 'show': {
-        await handleShow(interaction);
-        return;
-      }
-      case 'challenge': {
-        await handleChallenge(interaction);
-        return;
-      }
-      case 'accept': {
-        await handleAccept(interaction);
-        return;
-      }
-      case 'forfeit': {
-        await handleForfeit(interaction);
-        return;
-      }
-      case 'undo': {
-        await handleUndo(interaction);
-        return;
-      }
-      case 'help': {
-        await handleHelp(interaction);
-        return;
-      }
-      default: {
-        await interaction.editReply('What??');
-      }
-    }
+  runCommand: run,
+  runModal: run,
+  modalLabels: {
+    user: 'User you want to challenge.',
+    move: 'Make a move in Standard Algebraic Notation.',
+    starting_position: 'PGN for starting position.',
+  },
+  modalPlaceholders: {
+    move: 'E.g. e4, e2e4, Nf3, Nxf4, Nbe7, O-O',
+    color: '"Black" or "White"',
+    starting_position: 'FEN is NOT supported.',
   },
 };
 
