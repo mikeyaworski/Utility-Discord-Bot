@@ -47,22 +47,23 @@ export async function handleError(
 ): Promise<IntentionalAny> {
   // Modal interactions are really broken, so we need to defer and then edit the reply. Replying immediately doesn't work.
   async function sendResponse(msg: string) {
-    if (interaction.isModalSubmit()) {
+    if (interaction.isModalSubmit() && !interaction.deferred) {
       await interaction.deferReply({ ephemeral: true });
-      return interaction.editReply(msg);
+      await interaction.editReply(msg);
+      return;
     }
-    return interaction.editReply(msg);
+    await interaction.editReply(msg);
   }
   const name: string | undefined = get(err, 'name');
   const message: string | undefined = get(err, 'message');
   if (name === 'SequelizeUniqueConstraintError') {
-    return sendResponse('That is a duplicate entry in our database!');
+    return sendResponse('That is a duplicate entry in our database!').catch(error);
   }
   if (message === 'Unknown Emoji') {
-    return sendResponse('I\'m not able to use that emoji!');
+    return sendResponse('I\'m not able to use that emoji!').catch(error);
   }
   error(err);
-  return sendResponse(message || 'Something went wrong...');
+  return sendResponse(message || 'Something went wrong...').catch(error);
 }
 
 export function eventuallyRemoveComponents(interaction: CommandInteraction): void {
