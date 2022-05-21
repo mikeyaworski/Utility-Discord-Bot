@@ -81,66 +81,6 @@ export function listenToCommands(): void {
     });
     if (!command) return;
 
-    // If any required fields are missing, prompt them with a modal to fill the rest
-    if (interaction.isCommand() && command.runModal && command.slashCommandData) {
-      const commandName = command.slashCommandData.name;
-      let subcommand = '';
-      try {
-        subcommand = interaction.options.getSubcommand();
-      } catch {
-        // Intentionally empty - there is no subcommand
-      }
-
-      const subcommandFound = subcommand
-        ? command.slashCommandData.options.find(o => o.toJSON().type === 1 && o.toJSON().name === subcommand)?.toJSON()
-        : null;
-      const commandOptions = subcommandFound && subcommandFound.type === 1
-        ? subcommandFound.options
-        : command.slashCommandData.options.filter(o => o.toJSON().type !== 1).map(o => o.toJSON());
-      const requiredOptions = commandOptions?.filter(option => option.required);
-      const hasMissingOptions = requiredOptions?.some(option => interaction.options.get(option.name) == null);
-      const hasNoOptions = commandOptions
-        && commandOptions.length > 0
-        && commandOptions?.every(option => interaction.options.get(option.name) == null);
-      if (hasMissingOptions || (command.showModalWithNoArgs && hasNoOptions)) {
-        // Note: customId can only be 100 characters
-        const customId = subcommand ? `${commandName} ${subcommand}` : commandName;
-        const modal = new Modal()
-          .setCustomId(customId)
-          .setTitle(`/${customId}`.slice(0, 45));
-        commandOptions
-          ?.sort((a, b) => {
-            // Put timezone option at the end because it is generally less important than every other option,
-            // and we have a limit of 5 text inputs for the modal (5 options).
-            if (a.name === 'time_zone') return 1;
-            if (b.name === 'time_zone') return -1;
-            return 0;
-          })
-          .slice(0, 5)
-          .forEach(option => {
-            const value = interaction.options.get(option.name)?.value;
-            const label = command.modalLabels?.[option.name] || option.description;
-            const placeholder = command.modalPlaceholders?.[option.name] || '';
-            const input = new TextInputComponent()
-              .setCustomId(option.name)
-              .setLabel(label.slice(0, 45))
-              .setPlaceholder(placeholder.slice(0, 100))
-              .setValue(value == null ? '' : String(value))
-              .setRequired(option.required)
-              .setStyle(option.name === 'message' ? 'PARAGRAPH' : 'SHORT');
-            // Each row can only hold one input
-            const row = new MessageActionRow<ModalActionRowComponent>().addComponents(input);
-            modal.addComponents(row);
-          });
-        try {
-          await interaction.showModal(modal);
-        } catch (err) {
-          handleError(err, interaction);
-        }
-        return;
-      }
-    }
-
     if (interaction.isCommand()) {
       if (command.guildOnly && !interaction.guild) {
         await interaction.reply({
@@ -168,6 +108,65 @@ export function listenToCommands(): void {
             ephemeral: true,
             content: 'One of us does not have permission to use this command!',
           });
+          return;
+        }
+      }
+      // If any required fields are missing, prompt them with a modal to fill the rest
+      if (command.runModal && command.slashCommandData) {
+        const commandName = command.slashCommandData.name;
+        let subcommand = '';
+        try {
+          subcommand = interaction.options.getSubcommand();
+        } catch {
+          // Intentionally empty - there is no subcommand
+        }
+
+        const subcommandFound = subcommand
+          ? command.slashCommandData.options.find(o => o.toJSON().type === 1 && o.toJSON().name === subcommand)?.toJSON()
+          : null;
+        const commandOptions = subcommandFound && subcommandFound.type === 1
+          ? subcommandFound.options
+          : command.slashCommandData.options.filter(o => o.toJSON().type !== 1).map(o => o.toJSON());
+        const requiredOptions = commandOptions?.filter(option => option.required);
+        const hasMissingOptions = requiredOptions?.some(option => interaction.options.get(option.name) == null);
+        const hasNoOptions = commandOptions
+          && commandOptions.length > 0
+          && commandOptions?.every(option => interaction.options.get(option.name) == null);
+        if (hasMissingOptions || (command.showModalWithNoArgs && hasNoOptions)) {
+          // Note: customId can only be 100 characters
+          const customId = subcommand ? `${commandName} ${subcommand}` : commandName;
+          const modal = new Modal()
+            .setCustomId(customId)
+            .setTitle(`/${customId}`.slice(0, 45));
+          commandOptions
+            ?.sort((a, b) => {
+              // Put timezone option at the end because it is generally less important than every other option,
+              // and we have a limit of 5 text inputs for the modal (5 options).
+              if (a.name === 'time_zone') return 1;
+              if (b.name === 'time_zone') return -1;
+              return 0;
+            })
+            .slice(0, 5)
+            .forEach(option => {
+              const value = interaction.options.get(option.name)?.value;
+              const label = command.modalLabels?.[option.name] || option.description;
+              const placeholder = command.modalPlaceholders?.[option.name] || '';
+              const input = new TextInputComponent()
+                .setCustomId(option.name)
+                .setLabel(label.slice(0, 45))
+                .setPlaceholder(placeholder.slice(0, 100))
+                .setValue(value == null ? '' : String(value))
+                .setRequired(option.required)
+                .setStyle(option.name === 'message' ? 'PARAGRAPH' : 'SHORT');
+              // Each row can only hold one input
+              const row = new MessageActionRow<ModalActionRowComponent>().addComponents(input);
+              modal.addComponents(row);
+            });
+          try {
+            await interaction.showModal(modal);
+          } catch (err) {
+            handleError(err, interaction);
+          }
           return;
         }
       }
