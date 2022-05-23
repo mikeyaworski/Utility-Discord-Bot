@@ -425,9 +425,9 @@ const RemindersCommand: Command = {
   runCommand: run,
   runModal: run,
   modalLabels: {
-    times: 'The delay for the timer. Commas for multiple.',
+    times: 'Time of reminder. Commas for multiple.',
     channel: 'The channel to send the message in.',
-    interval: 'Interval to repeat timer.',
+    interval: 'Interval to repeat.',
     reminder_id: 'The ID of the reminder.',
     reminder_ids: 'The ID(s) of the reminder (can use commas).',
     message: 'The message of the reminder.',
