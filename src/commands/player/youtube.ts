@@ -30,9 +30,11 @@ export const getTracksFromQueries = (() => {
         });
         const youtubeLink = `https://youtube.com/watch?v=${youtubeResults[0].id}`;
         const youtubeTitle = youtubeResults[0].title;
+        const youtubeDuration = youtubeResults[0].duration;
         queryCache.set(query, youtubeLink);
         const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE_VOD, youtubeTitle ? {
           title: youtubeTitle,
+          duration: youtubeDuration,
         } : undefined);
         if (tracksFetchedCb) {
           tracksFetchedCb([newTrack]);
@@ -98,15 +100,19 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
   }
 }
 
-export const getTitleFromUrl = (() => {
-  const titleCache = new Map<string, string>();
-  return async (url: string): Promise<string> => {
-    if (titleCache.has(url)) return titleCache.get(url)!;
+export const getDetailsFromUrl = (() => {
+  interface Details {
+    title: string,
+    duration?: number,
+  }
+  const cache = new Map<string, Details>();
+  return async (url: string): Promise<Details> => {
+    if (cache.has(url)) return cache.get(url)!;
     log('Fetching YouTube title for video', url);
     const videoRes = await YouTubeSr.getVideo(url);
-    const { title } = videoRes;
+    const { title, duration } = videoRes;
     if (!title) throw new Error('Could not fetch title');
-    titleCache.set(url, title);
-    return title;
+    cache.set(url, { title, duration });
+    return { title, duration };
   };
 })();

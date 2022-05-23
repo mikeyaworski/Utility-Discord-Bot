@@ -4,10 +4,11 @@ import { createAudioResource, demuxProbe } from '@discordjs/voice';
 import { exec as ytdl } from 'youtube-dl-exec';
 import play from 'play-dl';
 import { error } from 'src/logging';
-import { getTitleFromUrl as getYoutubeTitleFromUrl } from './youtube';
+import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
 
-interface VideoDetails {
+export interface VideoDetails {
   title: string,
+  duration?: number,
 }
 
 interface AudioResourceOptions {
@@ -97,9 +98,7 @@ export default class Track {
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        this.details = {
-          title: await getYoutubeTitleFromUrl(this.link),
-        };
+        this.details = await getYoutubeDetailsFromUrl(this.link);
         break;
       }
       case TrackVariant.TWITCH_VOD: {

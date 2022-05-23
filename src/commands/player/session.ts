@@ -28,13 +28,27 @@ export default class Session {
   private queueLock = false;
   private readyLock = false;
 
+  // DiscordJS does not provide this for us, so we manually keep track of an approximate duration in the current track
+  private currentTrackPlayTime: {
+    // all in MS
+    started: number | null, // timestamp
+    pauseStarted: number | null, // timestamp
+    totalPauseTime: number,
+    seeked: number | null,
+  } = {
+    started: null,
+    pauseStarted: null,
+    totalPauseTime: 0,
+    seeked: null,
+  };
+
   public constructor(guild: Guild, voiceConnection: VoiceConnection) {
     this.guild = guild;
     this.voiceConnection = voiceConnection;
     this.audioPlayer = createAudioPlayer();
     this.queue = [];
 
-    this.voiceConnection.on('stateChange', async (oldState, newState) => {
+    this.voiceConnection.on<'stateChange'>('stateChange', async (oldState, newState) => {
       if (newState.status === VoiceConnectionStatus.Disconnected) {
         if (newState.reason === VoiceConnectionDisconnectReason.WebSocketClose && newState.closeCode === 4014) {
           // If the WebSocket closed with a 4014 code, this means that we should not manually attempt to reconnect,
@@ -76,7 +90,23 @@ export default class Session {
       }
     });
 
-    this.audioPlayer.on('stateChange', (oldState, newState) => {
+    // For keeping track of play and pause time
+    this.audioPlayer.on<'stateChange'>('stateChange', (oldState, newState) => {
+      if (newState.status !== AudioPlayerStatus.Playing && oldState.status === AudioPlayerStatus.Playing) {
+        this.currentTrackPlayTime.pauseStarted = Date.now();
+        log('Paused at', this.currentTrackPlayTime.pauseStarted);
+      } else if (newState.status === AudioPlayerStatus.Playing && oldState.status !== AudioPlayerStatus.Playing) {
+        if (this.currentTrackPlayTime.pauseStarted != null) {
+          const pausedTime = Date.now() - this.currentTrackPlayTime.pauseStarted;
+          log('Resumed after being paused for', pausedTime, 'milliseconds');
+          this.currentTrackPlayTime.totalPauseTime += pausedTime;
+          this.currentTrackPlayTime.pauseStarted = null;
+          log('New total pause time:', this.currentTrackPlayTime.totalPauseTime, 'millseconds');
+        }
+      }
+    });
+
+    this.audioPlayer.on<'stateChange'>('stateChange', (oldState, newState) => {
       if (newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle) {
         // If the Idle state is entered from a non-Idle state, it means that an audio resource has finished playing.
         this.processQueue();
@@ -186,6 +216,12 @@ export default class Session {
     this.queueLock = true;
     this.queue.splice(0, this.queue.length);
     this.audioPlayer.stop(true);
+    this.currentTrackPlayTime = {
+      started: null,
+      pauseStarted: null,
+      totalPauseTime: 0,
+      seeked: null,
+    };
   }
 
   /**
@@ -196,12 +232,34 @@ export default class Session {
     return this.processQueue(true);
   }
 
-  public async seek(amount: number): Promise<void> {
+  public async seek(amountSeconds: number): Promise<void> {
     if (!this.currentTrack) return;
     const resource = await this.currentTrack.getAudioResource({
-      seek: amount,
+      seek: amountSeconds,
     });
     this.audioPlayer.play(resource);
+    this.currentTrackPlayTime = {
+      started: Date.now(),
+      seeked: amountSeconds * 1000,
+      pauseStarted: null,
+      totalPauseTime: 0,
+    };
+  }
+
+  /**
+   * @returns An approximation of the time played in the current resource
+   */
+  public getCurrentTrackPlayTime(): number {
+    if (!this.currentTrackPlayTime.started) return 0;
+    const timeSinceStart = Date.now() - this.currentTrackPlayTime.started;
+    const totalPauseTime = this.isPaused() && this.currentTrackPlayTime.pauseStarted != null
+      ? (Date.now() - this.currentTrackPlayTime.pauseStarted) + this.currentTrackPlayTime.totalPauseTime
+      : this.currentTrackPlayTime.totalPauseTime;
+    const timePlayed = timeSinceStart - totalPauseTime;
+    if (this.currentTrackPlayTime.seeked != null) {
+      return timePlayed + this.currentTrackPlayTime.seeked;
+    }
+    return timePlayed;
   }
 
   private async processQueue(forceSkip = false): Promise<void> {
@@ -235,6 +293,13 @@ export default class Session {
     try {
       const resource = await this.currentTrack.getAudioResource();
       this.audioPlayer.play(resource);
+      log('Playing new track', this.currentTrack.link, this.currentTrack.variant);
+      this.currentTrackPlayTime = {
+        started: Date.now(),
+        pauseStarted: null,
+        totalPauseTime: 0,
+        seeked: null,
+      };
     } catch (err) {
       error(err);
       log('Could not play track', this.currentTrack.link, this.currentTrack.variant);
