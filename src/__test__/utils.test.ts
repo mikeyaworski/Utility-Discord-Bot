@@ -6,6 +6,7 @@ import {
   parseDelay,
   isYoutubeLink,
   isTwitchVodLink,
+  getClockString,
 } from '../utils';
 
 describe('utils', () => {
@@ -137,6 +138,43 @@ describe('utils', () => {
     });
     test('invalid link', () => {
       expect(isTwitchVodLink('https://twitch.tv/foobar')).toBe(false);
+    });
+  });
+
+  describe('getClockString', () => {
+    test('0', () => {
+      expect(getClockString(0)).toBe('0');
+    });
+    test('1s', () => {
+      expect(getClockString(1000)).toBe('01');
+    });
+    test('5s', () => {
+      expect(getClockString(5000)).toBe('05');
+    });
+    test('1m', () => {
+      expect(getClockString(60 * 1000)).toBe('01:00');
+    });
+    test('1m 5s', () => {
+      expect(getClockString(60 * 1000 + 5 * 1000)).toBe('01:05');
+    });
+    test('1h', () => {
+      expect(getClockString(60 * 60 * 1000)).toBe('01:00:00');
+    });
+    test('1h 5s', () => {
+      expect(getClockString(60 * 60 * 1000 + 5 * 1000)).toBe('01:00:05');
+    });
+    test('1h 10m 5s', () => {
+      expect(getClockString(60 * 60 * 1000 + 10 * 60 * 1000 + 5 * 1000)).toBe('01:10:05');
+    });
+    test('min portion length', () => {
+      expect(getClockString(0, 1)).toBe('00');
+      expect(getClockString(0, 2)).toBe('00:00');
+      expect(getClockString(0, 3)).toBe('00:00:00');
+      expect(getClockString(1000, 2)).toBe('00:01');
+      expect(getClockString(1000, 3)).toBe('00:00:01');
+      expect(getClockString(60 * 1000, 2)).toBe('01:00');
+      expect(getClockString(60 * 1000, 3)).toBe('00:01:00');
+      expect(getClockString(60 * 60 * 1000, 3)).toBe('01:00:00');
     });
   });
 });

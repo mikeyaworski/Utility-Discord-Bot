@@ -114,6 +114,24 @@ export function humanizeDuration(durationMs: number): string {
   });
 }
 
+export function getClockString(durationMs: number, minPortionLength = 0): string {
+  const secondsInMs = 1000;
+  const minutesInMs = 60 * secondsInMs;
+  const hoursInMs = 60 * minutesInMs;
+  const numHours = Math.floor(durationMs / hoursInMs);
+  durationMs -= numHours * hoursInMs;
+  const numMins = Math.floor(durationMs / minutesInMs);
+  durationMs -= numMins * minutesInMs;
+  const numSecs = Math.floor(durationMs / secondsInMs);
+  return [numHours, numMins, numSecs].reduce((acc, portion, i, portions) => {
+    const isRequired = (portions.length - minPortionLength) <= i;
+    if (!acc && !portion && !isRequired) return '';
+    const formatted = String(portion).padStart(2, '0');
+    if (acc) return `${acc}:${formatted}`;
+    return formatted;
+  }, '') || '0';
+}
+
 /**
  * Randomize array in-place using Durstenfeld shuffle algorithm.
  * https://stackoverflow.com/a/12646864/2554605
