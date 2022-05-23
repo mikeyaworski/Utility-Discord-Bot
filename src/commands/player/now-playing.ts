@@ -2,7 +2,7 @@ import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import sessions from './sessions';
-import { replyWithSessionButtons } from './utils';
+import { getTrackDurationString, replyWithSessionButtons } from './utils';
 
 const NowPlayingCommand: Command = {
   guildOnly: true,
@@ -24,10 +24,12 @@ const NowPlayingCommand: Command = {
           };
         }
         const videoDetails = await currentTrack.getVideoDetails();
+        const duration = await getTrackDurationString(session);
         return {
           title: '🔊 Now Playing',
           message: videoDetails.title,
           link: currentTrack.link,
+          footerText: duration || undefined,
         };
       },
     });

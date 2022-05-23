@@ -1,10 +1,11 @@
-import Discord, { CommandInteraction, ContextMenuInteraction, ModalSubmitInteraction } from 'discord.js';
+import Discord from 'discord.js';
 import { AnyInteraction, IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
 import { log } from 'src/logging';
-import { filterOutFalsy } from 'src/utils';
+import { filterOutFalsy, getClockString } from 'src/utils';
 import Session from './session';
+import { VideoDetails } from './track';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow {
   const buttons = new Discord.MessageActionRow<Discord.MessageButton>({
@@ -148,6 +149,7 @@ export async function replyWithSessionButtons({
   session?: Session,
   run: (session: Session) => Promise<{
     message: string,
+    footerText?: string,
     title?: string,
     hideButtons?: boolean,
     link?: string,
@@ -166,6 +168,7 @@ export async function replyWithSessionButtons({
     if (!session) return;
     const {
       message,
+      footerText,
       title,
       hideButtons,
       link,
@@ -176,6 +179,9 @@ export async function replyWithSessionButtons({
       },
       color: Colors.SUCCESS,
       description: filterOutFalsy([message, link]).join('\n'),
+      footer: {
+        text: footerText,
+      },
     })] : [];
     const content = title ? undefined : message;
     const components = hideButtons ? [] : [getPlayerButtons(session)];
@@ -189,4 +195,24 @@ export async function replyWithSessionButtons({
   listenForPlayerButtons(interaction, session, async () => {
     await runAndReply();
   });
+}
+
+export function getFractionalDuration(
+  playedDuration: number,
+  videoDetails: VideoDetails,
+): string | null {
+  if (!videoDetails.duration) return null;
+  const totalDuration = getClockString(videoDetails.duration);
+  const minPortions = (totalDuration.match(/:/g) || []).length + 1;
+  return `${getClockString(playedDuration, minPortions)} / ${totalDuration}`;
+}
+
+export async function getTrackDurationString(
+  session: Session,
+): Promise<string | null> {
+  const currentTrack = session.getCurrentTrack();
+  if (!currentTrack) return null;
+  const videoDetails = await currentTrack.getVideoDetails();
+  const playedDuration = session.getCurrentTrackPlayTime();
+  return getFractionalDuration(playedDuration, videoDetails);
 }

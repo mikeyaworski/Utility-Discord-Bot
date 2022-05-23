@@ -3,7 +3,7 @@ import type { AnyInteraction, Command, IntentionalAny } from 'src/types';
 import throttle from 'lodash.throttle';
 import YouTubeSr from 'youtube-sr';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { CommandInteraction, MessageEmbed, ModalSubmitInteraction } from 'discord.js';
+import { CommandInteraction, MessageEmbed, MessageEmbedOptions, ModalSubmitInteraction } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
 import { isTwitchVodLink, shuffleArray } from 'src/utils';
@@ -19,38 +19,49 @@ import {
   parseSpotifyTrack,
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
-import { attachPlayerButtons } from './utils';
+import { attachPlayerButtons, getFractionalDuration } from './utils';
 
-function respondWithEmbed(interaction: AnyInteraction, message: string) {
+function respondWithEmbed(interaction: AnyInteraction, content: MessageEmbedOptions) {
   return interaction.editReply({
     embeds: [new MessageEmbed({
       color: Colors.SUCCESS,
-      description: message,
+      ...content,
     })],
   });
 }
 
-async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<string> {
+async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<MessageEmbedOptions> {
   const wasPlayingAnything = Boolean(session.getCurrentTrack());
   await session.enqueue(tracks, pushToFront);
 
   try {
     const videoDetails = await tracks[0].getVideoDetails();
     if (wasPlayingAnything && tracks.length > 1) {
-      return `Queued ${tracks.length} tracks.`;
+      return { description: `Queued ${tracks.length} tracks.` };
     }
     if (tracks.length > 1) {
-      return `Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.`;
+      return { description: `Now playing: ${videoDetails.title}\nQueued ${tracks.length - 1} tracks.` };
     }
     if (wasPlayingAnything) {
-      return `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}`;
+      return { description: `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}` };
     }
-    return `🔊 **Now playing**: ${videoDetails.title}`;
+    const footerText = getFractionalDuration(0, videoDetails);
+    return {
+      author: {
+        name: '🔊 Now Playing',
+      },
+      description: videoDetails.title,
+      footer: {
+        text: footerText || undefined,
+      },
+    };
   } catch (err) {
     error(tracks[0].link, tracks[0].variant, err);
-    return 'Could not fetch video details.'
-    + ' This video probably cannot be played for some reason.'
-    + ' This can happen if the video is age-restricted or region-locked.';
+    return {
+      description: 'Could not fetch video details.'
+        + ' This video probably cannot be played for some reason.'
+        + ' This can happen if the video is age-restricted or region-locked.',
+    };
   }
 }
 
@@ -59,21 +70,32 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
   const firstTrackPartialMessage = await enqueue(session, [firstTrack], false);
-  await respondWithEmbed(interaction, `${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
+
+  function concatDescription(oldOptions: MessageEmbedOptions, newDescription: string): MessageEmbedOptions {
+    return {
+      ...oldOptions,
+      description: oldOptions.description ? `${oldOptions.description}\n${newDescription}` : newDescription,
+    };
+  }
+
+  await respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Fetching the other ${restQueries.length} tracks from YouTube...`));
 
   let numFetched = 0;
   const throttledMessageUpdate = throttle(async () => {
     if (numFetched === 0) {
-      return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nFetching the other ${restQueries.length} tracks from YouTube...`);
+      return respondWithEmbed(
+        interaction,
+        concatDescription(firstTrackPartialMessage, `Fetching the other ${restQueries.length} tracks from YouTube...`),
+      );
     }
     if (numFetched < restQueries.length) {
-      return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nQueued ${
+      return respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Queued ${
         numFetched
       } tracks.\nFetching the other ${
         restQueries.length - numFetched
-      } tracks from YouTube...`);
+      } tracks from YouTube...`));
     }
-    return respondWithEmbed(interaction, `${firstTrackPartialMessage}\nQueued ${numFetched} tracks from YouTube.`);
+    return respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Queued ${numFetched} tracks from YouTube.`));
   }, 5000);
 
   getTracksFromQueries(restQueries, async newTracks => {

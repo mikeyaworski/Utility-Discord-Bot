@@ -7,7 +7,7 @@ import { CONCURRENCY_LIMIT } from 'src/constants';
 import { getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
-import { replyWithSessionButtons, attachPlayerButtons } from './utils';
+import { replyWithSessionButtons, attachPlayerButtons, getTrackDurationString } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -121,6 +121,7 @@ async function handleList(interaction: AnyInteraction, session: Session): Promis
       return {
         message,
         title: '🎵 Queue List 🎵',
+        footerText: await getTrackDurationString(session) || undefined,
       };
     },
   });
