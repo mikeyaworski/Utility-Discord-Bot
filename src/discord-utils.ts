@@ -15,6 +15,8 @@ import type {
   InteractionReplyOptions,
   ModalSubmitInteraction,
   CommandInteractionOption,
+  Channel,
+  GuildMember,
 } from 'discord.js';
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping } from 'src/types';
 
@@ -31,7 +33,7 @@ import {
   USER_ARG_REGEX,
   USER_DISCRIMINATOR_REGEX,
 } from 'src/constants';
-import { error } from 'src/logging';
+import { error, log } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
@@ -470,6 +472,67 @@ export function getCommandInfoFromInteraction(interaction: ModalSubmitInteractio
   return { commandName: matches[1], subcommand: matches[2] };
 }
 
+export async function resolveMember(input: string, interaction: AnyInteraction): Promise<GuildMember | null | undefined> {
+  if (!interaction.guild || !input) return null;
+  const userId = getChannelIdFromArg(input);
+  if (userId) {
+    const member = await interaction.guild.members.fetch(userId);
+    if (!member) throw new Error(`Could not find member with ID: ${userId}`);
+    return member;
+  }
+  let discriminator: string | undefined;
+  let formattedInput = input.toLowerCase().replace('@', '');
+  const matches = formattedInput.match(USER_DISCRIMINATOR_REGEX);
+  if (matches) {
+    formattedInput = matches[1];
+    discriminator = matches[2];
+  }
+  // These have an order of preference, because nicknames can be duplicates
+  let member = await interaction.guild.members.cache.find(member => {
+    const username = member.user.username.toLowerCase();
+    if (discriminator) return member.user.discriminator === discriminator && username === formattedInput;
+    return username === formattedInput;
+  });
+  if (!member && !discriminator) {
+    member = await interaction.guild.members.cache.find(member => {
+      return member.displayName.toLowerCase() === formattedInput;
+    });
+  }
+  if (!member && !discriminator) {
+    member = await interaction.guild.members.cache.find(member => {
+      return member.nickname?.toLowerCase() === formattedInput;
+    });
+  }
+  return member;
+}
+
+export async function resolveChannel(input: string, interaction: AnyInteraction): Promise<Channel | null | undefined> {
+  if (!interaction.guild || !input) return null;
+  const channelId = getChannelIdFromArg(input);
+  if (channelId) {
+    const channel = await interaction.guild.channels.fetch(channelId);
+    return channel;
+  }
+  const formattedInput = input.toLowerCase().replace('#', '');
+  const channel = await interaction.guild.channels.cache.find(channel => {
+    return get(channel, 'name')?.toLowerCase() === formattedInput;
+  });
+  return channel;
+}
+
+export async function resolveRole(input: string, interaction: AnyInteraction): Promise<Role | null | undefined> {
+  if (!interaction.guild || !input) return null;
+  const roleId = getRoleIdFromArg(input);
+  if (roleId) {
+    const role = await interaction.guild.roles.fetch(roleId);
+    return role;
+  }
+  const role = await interaction.guild.roles.cache.find(role => {
+    return role.name.toLowerCase() === input.replace('@', '').toLowerCase();
+  });
+  return role;
+}
+
 /**
  * TODO: Type the response
  */
@@ -566,38 +629,9 @@ export async function parseInput({
       }
       case 6: { // User
         if (!interaction.guild || !input) break;
-        const userId = getChannelIdFromArg(input);
-        if (userId) {
-          const member = await interaction.guild.members.fetch(userId);
-          if (!member) throw new Error(`Could not find member with ID: ${userId}`);
-          resolvedInputs[option.name] = member;
-        } else {
-          let discriminator: string | undefined;
-          let formattedInput = input.toLowerCase().replace('@', '');
-          const matches = formattedInput.match(USER_DISCRIMINATOR_REGEX);
-          if (matches) {
-            formattedInput = matches[1];
-            discriminator = matches[2];
-          }
-          // These have an order of preference, because nicknames can be duplicates
-          let member = await interaction.guild.members.cache.find(member => {
-            const username = member.user.username.toLowerCase();
-            if (discriminator) return member.user.discriminator === discriminator && username === formattedInput;
-            return username === formattedInput;
-          });
-          if (!member && !discriminator) {
-            member = await interaction.guild.members.cache.find(member => {
-              return member.displayName.toLowerCase() === formattedInput;
-            });
-          }
-          if (!member && !discriminator) {
-            member = await interaction.guild.members.cache.find(member => {
-              return member.nickname?.toLowerCase() === formattedInput;
-            });
-          }
-          if (!member) throw new Error(`Could not find member with name: ${input}`);
-          resolvedInputs[option.name] = member;
-        }
+        const member = await resolveMember(input, interaction);
+        if (!member) throw new Error(`Could not find member based on: ${input}`);
+        resolvedInputs[option.name] = member;
         break;
       }
       case 9: { // Mentionable
@@ -608,39 +642,50 @@ export async function parseInput({
       }
       case 7: { // Channel
         if (!interaction.guild || !input) break;
-        const channelId = getChannelIdFromArg(input);
-        if (channelId) {
-          const channel = await interaction.guild.channels.fetch(channelId);
-          if (!channel) throw new Error(`Could not find channel with ID: ${channelId}`);
-          resolvedInputs[option.name] = channel;
-        } else {
-          const formattedInput = input.toLowerCase().replace('#', '');
-          const channel = await interaction.guild.channels.cache.find(channel => {
-            return get(channel, 'name')?.toLowerCase() === formattedInput;
-          });
-          if (!channel) throw new Error(`Could not find channel with name: ${input}`);
-          resolvedInputs[option.name] = channel;
-        }
+        const channel = await resolveChannel(input, interaction);
+        if (!channel) throw new Error(`Could not find channel based on: ${input}`);
+        resolvedInputs[option.name] = channel;
         break;
       }
       case 8: { // Role
         if (!interaction.guild || !input) break;
-        const roleId = getRoleIdFromArg(input);
-        if (roleId) {
-          const role = await interaction.guild.roles.fetch(roleId);
-          if (!role) throw new Error(`Could not find role with ID: ${roleId}`);
-          resolvedInputs[option.name] = role;
-        } else {
-          const role = await interaction.guild.roles.cache.find(role => {
-            return role.name.toLowerCase() === input.toLowerCase();
-          });
-          if (!role) throw new Error(`Could not find role with name: ${input}`);
-          resolvedInputs[option.name] = role;
-        }
+        const role = await resolveRole(input, interaction);
+        if (!role) throw new Error(`Could not find role based on: ${input}`);
+        resolvedInputs[option.name] = role;
         break;
       }
       case 3: // String
       default: {
+        if (!input) break;
+        if (!interaction.guild) {
+          resolvedInputs[option.name] = input;
+          break;
+        }
+        const promises: Promise<void>[] = [];
+        const channelReferences = input.match(/#[a-zA-Z\d-]+/gi);
+        if (channelReferences) log('Resolving channel references from', input);
+        promises.push(...channelReferences?.map(async channelReference => {
+          log('Resolving channel from', channelReference);
+          const channel = await resolveChannel(channelReference, interaction);
+          if (channel) input = input.replace(channelReference, `<#${channel.id}>`);
+        }) || []);
+        // TODO: Support mentions which contain a space
+        const mentions = input.match(/@[^\s+]+/gi);
+        if (mentions) log('Resolving mentions from', input);
+        promises.push(...mentions?.map(async mention => {
+          log('Resolving member from', mention);
+          const member = await resolveMember(mention, interaction);
+          if (member) input = input.replace(mention, `<@${member.id}>`);
+        }) || []);
+        interaction.guild.roles.cache.forEach(role => {
+          const roleMention = `@${role.name.toLowerCase()}`;
+          const idx = input.toLowerCase().indexOf(roleMention);
+          if (idx >= 0) {
+            log('Found role mention', role.name, role.id, 'from input', input);
+            input = input.toLowerCase().replace(new RegExp(roleMention, 'gi'), `<@&${role.id}>`);
+          }
+        });
+        await Promise.all(promises);
         resolvedInputs[option.name] = input;
       }
     }
