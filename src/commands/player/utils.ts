@@ -1,4 +1,4 @@
-import Discord from 'discord.js';
+import Discord, { EmbedFieldData } from 'discord.js';
 import { AnyInteraction, IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
 import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
@@ -148,7 +148,8 @@ export async function replyWithSessionButtons({
   interaction: AnyInteraction,
   session?: Session,
   run: (session: Session) => Promise<{
-    message: string,
+    message?: string,
+    fields?: EmbedFieldData[],
     footerText?: string,
     title?: string,
     hideButtons?: boolean,
@@ -168,6 +169,7 @@ export async function replyWithSessionButtons({
     if (!session) return;
     const {
       message,
+      fields,
       footerText,
       title,
       hideButtons,
@@ -182,6 +184,7 @@ export async function replyWithSessionButtons({
       footer: {
         text: footerText,
       },
+      fields,
     })] : [];
     const content = title ? undefined : message;
     const components = hideButtons ? [] : [getPlayerButtons(session)];

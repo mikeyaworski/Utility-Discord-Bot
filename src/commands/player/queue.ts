@@ -1,4 +1,4 @@
-import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
+import { EmbedFieldData } from 'discord.js';
 import type { AnyInteraction, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
@@ -103,23 +103,39 @@ async function handleList(interaction: AnyInteraction, session: Session): Promis
         })))).filter(Boolean) as Next10;
       const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
       const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
-      let message = `**__🔊 Now Playing__**: ${
-        nowPlayingTitle
-      }\n\n**__Looped__**? ${
-        session.isLooped() ? 'Yes' : 'No'
-      }\n**__Shuffled__**? ${
-        session.isShuffled() ? 'Yes' : 'No'
-      }`;
+
+      const fields: EmbedFieldData[] = [
+        {
+          name: '🔊 Now Playing',
+          value: nowPlayingTitle,
+          inline: false,
+        },
+        {
+          name: 'Looped',
+          value: session.isLooped() ? 'Yes' : 'No',
+          inline: true,
+        },
+        {
+          name: 'Shuffled',
+          value: session.isShuffled() ? 'Yes' : 'No',
+          inline: true,
+        },
+      ];
 
       if (next10.length > 0) {
-        message = `${message}\n\n__Length of Queue__: ${
-          totalQueued
-        }\n__Queue__ (max 10 are shown):\n${
-          next10.map(details => `#${details.position}: ${details.title}`).join('\n')
-        }`;
+        fields.push({
+          name: 'Length of Queue',
+          value: String(totalQueued),
+          inline: true,
+        }, {
+          name: 'Queue (max 10 are shown)',
+          value: next10.map(details => `#${details.position}: ${details.title}`).join('\n'),
+          inline: false,
+        });
       }
+
       return {
-        message,
+        fields,
         title: '🎵 Queue List 🎵',
         footerText: await getTrackDurationString(session) || undefined,
       };
