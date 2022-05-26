@@ -7,6 +7,7 @@ import {
   isYoutubeLink,
   isTwitchVodLink,
   getClockString,
+  getSecondsFromClockString,
 } from '../utils';
 
 describe('utils', () => {
@@ -175,6 +176,39 @@ describe('utils', () => {
       expect(getClockString(60 * 1000, 2)).toBe('01:00');
       expect(getClockString(60 * 1000, 3)).toBe('00:01:00');
       expect(getClockString(60 * 60 * 1000, 3)).toBe('01:00:00');
+    });
+  });
+
+  describe('getSecondsFromClockString', () => {
+    test('0', () => {
+      expect(getSecondsFromClockString('0')).toBe(0);
+    });
+    test('10', () => {
+      expect(getSecondsFromClockString('10')).toBe(10);
+    });
+    test('1:00', () => {
+      expect(getSecondsFromClockString('1:00')).toBe(60);
+    });
+    test('2:05', () => {
+      expect(getSecondsFromClockString('2:05')).toBe(125);
+    });
+    test('2:5', () => {
+      expect(getSecondsFromClockString('2:5')).toBe(125);
+    });
+    test('2:3:5', () => {
+      expect(getSecondsFromClockString('2:3:5')).toBe(2 * 3600 + 3 * 60 + 5);
+    });
+    test('02:03:05', () => {
+      expect(getSecondsFromClockString('02:03:05')).toBe(2 * 3600 + 3 * 60 + 5);
+    });
+    test('01:00:5', () => {
+      expect(getSecondsFromClockString('01:00:5')).toBe(3600 + 5);
+    });
+    test('01:02:03:04', () => {
+      expect(() => getSecondsFromClockString('01:02:03:04')).toThrowError();
+    });
+    test('foobar', () => {
+      expect(() => getSecondsFromClockString('foobar')).toThrowError();
     });
   });
 });

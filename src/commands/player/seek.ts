@@ -1,6 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { getSecondsFromClockString } from 'src/utils';
 import sessions from './sessions';
 import { attachPlayerButtons } from './utils';
 
@@ -9,7 +10,7 @@ const SeekCommand: Command = {
   slashCommandData: new SlashCommandBuilder()
     .setName('seek')
     .setDescription('Skip to a specific part of the audio.')
-    .addNumberOption(option => option.setName('amount').setDescription('In seconds.').setRequired(true)),
+    .addStringOption(option => option.setName('amount').setDescription('In seconds, or a clock string of the form xx:xx:xx').setRequired(true)),
 
   runCommand: async interaction => {
     await interaction.deferReply({
@@ -20,9 +21,10 @@ const SeekCommand: Command = {
       await interaction.editReply('Session does not exist');
       return;
     }
-    const seek = interaction.options.getNumber('amount', true);
-    await session.seek(seek);
-    await interaction.editReply(`Seeking to ${seek} seconds.`);
+    const seek = interaction.options.getString('amount', true);
+    const numSeconds = Number.isNaN(Number(seek)) ? getSecondsFromClockString(seek) : Number(seek);
+    await session.seek(numSeconds);
+    await interaction.editReply(`Seeking to ${numSeconds} seconds.`);
     attachPlayerButtons(interaction, session);
   },
 };

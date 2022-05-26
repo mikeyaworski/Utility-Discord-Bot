@@ -132,6 +132,16 @@ export function getClockString(durationMs: number, minPortionLength = 0): string
   }, '') || '0';
 }
 
+export function getSecondsFromClockString(clockString: string): number {
+  const clockStringRegex = /^(\d{1,2}:){0,2}(\d{1,2})$/;
+  if (!clockStringRegex.test(clockString)) throw new Error('Clock string is not formatted properly');
+  const parts = clockString.split(':');
+  return parts.reverse().reduce((acc, part, i) => {
+    // only supports up to hours, so this exponential logic works
+    return acc + (60 ** i) * Number(part);
+  }, 0);
+}
+
 /**
  * Randomize array in-place using Durstenfeld shuffle algorithm.
  * https://stackoverflow.com/a/12646864/2554605
