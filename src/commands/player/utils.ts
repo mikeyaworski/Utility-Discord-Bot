@@ -7,8 +7,8 @@ import { filterOutFalsy, getClockString } from 'src/utils';
 import Session from './session';
 import { VideoDetails } from './track';
 
-export function getPlayerButtons(session: Session): Discord.MessageActionRow {
-  const buttons = new Discord.MessageActionRow<Discord.MessageButton>({
+export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
+  const firstRow = new Discord.MessageActionRow<Discord.MessageButton>({
     components: [
       session.isPaused()
         ? new Discord.MessageButton({
@@ -47,10 +47,19 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow {
         label: 'Clear',
         style: 'SUCCESS',
       }),
-    ].filter(Boolean),
+    ],
+  });
+  const secondRow = new Discord.MessageActionRow<Discord.MessageButton>({
+    components: [
+      new Discord.MessageButton({
+        customId: 'refresh',
+        label: 'Refresh',
+        style: 'SUCCESS',
+      }),
+    ],
   });
 
-  return buttons;
+  return [firstRow, secondRow];
 }
 
 export async function listenForPlayerButtons(
@@ -104,6 +113,10 @@ export async function listenForPlayerButtons(
           if (cb) cb();
           break;
         }
+        case 'refresh': {
+          if (cb) cb();
+          break;
+        }
         default: {
           break;
         }
@@ -129,9 +142,9 @@ export function attachPlayerButtons(
 ): void {
   // eventuallyRemoveComponents(interaction);
   async function populateButtons() {
-    const buttons = getPlayerButtons(session);
+    const rows = getPlayerButtons(session);
     await interaction.editReply({
-      components: [buttons],
+      components: rows,
     });
   }
   populateButtons();
@@ -187,7 +200,7 @@ export async function replyWithSessionButtons({
       fields,
     })] : [];
     const content = title ? undefined : message;
-    const components = hideButtons ? [] : [getPlayerButtons(session)];
+    const components = hideButtons ? [] : getPlayerButtons(session);
     await interaction.editReply({
       embeds,
       components,
