@@ -1,8 +1,8 @@
-import type { AudioResource } from '@discordjs/voice';
+import { AudioResource, createAudioResource } from '@discordjs/voice';
 
-import { createAudioResource, demuxProbe } from '@discordjs/voice';
-import { exec as ytdl } from 'youtube-dl-exec';
+import ffmpeg from 'fluent-ffmpeg';
 import play from 'play-dl';
+import ytdl from 'ytdl-core';
 import { error } from 'src/logging';
 import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
 
@@ -35,61 +35,35 @@ export default class Track {
 
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     switch (this.variant) {
+      // play-dl is no longer actively maintained, so we have a fallback
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        // play-dl is no longer actively maintained. Perhaps we can use the approach from here:
-        // https://stackoverflow.com/a/71607743/2554605
-        const source = options.seek
-          ? await play.stream(this.link, {
-            seek: options.seek,
-          })
-          : await play.stream(this.link);
-        const audioResource = await createAudioResource(source.stream, {
-          metadata: this,
-          inputType: source.type,
-        });
-        return audioResource;
+        try {
+          const source = options.seek
+            ? await play.stream(this.link, {
+              seek: options.seek,
+            })
+            : await play.stream(this.link);
+          const audioResource = await createAudioResource(source.stream, {
+            metadata: this,
+            inputType: source.type,
+          });
+          return audioResource;
+        } catch (err) {
+          error(err);
+        }
       }
+      // We want to fall through if play-dl doesn't work
+      // eslint-disable-next-line no-fallthrough
       default: {
-        return new Promise((resolve, reject) => {
-          const process = ytdl(
-            this.link, {
-              // @ts-ignore This library has incomplete typing
-              o: '-',
-              q: '',
-              f: 'bestaudio[ext=webm+acodec=opus+asr=48000]/bestaudio',
-              r: '100K',
-            }, {
-              stdio: ['ignore', 'pipe', 'ignore'],
-            },
-          );
-          if (!process.stdout) {
-            reject(new Error('No stdout'));
-            return;
-          }
-          const stream = process.stdout;
-          const onError = (err: unknown) => {
-            if (!process.killed) process.kill();
-            stream.resume();
-            reject(err);
-            // This ERR_STREAM_PREMATURE_CLOSE error happens when you skip the last song, but there is no issue with that.
-            // TODO: See if there is an alternative way to skip songs which does not run into this error.
-            // @ts-ignore This is useless TS
-            if (typeof err === 'object' && err && 'code' in err && err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
-              return;
-            }
-            error(err);
-          };
-          process.once('spawn', () => {
-            demuxProbe(stream)
-              .then(probe => resolve(
-                createAudioResource(probe.stream, {
-                  metadata: this,
-                  inputType: probe.type,
-                }),
-              ))
-              .catch(onError);
-          }).catch(onError);
+        const { seek = 0 } = options;
+        const stream = ytdl(this.link);
+        const seekedStream = seek
+          ? ffmpeg({ source: stream }).toFormat('mp3').setStartTime(Math.ceil(seek))
+          : stream;
+        // @ts-expect-error This actually works
+        return createAudioResource(seekedStream, {
+          metadata: this,
         });
       }
     }
