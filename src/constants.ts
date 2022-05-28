@@ -4,6 +4,8 @@ export const DECLINE_EMOJI = '❌';
 export const ONE_MINUTE = 1000 * 60;
 export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
 export const INTERACTION_MAX_TIMEOUT = ONE_MINUTE * 14;
+export const REWIND_BUTTON_TIME = 15 * 1000;
+export const FAST_FORWARD_BUTTON_TIME = 15 * 1000;
 
 export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;

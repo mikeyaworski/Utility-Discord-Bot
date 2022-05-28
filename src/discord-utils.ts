@@ -39,6 +39,18 @@ import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption } from 'discord-api-types/v9';
 
+export function getErrorMsg(err: unknown): string {
+  const name: string | undefined = get(err, 'name');
+  const message: string | undefined = get(err, 'message');
+  if (name === 'SequelizeUniqueConstraintError') {
+    return 'That is a duplicate entry in our database!';
+  }
+  if (message === 'Unknown Emoji') {
+    return 'I\'m not able to use that emoji!';
+  }
+  return message || 'Something went wrong...';
+}
+
 /**
  * Provides generic error handing for dealing with database operations or Discord API requests.
  * This can be used as a fallback after any custom error handling for the use case.
@@ -56,16 +68,8 @@ export async function handleError(
     }
     await interaction.editReply(msg);
   }
-  const name: string | undefined = get(err, 'name');
-  const message: string | undefined = get(err, 'message');
-  if (name === 'SequelizeUniqueConstraintError') {
-    return sendResponse('That is a duplicate entry in our database!').catch(error);
-  }
-  if (message === 'Unknown Emoji') {
-    return sendResponse('I\'m not able to use that emoji!').catch(error);
-  }
-  error(err);
-  return sendResponse(message || 'Something went wrong...').catch(error);
+  const msg = getErrorMsg(err);
+  return sendResponse(msg).catch(error);
 }
 
 export function eventuallyRemoveComponents(interaction: CommandInteraction): void {

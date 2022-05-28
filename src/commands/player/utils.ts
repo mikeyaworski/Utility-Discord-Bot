@@ -1,9 +1,10 @@
 import Discord, { EmbedFieldData } from 'discord.js';
 import { AnyInteraction, IntentionalAny } from 'src/types';
 // import { eventuallyRemoveComponents } from 'src/discord-utils';
-import { Colors, INTERACTION_MAX_TIMEOUT } from 'src/constants';
-import { log } from 'src/logging';
+import { Colors, FAST_FORWARD_BUTTON_TIME, INTERACTION_MAX_TIMEOUT, REWIND_BUTTON_TIME } from 'src/constants';
+import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
+import { getErrorMsg } from 'src/discord-utils';
 import Session from './session';
 import { VideoDetails } from './track';
 
@@ -56,6 +57,16 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
         label: 'Refresh',
         style: 'SUCCESS',
       }),
+      new Discord.MessageButton({
+        customId: 'rewind',
+        label: `Rewind ${REWIND_BUTTON_TIME / 1000} seconds`,
+        style: 'SUCCESS',
+      }),
+      new Discord.MessageButton({
+        customId: 'fast-forward',
+        label: `Fast forward ${FAST_FORWARD_BUTTON_TIME / 1000} seconds`,
+        style: 'SUCCESS',
+      }),
     ],
   });
 
@@ -73,7 +84,7 @@ export async function listenForPlayerButtons(
       filter: i => i.message.id === msg.id,
       time: INTERACTION_MAX_TIMEOUT,
     });
-    collector?.on('collect', i => {
+    collector?.on('collect', async i => {
       i.deferUpdate().catch(() => {
         log('Could not defer update for interaction', i.customId);
       });
@@ -115,6 +126,34 @@ export async function listenForPlayerButtons(
         }
         case 'refresh': {
           if (cb) cb();
+          break;
+        }
+        case 'rewind': {
+          try {
+            await session.seek(Math.max(0, (session.getCurrentTrackPlayTime() - REWIND_BUTTON_TIME) / 1000));
+            if (cb) cb();
+          } catch (err) {
+            error(err);
+            const msg = getErrorMsg(err);
+            await interaction.followUp({
+              content: msg,
+              ephemeral: true,
+            });
+          }
+          break;
+        }
+        case 'fast-forward': {
+          try {
+            await session.seek((session.getCurrentTrackPlayTime() + FAST_FORWARD_BUTTON_TIME) / 1000);
+            if (cb) cb();
+          } catch (err) {
+            error(err);
+            const msg = getErrorMsg(err);
+            await interaction.followUp({
+              content: msg,
+              ephemeral: true,
+            });
+          }
           break;
         }
         default: {
