@@ -37,6 +37,8 @@ export default class Track {
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
+        // play-dl is no longer actively maintained. Perhaps we can use the approach from here:
+        // https://stackoverflow.com/a/71607743/2554605
         const source = options.seek
           ? await play.stream(this.link, {
             seek: options.seek,
