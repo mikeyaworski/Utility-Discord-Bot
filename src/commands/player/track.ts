@@ -38,20 +38,21 @@ export default class Track {
       // play-dl is no longer actively maintained, so we have a fallback
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        try {
-          const source = options.seek
-            ? await play.stream(this.link, {
-              seek: options.seek,
-            })
-            : await play.stream(this.link);
-          const audioResource = await createAudioResource(source.stream, {
-            metadata: this,
-            inputType: source.type,
-          });
-          return audioResource;
-        } catch (err) {
-          error(err);
-        }
+        // This now breaks in the middle of songs
+        // try {
+        //   const source = options.seek
+        //     ? await play.stream(this.link, {
+        //       seek: options.seek,
+        //     })
+        //     : await play.stream(this.link);
+        //   const audioResource = await createAudioResource(source.stream, {
+        //     metadata: this,
+        //     inputType: source.type,
+        //   });
+        //   return audioResource;
+        // } catch (err) {
+        //   error(err);
+        // }
       }
       // We want to fall through if play-dl doesn't work
       // eslint-disable-next-line no-fallthrough
