@@ -160,6 +160,7 @@ async function play({
       const track = new Track(vodLink, TrackVariant.TWITCH_VOD);
       const responseMessage = await enqueue(session, [track], pushToFront);
       await respondWithEmbed(interaction, responseMessage);
+      return attachPlayerButtons(interaction, session);
     }
 
     if (YouTubeSr.validate(vodLink, 'VIDEO') || YouTubeSr.validate(vodLink, 'PLAYLIST')) {
