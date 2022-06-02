@@ -28,7 +28,11 @@ function preventSleep() {
 // endpoint for pinging the server to keep it alive
 const app = express();
 app.get('/', (req, res) => res.send('Healthy!'));
-app.listen(process.env.PORT || 3000, preventSleep);
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  log('Listening on port', port);
+  preventSleep();
+});
 
 (async () => {
   await syncModels();

@@ -10,7 +10,7 @@ services:
       - .:/code/
       - /code/node_modules
     ports:
-      - 3003:3003
+      - 3000:3000
     depends_on:
       - utility_discord_bot_db
     links:
