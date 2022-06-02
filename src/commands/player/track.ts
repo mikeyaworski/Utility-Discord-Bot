@@ -35,24 +35,23 @@ export default class Track {
 
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     switch (this.variant) {
-      // play-dl is no longer actively maintained, so we have a fallback
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
         // This now breaks in the middle of songs
-        // try {
-        //   const source = options.seek
-        //     ? await play.stream(this.link, {
-        //       seek: options.seek,
-        //     })
-        //     : await play.stream(this.link);
-        //   const audioResource = await createAudioResource(source.stream, {
-        //     metadata: this,
-        //     inputType: source.type,
-        //   });
-        //   return audioResource;
-        // } catch (err) {
-        //   error(err);
-        // }
+        try {
+          const source = options.seek
+            ? await play.stream(this.link, {
+              seek: options.seek,
+            })
+            : await play.stream(this.link);
+          const audioResource = await createAudioResource(source.stream, {
+            metadata: this,
+            inputType: source.type,
+          });
+          return audioResource;
+        } catch (err) {
+          error(err);
+        }
       }
       // We want to fall through if play-dl doesn't work
       // eslint-disable-next-line no-fallthrough
