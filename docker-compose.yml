@@ -1,9 +1,9 @@
 version: '2'
 services:
-  utility_discord_bot:
+  utility-discord-bot:
     build: .
     restart: always
-    container_name: utility_discord_bot
+    container_name: utility-discord-bot
     tty: true
     command: npm run dev
     volumes:
@@ -12,25 +12,25 @@ services:
     ports:
       - 80:3000
     depends_on:
-      - utility_discord_bot_db
+      - utility-discord-bot-db
     links:
-      - utility_discord_bot_db
+      - utility-discord-bot-db
     environment:
       DISCORD_BOT_CLIENT_ID: ${DISCORD_BOT_CLIENT_ID}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
       PORT: ${PORT}
       PING_HOST: ${PING_HOST}
       DATABASE_URL: ${DATABASE_URL}
-  utility_discord_bot_db:
-    container_name: utility_discord_bot_db
+  utility-discord-bot-db:
+    container_name: utility-discord-bot-db
     volumes:
-      - utility_discord_bot_db_data:/var/lib/postgresql/data
+      - utility-discord-bot-db-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
     image: postgres:11.5
     environment:
-      POSTGRES_DB: utility_discord_bot_db
+      POSTGRES_DB: utility-discord-bot-db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
 volumes:
-  utility_discord_bot_db_data: {}
+  utility-discord-bot-db-data: {}
