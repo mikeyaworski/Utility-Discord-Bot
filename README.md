@@ -28,6 +28,7 @@ Optional variables:
 
 ```
 ENVIRONMENT=development
+PORT=3000
 
 DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_TOKEN=...

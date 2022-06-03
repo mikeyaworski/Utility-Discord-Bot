@@ -28,7 +28,7 @@ function preventSleep() {
 // endpoint for pinging the server to keep it alive
 const app = express();
 app.get('/', (req, res) => res.send('Healthy!'));
-const port = process.env.PORT || 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(port, () => {
   log('Listening on port', port);
   preventSleep();
