@@ -15,12 +15,6 @@ services:
       - utility-discord-bot-db
     links:
       - utility-discord-bot-db
-    environment:
-      DISCORD_BOT_CLIENT_ID: ${DISCORD_BOT_CLIENT_ID}
-      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
-      PORT: ${PORT}
-      PING_HOST: ${PING_HOST}
-      DATABASE_URL: ${DATABASE_URL}
   utility-discord-bot-db:
     container_name: utility-discord-bot-db
     volumes:

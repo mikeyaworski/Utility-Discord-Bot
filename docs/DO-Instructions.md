@@ -13,7 +13,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
 1. Click on your droplet, go to Access and then click "Launch Droplet Console" to connect your droplet on the web. You can SSH into your droplet manually if you want, but this is unnecessary work.
 1. Assuming you chose Ubuntu for your distribution, Git will already be installed and you will have access to `apt`. If you use another distribution, you may need to install this software in different ways (e.g. your distribution may not have APT). At the end of the day, you need to have Docker installed and running. NPM and Git are optional, but they allow you to conveniently run scripts from the Git repo. So we will make sure all three are installed.
    ```
-   apt install docker.io npm
+   apt install docker.io npm docker-compose
    ```
 1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
@@ -50,9 +50,18 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     1. Type `:x` to save and quit.
 
     You can use something like nano instead of vim if you struggle with the instructions above.
+1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then generate an SSL certificate and run the nginx server:
+   1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
+   1. `npm run dhparam`
+   1. Update `deploy/nginx-conf-http/nginx.conf` and `deploy/nginx-conf-https/nginx.conf` by replacing the server name `api.utilitydiscordbot.com` (and possibly port number) with your own.
+   1. Update `deploy/docker-compose.yml` by replacing `api.utilitydiscordbot.com` and `michael@mikeyaworski.com` with your own.
 1.  Start the bot:
     ```
     npm run start:docker
+    ```
+    Or, if you are running the nginx server mentioned in the previous step, instead start the bot with:
+    ```
+    npm run start:docker-compose
     ```
 1. View logs to see if everything is successful:
    ```
@@ -60,14 +69,33 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
    Use `Ctrl + C` to get out of the logs.
 
+   If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+   ```
+   docker logs certbot -f
+   docker logs http-server -f
+   docker logs https-server -f
+   ```
+
 ## Restarting
+
+Without HTTPS:
 
 ```
 cd ~/Utility-Discord-Bot
 npm run restart:docker
 ```
 
+With HTTPS:
+
+```
+cd ~/Utility-Discord-Bot
+npm run docker-pull
+npm run restart:docker-compose
+```
+
 ## Updating
+
+Without HTTPS:
 
 ```
 cd ~/Utility-Discord-Bot
@@ -75,11 +103,28 @@ npm run docker-pull
 npm run restart:docker
 ```
 
+With HTTPS:
+
+```
+cd ~/Utility-Discord-Bot
+npm run docker-pull
+npm run restart:docker-compose
+```
+
 ## Stopping
+
+Without HTTPS:
 
 ```
 cd ~/Utility-Discord-Bot
 npm run stop:docker
+```
+
+With HTTPS:
+
+```
+cd ~/Utility-Discord-Bot
+npm run stop:docker-compose
 ```
 
 ## Reading Logs
@@ -89,3 +134,10 @@ cd ~/Utility-Discord-Bot
 npm run logs:docker
 ```
 Use `Ctrl + C` to get out of the logs.
+
+If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+```
+docker logs certbot -f
+docker logs http-server -f
+docker logs https-server -f
+```

@@ -1,0 +1,76 @@
+version: '2'
+services:
+  utility-discord-bot:
+    image: mikeyaworski/utility-discord-bot:latest
+    restart: unless-stopped
+    container_name: utility-discord-bot
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      PORT: ${PORT}
+      PING_HOST: ${PING_HOST}
+      DISCORD_BOT_CLIENT_ID: ${DISCORD_BOT_CLIENT_ID}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      DATABASE_URL: ${DATABASE_URL}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+      SLASH_COMMANDS_GUILD_ID: ${SLASH_COMMANDS_GUILD_ID}
+    ports:
+      - 3000:3000
+    networks:
+      - app-network
+  http-server:
+    image: nginx:mainline-alpine
+    container_name: http-server
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - webroot:/var/www/html
+      - ./nginx-conf-http:/etc/nginx/conf.d
+    depends_on:
+      - utility-discord-bot
+    networks:
+      - app-network
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - webroot:/var/www/html
+    depends_on:
+      - http-server
+    command: certonly --webroot --webroot-path=/var/www/html --email michael@mikeyaworski.com --agree-tos --no-eff-email -d api.utilitydiscordbot.com
+  # TODO: Handle reloading nginx once the SSL cert is renewed
+  # Note: This HTTPS server is separate from the HTTP server, since the HTTP server is used
+  # to pass the ACME challenge. After we pass the challenge
+  # and certbot generates the SSL certificate, we can start the HTTPS server.
+  https-server:
+    image: nginx:mainline-alpine
+    container_name: https-server
+    restart: unless-stopped
+    ports:
+      - 443:443
+    volumes:
+      - webroot:/var/www/html
+      - ./nginx-conf-https:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./dhparam:/etc/ssl/certs
+    depends_on:
+      - certbot
+    networks:
+      - app-network
+volumes:
+  certbot-etc:
+  certbot-var:
+  webroot:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./
+      o: bind
+networks:
+  app-network:
+    driver: bridge
