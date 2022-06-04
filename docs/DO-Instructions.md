@@ -146,7 +146,12 @@ Use `Ctrl + C` to get out of the logs.
 
 If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
 ```
-docker logs certbot -f
-docker logs http-server -f
-docker logs https-server -f
+npm run logs:cert
+npm run logs:http
+npm run logs:https
+```
+
+You may also want to read the cronjob logs for renewing your SSL certificate. You can do that with:
+```
+npm run logs:cron
 ```

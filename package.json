@@ -23,13 +23,17 @@
     "docker-pull": "docker pull mikeyaworski/utility-discord-bot:latest",
     "start:docker": "docker run -d --env-file .env --publish 80:3000 --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
     "stop:docker": "docker stop utility-discord-bot && docker rm utility-discord-bot",
-    "logs:docker": "docker logs -f utility-discord-bot --timestamps",
+    "logs:docker": "docker logs -f --timestamps utility-discord-bot",
     "restart:docker": "npm run stop:docker && npm run start:docker",
     "dhparam": "mkdir -p deploy/dhparam && openssl dhparam -out ./deploy/dhparam/dhparam-2048.pem 2048",
     "start:docker-compose": "docker-compose -f deploy/docker-compose.yml --env-file .env up -d",
     "stop:docker-compose": "docker-compose -f deploy/docker-compose.yml stop && docker-compose -f deploy/docker-compose.yml rm -f",
     "restart:docker-compose": "npm run stop:docker-compose && npm run start:docker-compose",
-    "remove-volumes": "docker volume rm deploy_webroot deploy_certbot-etc deploy_certbot-var"
+    "remove-volumes": "docker volume rm deploy_webroot deploy_certbot-etc deploy_certbot-var",
+    "logs:cron": "cat /var/log/cron.log",
+    "logs:http": "docker logs -f --timestamps http-server",
+    "logs:https": "docker logs -f --timestamps https-server",
+    "logs:cert": "docker logs -f --timestamps certbot"
   },
   "repository": {
     "type": "git",
