@@ -17,12 +17,12 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
 1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
-    git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
-    cd Utility-Discord-Bot
+    git clone https://github.com/mikeyaworski/utility-discord-bot.git
+    cd utility-discord-bot
     ```
 1.  Pull the latest Docker image.
     ```
-    cd ~/Utility-Discord-Bot
+    cd ~/utility-discord-bot
     npm run docker-pull
     ```
     Or, if you want to use a specific Docker image (other than `latest`), find the tag from https://hub.docker.com/repository/docker/mikeyaworski/utility-discord-bot and use this command, where `...` is the tag you want to use:
@@ -44,7 +44,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
     1. Create it on your local computer and copy the contents of the file.
-    1. In your SSH session, run `vi .env` (make sure you are inside the `Utility-Discord-Bot` folder).
+    1. In your SSH session, run `vi .env` (make sure you are inside the `utility-discord-bot` folder).
     1. Press `i` to enter Insert mode
     1. Paste. This pastes the content of the `.env` file. If on Windows WSL, you may need to right click your WSL bar, click Properties and check "Use Ctrl+Shift+C/V as Copy/Paste" first. And then use `Ctrl + Shift + V` to paste.
     1. Type `:x` to save and quit.
@@ -75,20 +75,29 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    docker logs http-server -f
    docker logs https-server -f
    ```
+1. (Optional) If you enabled HTTPS, then you should also create a cronjob to run the `deploy/renew-ssl.sh` script. This will both renew the SSL certificate and restart the https nginx server, so that the server will use the new certificate.
+   1. Type `pwd` and observe the result.
+   1. Ensure that in `deploy/renew-ssl.sh`, the `cd` command uses the same path as your output from `pwd`.
+   1. Type `crontab -e` and choose whichever option you want to open a text editor.
+   1. Add this to the bottom of the file:
+      ```
+      0 12 * * * /your_pwd_path/deploy/renew-ssl.sh >> /var/log/cron.log 2>&1
+      ```
+      This runs the renewal script on a daily basis.
 
 ## Restarting
 
 Without HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run restart:docker
 ```
 
 With HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run docker-pull
 npm run restart:docker-compose
 ```
@@ -98,7 +107,7 @@ npm run restart:docker-compose
 Without HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run docker-pull
 npm run restart:docker
 ```
@@ -106,7 +115,7 @@ npm run restart:docker
 With HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run docker-pull
 npm run restart:docker-compose
 ```
@@ -116,21 +125,21 @@ npm run restart:docker-compose
 Without HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run stop:docker
 ```
 
 With HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run stop:docker-compose
 ```
 
 ## Reading Logs
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run logs:docker
 ```
 Use `Ctrl + C` to get out of the logs.
