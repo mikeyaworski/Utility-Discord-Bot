@@ -73,7 +73,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     ```
 1. View logs to see if everything is successful:
    ```
-   npm run logs:docker
+   npm run logs:bot
    ```
    Use `Ctrl + C` to get out of the logs.
 
@@ -103,6 +103,6 @@ npm run stop:docker
 
 ```
 cd ~/Utility-Discord-Bot
-npm run logs:docker
+npm run logs:bot
 ```
 Use `Ctrl + C` to get out of the logs.
