@@ -14,8 +14,6 @@ This is a private bot. To get this bot in your server, please host this yourself
 - [Google Cloud Engine (GCE) instructions](/docs/GCE-Instructions.md)
 - [Digital Ocean Droplet instructions](/docs/DO-Instructions.md)
 
-1. Make sure you are using Node v14 or above, since some of our dependencies require this.
-
 ## Environment Variables
 Create a `.env` file in the root of your project folder. You can use `.env.example` as a starting point.
 
