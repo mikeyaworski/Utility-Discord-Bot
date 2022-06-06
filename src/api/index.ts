@@ -1,12 +1,13 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import axios from 'axios';
+import cookieParser from 'cookie-parser';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
 
 // Routers
-import authRouter from './auth';
+import authRouter from './routes/auth';
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ const app = express();
 
 export function initApi(): void {
   app.get('/', (req, res) => res.send('Healthy!'));
+  app.use(cookieParser());
+  app.use(express.json());
   app.use('/auth', authRouter);
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
