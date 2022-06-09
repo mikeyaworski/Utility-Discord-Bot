@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import axios from 'axios';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
@@ -30,6 +31,14 @@ const app = express();
 
 export function initApi(): void {
   app.get('/', (req, res) => res.send('Healthy!'));
+  app.use(cors({
+    origin: process.env.ENVIRONMENT === 'production'
+      ? [
+        /^https:\/\/utilitydiscordbot\.com$/,
+      ] : [
+        /^https?:\/\/localhost(:\d+)?$/,
+      ],
+  }));
   app.use(cookieParser());
   app.use(express.json());
   app.use('/auth', authRouter);
