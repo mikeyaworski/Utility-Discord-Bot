@@ -33,7 +33,7 @@ export function initApi(): void {
   app.use(cookieParser());
   app.use(express.json());
   app.use('/auth', authRouter);
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   app.listen(port, () => {
     log('Listening on port', port);
     preventSleep();
