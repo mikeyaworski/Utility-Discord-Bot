@@ -5,7 +5,7 @@ import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
 
 const router = express.Router();
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', async (req, res) => {
   const {
     token,
     tokenType,
@@ -30,13 +30,13 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-router.post('/logout', async (req, res, next) => {
+router.post('/logout', async (req, res) => {
   res.clearCookie('auth');
   res.status(204).end();
 });
 
 // @ts-expect-error
-router.get('/who_am_i', authMiddleware, async (req: AuthRequest, res, next) => {
+router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
   res.status(200).json(req.user);
 });
 
