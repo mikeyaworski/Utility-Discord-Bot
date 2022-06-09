@@ -32,6 +32,7 @@ const app = express();
 export function initApi(): void {
   app.get('/', (req, res) => res.send('Healthy!'));
   app.use(cors({
+    credentials: true,
     origin: process.env.ENVIRONMENT === 'production'
       ? [
         /^https:\/\/utilitydiscordbot\.com$/,
