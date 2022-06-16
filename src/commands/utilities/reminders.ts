@@ -177,6 +177,7 @@ function getReminderEmbed(reminder: Reminder, options: {
         inline: true,
       });
     }
+    try {
     const nextInvocation = getNextInvocation(reminder.id);
     if (nextInvocation) {
       const remainingTime = nextInvocation - Date.now();
@@ -187,6 +188,10 @@ function getReminderEmbed(reminder: Reminder, options: {
           inline: true,
         });
       }
+    }
+    } catch (err) {
+      // An error can sometimes get thrown depending on race conditions with CronJob times in the past
+      error(err);
     }
   }
   if (showChannel) {

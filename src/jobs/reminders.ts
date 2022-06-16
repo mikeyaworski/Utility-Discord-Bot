@@ -13,7 +13,8 @@ const timeouts: Timeouts = {};
 
 export function getNextInvocation(id: string): number | undefined {
   const job = timeouts[id];
-  return job?.nextDate().unix() * 1000;
+  if (!job) return undefined;
+  return job.nextDate().unix() * 1000;
 }
 
 export async function removeReminder(id: string): Promise<void> {
@@ -28,9 +29,11 @@ async function handleReminder(reminder: Reminder, destroy: boolean) {
   const channel = await getChannel(reminder.channel_id);
   if (!channel) {
     log(`Could not find channel ${reminder.channel_id} in guild ${reminder.guild_id} for reminder ${reminder.id}`);
+    await removeReminder(reminder.id);
+    return;
   }
-  if (channel?.isText()) {
-    await channel!.send(reminder.message || 'Timer is up!');
+  if (channel.isText()) {
+    await channel.send(reminder.message || 'Timer is up!');
   }
   if (destroy) {
     await removeReminder(reminder.id);
@@ -47,7 +50,7 @@ function getNextInvocationDate(time: number, interval: number | null): Date | nu
   if (timeDiff < 0 && !interval) {
     return null;
   }
-  // Time is in the past but there is an interval, so add intervals until we reach some time in the future
+  // Time is in the past, but there is an interval, so add intervals until we reach some time in the future
   if (timeDiff < 0 && interval) {
     const numIntervals = Math.ceil(Math.abs(timeDiff / interval / 1000));
     return new Date(
@@ -88,9 +91,9 @@ export function setReminder(reminder: Reminder): void {
 
   const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
   async function handleFirst() {
-        handleReminder(reminder, !reminder.interval);
-      if (reminder.interval) {
-        (function interval() {
+    handleReminder(reminder, !reminder.interval);
+    if (reminder.interval) {
+      (function interval() {
         const nextIntervalInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
         if (hasReminderExpired(reminder) || !nextIntervalInvocationDate) {
           removeReminder(reminder.id);
@@ -111,8 +114,8 @@ export function setReminder(reminder: Reminder): void {
             },
           });
         }
-        }());
-      }
+      }());
+    }
   }
 
   if (nextInvocationDate == null) {
@@ -123,7 +126,7 @@ export function setReminder(reminder: Reminder): void {
       start: true,
       unrefTimeout: true,
       onTick: handleFirst,
-  });
+    });
   }
 }
 
