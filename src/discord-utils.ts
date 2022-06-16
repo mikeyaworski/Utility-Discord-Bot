@@ -200,8 +200,13 @@ export function getUserIdFromArg(userArg: string): string | null {
 export async function getChannel(channelArg: string): Promise<AnyChannel | null> {
   const channelId = getChannelIdFromArg(channelArg);
   if (!channelId) return null;
-  const channel = await client.channels.fetch(channelId);
-  return channel || null;
+  try {
+    const channel = await client.channels.fetch(channelId);
+    return channel || null;
+  } catch (err) {
+    error(err);
+    return null;
+  }
 }
 
 export function checkMentionsEveryone(msg: string): boolean {
