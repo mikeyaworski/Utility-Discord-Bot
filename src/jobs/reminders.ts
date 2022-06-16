@@ -4,6 +4,7 @@ import { CronJob } from 'cron';
 import { Reminders } from 'src/models/reminders';
 import { log } from 'src/logging';
 import { getChannel } from 'src/discord-utils';
+import { MIN_REMINDER_INTERVAL } from 'src/constants';
 
 type Timeouts = {
   [reminderId: string]: CronJob;
@@ -57,37 +58,73 @@ function getNextInvocationDate(time: number, interval: number | null): Date | nu
   return new Date(time * 1000);
 }
 
-export function setReminder(reminder: Reminder): void {
+function hasReminderExpired(reminder: Reminder): boolean {
+  if (!reminder.interval) {
+    // A reminder without an interval cannot expire (end_time and max_occurrences have no effect)
+    return false;
+  }
+  // Use MIN_REMINDER_INTERVAL as a buffer since messages may be slightly delayed,
+  // and since the interval length has that minimum,
+  // we know that another reminder will not be invoked during the buffer
+  const bufferTime = (MIN_REMINDER_INTERVAL / 2) * 1000;
+  const endDate = reminder.end_time
+    ? new Date(reminder.end_time * 1000)
+    : reminder.max_occurrences
+      ? new Date((reminder.time + reminder.interval * (reminder.max_occurrences - 1)) * 1000 + bufferTime)
+      : null;
   const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
+  if (endDate == null) return false;
+  if (nextInvocationDate == null) return true; // This can't actually happen
+  return endDate < nextInvocationDate;
+}
+
+export function setReminder(reminder: Reminder): void {
   if (timeouts[reminder.id]) timeouts[reminder.id].stop();
-  timeouts[reminder.id] = new CronJob({
-    cronTime: nextInvocationDate || new Date(),
-    start: true,
-    unrefTimeout: true,
-    onTick: () => {
-      if (nextInvocationDate || !reminder.interval) {
+
+  if (hasReminderExpired(reminder)) {
+    removeReminder(reminder.id);
+    return;
+  }
+
+  const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
+  async function handleFirst() {
         handleReminder(reminder, !reminder.interval);
-      }
       if (reminder.interval) {
-        // This recursive interval approach can certainly lead to time drifting.
-        // E.g. If the timing is late for whatever reason, all subsequent jobs in the interval will be at least as late.
-        // This lateness is cumulative and will never reset.
-        // But the server gets torn down and recreated at least once a day in practice,
-        // so this is fine for the use case.
         (function interval() {
+        const nextIntervalInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
+        if (hasReminderExpired(reminder) || !nextIntervalInvocationDate) {
+          removeReminder(reminder.id);
+        } else {
           timeouts[reminder.id] = new CronJob({
-            cronTime: new Date(Date.now() + reminder.interval * 1000),
+            cronTime: nextIntervalInvocationDate,
             start: true,
             unrefTimeout: true,
             onTick: () => {
               handleReminder(reminder, false);
-              interval();
+              // This arbitrary 1 second delay helps avoid the CronJob immediately invoking another
+              // CronJob for the same invocation time. This is a race condition between the CronJob
+              // finishing and getNextInvocationDate returning a different date.'
+              // If a full second has passed, then getNextInvocationDate should no longer return the exact same date.
+              // And since 1 second is far less than our minimum interval length, the only
+              // con with this delay is that the reminders list command will (for 1 second) not have access to the next invocation.
+              setTimeout(interval, 1000);
             },
           });
+        }
         }());
       }
-    },
+  }
+
+  if (nextInvocationDate == null) {
+    handleFirst();
+  } else {
+    timeouts[reminder.id] = new CronJob({
+      cronTime: nextInvocationDate,
+      start: true,
+      unrefTimeout: true,
+      onTick: handleFirst,
   });
+  }
 }
 
 async function loadReminders(): Promise<void> {

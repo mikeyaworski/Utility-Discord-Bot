@@ -1,7 +1,7 @@
 import type { MessageEmbedOptions } from 'discord.js';
 import type { AnyInteraction, AnyMapping, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
-import type { SlashCommandChannelOption, SlashCommandStringOption } from '@discordjs/builders';
+import type { SlashCommandChannelOption, SlashCommandStringOption, SlashCommandIntegerOption } from '@discordjs/builders';
 
 import { MessageEmbed } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
@@ -23,6 +23,7 @@ import {
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder, getNextInvocation } from 'src/jobs/reminders';
+import { error } from 'src/logging';
 
 const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
   return option
@@ -42,16 +43,28 @@ const messageOption = (option: SlashCommandStringOption) => {
     .setDescription('The message of the reminder. Defaults to "Timer is up!" if nothing provided.')
     .setRequired(false);
 };
+const intervalOption = (option: SlashCommandStringOption) => {
+  return option
+    .setName('interval')
+    .setDescription('Interval to send reminder on repeat. Examples: "24 hours" or "8640000"')
+    .setRequired(false);
+};
 const channelOption = (option: SlashCommandChannelOption) => {
   return option
     .setName('channel')
     .setDescription('The channel to send the message in. Defaults to the current one if not provided.')
     .setRequired(false);
 };
-const intervalOption = (option: SlashCommandStringOption) => {
+const endTimeOption = (option: SlashCommandStringOption) => {
   return option
-    .setName('interval')
-    .setDescription('Interval to send reminder on repeat. Examples: "24 hours" or "8640000"')
+    .setName('end_time')
+    .setDescription('The last possible time that the reminder is allowed to be run during an interval.')
+    .setRequired(false);
+};
+const maxOccurrencesOption = (option: SlashCommandIntegerOption) => {
+  return option
+    .setName('max_occurrences')
+    .setDescription('The number of times to run during interval.')
     .setRequired(false);
 };
 
@@ -66,7 +79,9 @@ commandBuilder.addSubcommand(subcommand => {
     .addStringOption(timeOption({ required: true }))
     .addStringOption(messageOption)
     .addStringOption(intervalOption)
+    .addStringOption(endTimeOption)
     .addChannelOption(channelOption)
+    .addIntegerOption(maxOccurrencesOption)
     .addStringOption(timeZoneOption);
   return subcommand;
 });
@@ -81,10 +96,12 @@ commandBuilder.addSubcommand(subcommand => {
         .setRequired(true);
     })
     .addStringOption(timeOption({ required: false }))
-    .addStringOption(timeZoneOption)
     .addStringOption(messageOption)
+    .addStringOption(intervalOption)
+    .addStringOption(endTimeOption)
     .addChannelOption(channelOption)
-    .addStringOption(intervalOption);
+    .addIntegerOption(maxOccurrencesOption)
+    .addStringOption(timeZoneOption);
   return subcommand;
 });
 commandBuilder.addSubcommand(subcommand => {
@@ -145,6 +162,21 @@ function getReminderEmbed(reminder: Reminder, options: {
       value: humanizeDuration(reminder.interval * 1000),
       inline: true,
     });
+    if (reminder.max_occurrences && !reminder.end_time) {
+      fields.push({
+        name: 'Max Occurrences',
+        value: String(reminder.max_occurrences),
+        inline: true,
+      });
+    }
+    if (reminder.end_time) {
+      const remainingTimeToEnd = (reminder.end_time * 1000) - Date.now();
+      fields.push({
+        name: 'End Time',
+        value: `${getDateString(reminder.end_time)}\n(${humanizeDuration(remainingTimeToEnd)})`,
+        inline: true,
+      });
+    }
     const nextInvocation = getNextInvocation(reminder.id);
     if (nextInvocation) {
       const remainingTime = nextInvocation - Date.now();
@@ -203,6 +235,8 @@ async function parseReminderOptions({
   editing: boolean
 }) {
   const time = inputs.times; // Optional for editing
+  const endTime = inputs.end_time;
+  const maxOccurrences = inputs.max_occurrences;
   const timeZone = inputs.time_zone;
   const { message } = inputs;
   const channelArg = inputs.channel;
@@ -232,6 +266,8 @@ async function parseReminderOptions({
   return {
     message,
     times,
+    endTimes: parseTimesArg(endTime, timeZone),
+    maxOccurrences,
     interval,
     channel,
     author,
@@ -254,11 +290,11 @@ export async function handleUpsert(
       message,
       interval,
       times,
+      endTimes,
+      maxOccurrences,
       channel,
       author,
     } = await parseReminderOptions({ interaction, inputs, editing });
-
-    const timeIsInPast = times.some(time => time < Date.now() / 1000);
 
     // Throws if there is an issue
     checkMessageErrors(interaction, {
@@ -270,18 +306,35 @@ export async function handleUpsert(
     const existingReminder = id ? await Reminders.findByPk(id) : null;
     if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
 
+    const timeIsInPast = times.some(time => time < Date.now() / 1000);
     if (timeIsInPast && !interval && !existingReminder?.interval) {
       return interaction.editReply('You cannot create a reminder in the past.');
     }
 
     if (existingReminder && !times.length) times.push(existingReminder.time);
 
-    const reminderPayloads: Partial<Reminder>[] = times.map(time => {
+    interface TimePair {
+      time: number,
+      endTime?: number | null,
+    }
+    const timePairs: TimePair[] = times.map((time, i) => {
+      if (endTimes[i] != null) return { time, endTime: endTimes[i] };
+      if (endTimes.length) return { time, endTime: endTimes[endTimes.length - 1] };
+      return { time, endTime: null };
+    });
+    const endTimeEarlier = timePairs.some(({ time, endTime }) => endTime != null && endTime < time);
+    if (endTimeEarlier) {
+      return interaction.editReply('The end time must be later than the initial time.');
+    }
+
+    const reminderPayloads: Partial<Reminder>[] = timePairs.map(({ time, endTime }) => {
       const reminderPayload: Partial<Reminder> = {
         guild_id: existingReminder?.guild_id,
         channel_id: existingReminder?.channel_id,
         owner_id: existingReminder?.owner_id,
         time: existingReminder?.time,
+        end_time: existingReminder?.end_time,
+        max_occurrences: existingReminder?.max_occurrences,
         message: existingReminder?.message,
         interval: existingReminder?.interval,
       };
@@ -289,6 +342,8 @@ export async function handleUpsert(
       if (channel?.id) reminderPayload.channel_id = channel.id;
       if (author.id) reminderPayload.owner_id = author.id;
       if (time) reminderPayload.time = time;
+      if (endTime) reminderPayload.end_time = endTime;
+      if (maxOccurrences) reminderPayload.max_occurrences = maxOccurrences;
       if (message) reminderPayload.message = message;
       if (interval) reminderPayload.interval = interval;
       return reminderPayload;
@@ -426,6 +481,8 @@ const RemindersCommand: Command = {
   runModal: run,
   modalLabels: {
     times: 'Time of reminder. Commas for multiple.',
+    end_time: 'The last possible time that it can run.',
+    max_occurrences: 'The number of times to run during interval.',
     channel: 'The channel to send the message in.',
     interval: 'Interval to repeat.',
     reminder_id: 'The ID of the reminder.',
@@ -435,6 +492,7 @@ const RemindersCommand: Command = {
   },
   modalPlaceholders: {
     times: 'E.g. "5 mins" or "5 mins, 10 mins"',
+    end_time: 'E.g. "5 mins" or "Friday at 2pm"',
     channel: 'Defaults to current one',
     interval: 'E.g. "24 hours" or "8640000"',
     reminder_id: 'Use "/reminders list" to find IDs',

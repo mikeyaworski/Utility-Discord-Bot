@@ -15,6 +15,8 @@ export class Reminders extends Model<
   declare channel_id: string;
   declare owner_id: string;
   declare time: number;
+  declare end_time: number | null;
+  declare max_occurrences: number | null;
   declare interval: number | null;
   declare message: string | null;
 }
@@ -25,6 +27,8 @@ export type Reminder = {
   channel_id: string,
   owner_id: string,
   time: number,
+  end_time: number | null,
+  max_occurrences: number | null,
   interval: number | null,
   message: string | null,
 };
@@ -55,6 +59,18 @@ const RemindersDefinition: ModelDefinition = sequelize => {
       type: Sequelize.INTEGER,
       allowNull: false,
     },
+    end_time: {
+      // Epoch time in seconds
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    },
+    max_occurrences: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 1,
+      },
+    },
     interval: {
       // In seconds
       type: Sequelize.INTEGER,
@@ -69,6 +85,13 @@ const RemindersDefinition: ModelDefinition = sequelize => {
     sequelize,
     tableName,
     freezeTableName: true,
+    validate: {
+      isEndTimeLaterThanInitialTime() {
+        if (this.end_time != null && (this.end_time as number) < (this.time as number)) {
+          throw new Error('End time must be later than initial time');
+        }
+      },
+    },
   });
 };
 
