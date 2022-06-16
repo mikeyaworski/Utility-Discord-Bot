@@ -178,17 +178,17 @@ function getReminderEmbed(reminder: Reminder, options: {
       });
     }
     try {
-    const nextInvocation = getNextInvocation(reminder.id);
-    if (nextInvocation) {
-      const remainingTime = nextInvocation - Date.now();
-      if (remainingTime > 0) {
-        fields.push({
-          name: 'Next Run',
-          value: humanizeDuration(remainingTime),
-          inline: true,
-        });
+      const nextInvocation = getNextInvocation(reminder.id);
+      if (nextInvocation) {
+        const remainingTime = nextInvocation - Date.now();
+        if (remainingTime > 0) {
+          fields.push({
+            name: 'Next Run',
+            value: humanizeDuration(remainingTime),
+            inline: true,
+          });
+        }
       }
-    }
     } catch (err) {
       // An error can sometimes get thrown depending on race conditions with CronJob times in the past
       error(err);
@@ -213,7 +213,7 @@ function getReminderEmbed(reminder: Reminder, options: {
 function parseTimesArg(timesArg: string | null, timeZone: string | null): number[] {
   if (!timesArg) return [];
   const tzOffset = getTimezoneOffsetFromFilter(timeZone || '') ?? getTimezoneOffsetFromFilter('America/Toronto');
-  const times = filterOutFalsy(timesArg.split(/,\s+/).map(timeArg => {
+  const times = filterOutFalsy(timesArg.split(/,\s*/).map(timeArg => {
     let date = parseDate(timeArg, {
       timezone: tzOffset ?? undefined,
     });
