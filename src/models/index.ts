@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { Sequelize, Options } from 'sequelize';
+import { IntentionalAny } from 'src/types';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ fs
     return require(path.join(__dirname, file)).default(sequelize);
   });
 
-export function syncModels(): void {
-  sequelize.sync();
+export function syncModels(): Promise<IntentionalAny> {
+  // TODO: Add proper migrations instead of allowing the tables to be altered
+  return sequelize.sync({ alter: true });
 }
