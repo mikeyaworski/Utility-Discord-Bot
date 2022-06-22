@@ -133,9 +133,12 @@ function getTurnInfo(interaction: AnyInteraction, game: ChessGames) {
   const chess = new Chess();
   chess.load_pgn(game.pgn);
   const currentTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
+  chess.undo();
+  const lastTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
   return {
     currentTurnUser,
     isYourTurn: currentTurnUser === interaction.user.id,
+    madeLastMove: lastTurnUser === interaction.user.id,
   };
 }
 
@@ -630,10 +633,10 @@ async function handleUndo(interaction: AnyInteraction) {
     noGamesMessage: 'You are not playing any games.',
     cb: async game => {
       // TODO: Have this propose a takeback where the other person has to accept
-      const { isYourTurn } = getTurnInfo(interaction, game);
-      if (isYourTurn) {
+      const { madeLastMove } = getTurnInfo(interaction, game);
+      if (!madeLastMove) {
         await interaction.followUp({
-          content: 'You cannot take back your move when it is not your turn.',
+          content: 'You cannot take back a move unless you made the last move.',
           ephemeral: true,
         });
         return;
