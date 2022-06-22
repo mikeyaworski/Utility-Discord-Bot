@@ -104,13 +104,13 @@ export function setReminder(reminder: Reminder): void {
             unrefTimeout: true,
             onTick: () => {
               handleReminder(reminder, false);
-              // This arbitrary 1 second delay helps avoid the CronJob immediately invoking another
+              // This arbitrary 2 second delay helps avoid the CronJob immediately invoking another
               // CronJob for the same invocation time. This is a race condition between the CronJob
-              // finishing and getNextInvocationDate returning a different date.'
-              // If a full second has passed, then getNextInvocationDate should no longer return the exact same date.
-              // And since 1 second is far less than our minimum interval length, the only
-              // con with this delay is that the reminders list command will (for 1 second) not have access to the next invocation.
-              setTimeout(interval, 1000);
+              // finishing and getNextInvocationDate returning a different date.
+              // If a full two seconds have passed, then getNextInvocationDate should no longer return the exact same date.
+              // And since 2 seconds is far less than our minimum interval length, the only
+              // con with this delay is that the reminders list command will (for 2 seconds) not have access to the next invocation.
+              setTimeout(interval, 2000);
             },
           });
         }
