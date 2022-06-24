@@ -45,6 +45,12 @@ async function handleReminder(reminder: Reminder, destroy: boolean) {
  * or null if it should be executed immediately.
  */
 function getNextInvocationDate(time: number, interval: number | null): Date | null {
+  // Add a 1 second buffer so we don't schedule something in the past for edge cases.
+  // The CronJob has problems where create a job at precisely the same time it's scheduled for,
+  // then the job will break and never fire.
+  // This 1 second buffer is tolerable since reminders cannot be scheduled more frequently than this.
+  const buffer = 1000;
+
   const timeDiff = time * 1000 - Date.now();
   // Time is in the past and there is no interval, so execute immediately
   if (timeDiff < 0 && !interval) {
@@ -54,11 +60,11 @@ function getNextInvocationDate(time: number, interval: number | null): Date | nu
   if (timeDiff < 0 && interval) {
     const numIntervals = Math.ceil(Math.abs(timeDiff / interval / 1000));
     return new Date(
-      time * 1000 + numIntervals * interval * 1000,
+      time * 1000 + numIntervals * interval * 1000 + buffer,
     );
   }
   // Initial time is in the future, so return that date
-  return new Date(time * 1000);
+  return new Date(time * 1000 + buffer);
 }
 
 function hasReminderExpired(reminder: Reminder): boolean {
@@ -89,7 +95,6 @@ export function setReminder(reminder: Reminder): void {
     return;
   }
 
-  const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
   async function handleFirst() {
     handleReminder(reminder, !reminder.interval);
     if (reminder.interval) {
@@ -104,13 +109,7 @@ export function setReminder(reminder: Reminder): void {
             unrefTimeout: true,
             onTick: () => {
               handleReminder(reminder, false);
-              // This arbitrary 2 second delay helps avoid the CronJob immediately invoking another
-              // CronJob for the same invocation time. This is a race condition between the CronJob
-              // finishing and getNextInvocationDate returning a different date.
-              // If a full two seconds have passed, then getNextInvocationDate should no longer return the exact same date.
-              // And since 2 seconds is far less than our minimum interval length, the only
-              // con with this delay is that the reminders list command will (for 2 seconds) not have access to the next invocation.
-              setTimeout(interval, 2000);
+              interval();
             },
           });
         }
@@ -118,6 +117,7 @@ export function setReminder(reminder: Reminder): void {
     }
   }
 
+  const nextInvocationDate = getNextInvocationDate(reminder.time, reminder.interval);
   if (nextInvocationDate == null) {
     handleFirst();
   } else {
