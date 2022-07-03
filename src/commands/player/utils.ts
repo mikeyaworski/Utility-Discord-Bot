@@ -6,7 +6,7 @@ import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
 import { getErrorMsg } from 'src/discord-utils';
 import Session from './session';
-import { VideoDetails } from './track';
+import Track, { VideoDetails } from './track';
 
 export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
   const firstRow = new Discord.MessageActionRow<Discord.MessageButton>({
@@ -267,7 +267,24 @@ export async function getTrackDurationString(
 ): Promise<string | null> {
   const currentTrack = session.getCurrentTrack();
   if (!currentTrack) return null;
-  const videoDetails = await currentTrack.getVideoDetails();
-  const playedDuration = session.getCurrentTrackPlayTime();
-  return getFractionalDuration(playedDuration, videoDetails);
+  try {
+    const videoDetails = await currentTrack.getVideoDetails();
+    const playedDuration = session.getCurrentTrackPlayTime();
+    return getFractionalDuration(playedDuration, videoDetails);
+  } catch (err) {
+    error(err);
+    return null;
+  }
+}
+
+export async function getVideoDetailsWithFallback(track: Track): Promise<VideoDetails> {
+  try {
+    const videoDetails = await track.getVideoDetails();
+    return videoDetails;
+  } catch (err) {
+    error(err);
+    return {
+      title: 'Unknown Title',
+    };
+  }
 }

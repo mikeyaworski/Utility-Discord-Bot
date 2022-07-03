@@ -7,7 +7,7 @@ import { CONCURRENCY_LIMIT } from 'src/constants';
 import { getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
-import { replyWithSessionButtons, attachPlayerButtons, getTrackDurationString } from './utils';
+import { replyWithSessionButtons, attachPlayerButtons, getTrackDurationString, getVideoDetailsWithFallback } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -92,7 +92,7 @@ async function handleList(interaction: AnyInteraction, session: Session): Promis
         .slice(0, 10)
         .map((track, idx) => limit(async () => {
           try {
-            const details = await track.getVideoDetails();
+            const details = await getVideoDetailsWithFallback(track);
             return {
               title: details.title,
               position: idx + 1,
@@ -101,7 +101,7 @@ async function handleList(interaction: AnyInteraction, session: Session): Promis
             return null;
           }
         })))).filter(Boolean) as Next10;
-      const nowPlayingTitle = (await currentTrack.getVideoDetails()).title;
+      const nowPlayingTitle = (await getVideoDetailsWithFallback(currentTrack)).title;
       const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
 
       const fields: EmbedFieldData[] = [
