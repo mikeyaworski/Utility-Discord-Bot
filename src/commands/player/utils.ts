@@ -31,22 +31,22 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
         ? new Discord.MessageButton({
           customId: 'unloop',
           label: 'Unloop',
-          style: 'SUCCESS',
+          style: 'PRIMARY',
         })
         : new Discord.MessageButton({
           customId: 'loop',
           label: 'Loop',
-          style: 'SUCCESS',
+          style: 'PRIMARY',
         }),
       new Discord.MessageButton({
         customId: 'shuffle',
         label: 'Shuffle',
-        style: 'SUCCESS',
+        style: 'PRIMARY',
       }),
       new Discord.MessageButton({
         customId: 'clear',
         label: 'Clear',
-        style: 'SUCCESS',
+        style: 'DANGER',
       }),
     ],
   });
@@ -55,17 +55,17 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
       new Discord.MessageButton({
         customId: 'refresh',
         label: 'Refresh',
-        style: 'SUCCESS',
+        style: 'SECONDARY',
       }),
       new Discord.MessageButton({
         customId: 'rewind',
-        label: `Rewind ${REWIND_BUTTON_TIME / 1000} seconds`,
-        style: 'SUCCESS',
+        label: `⏪ ${REWIND_BUTTON_TIME / 1000}s`,
+        style: 'SECONDARY',
       }),
       new Discord.MessageButton({
         customId: 'fast-forward',
-        label: `Fast forward ${FAST_FORWARD_BUTTON_TIME / 1000} seconds`,
-        style: 'SUCCESS',
+        label: `⏩ ${FAST_FORWARD_BUTTON_TIME / 1000}s`,
+        style: 'SECONDARY',
       }),
     ],
   });
