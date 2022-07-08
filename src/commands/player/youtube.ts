@@ -24,13 +24,10 @@ export const getTracksFromQueries = (() => {
     const limit = pLimit(CONCURRENCY_LIMIT);
     const newQueryTracks = await Promise.all(newQueries.map(query => limit(async () => {
       try {
-        const youtubeResults = await YouTubeSr.search(query, {
-          type: 'video',
-          limit: 1,
-        });
-        const youtubeLink = `https://youtube.com/watch?v=${youtubeResults[0].id}`;
-        const youtubeTitle = youtubeResults[0].title;
-        const youtubeDuration = youtubeResults[0].duration;
+        const res = await YouTubeSr.searchOne(query, 'video');
+        const youtubeLink = `https://youtube.com/watch?v=${res.id}`;
+        const youtubeTitle = res.title;
+        const youtubeDuration = res.duration;
         queryCache.set(query, youtubeLink);
         const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE_VOD, youtubeTitle ? {
           title: youtubeTitle,
