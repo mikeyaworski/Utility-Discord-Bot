@@ -79,7 +79,7 @@
     "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
     "youtube-dl-exec": "^2.0.2",
-    "youtube-sr": "^4.1.11",
+    "youtube-sr": "^4.1.17",
     "ytdl-core": "^4.11.0"
   },
   "devDependencies": {
