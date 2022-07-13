@@ -68,7 +68,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleList(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
+export async function handleList(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
   await replyWithSessionButtons({
     interaction,
     session,

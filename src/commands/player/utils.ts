@@ -7,8 +7,14 @@ import { filterOutFalsy, getClockString } from 'src/utils';
 import { getErrorMsg } from 'src/discord-utils';
 import Session from './session';
 import Track, { VideoDetails } from './track';
+import { handleList } from './queue';
 
-export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
+export function getPlayerButtons(session: Session, interaction: AnyInteraction): Discord.MessageActionRow[] {
+  const commandName = interaction.isCommand()
+    ? `${interaction.commandName} ${interaction.options.getSubcommand(false)}`
+    : interaction.isContextMenu()
+      ? interaction.commandName
+      : null;
   const firstRow = new Discord.MessageActionRow<Discord.MessageButton>({
     components: [
       session.isPaused()
@@ -51,7 +57,7 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
     ],
   });
   const secondRow = new Discord.MessageActionRow<Discord.MessageButton>({
-    components: [
+    components: filterOutFalsy([
       new Discord.MessageButton({
         customId: 'refresh',
         label: 'Refresh',
@@ -67,7 +73,12 @@ export function getPlayerButtons(session: Session): Discord.MessageActionRow[] {
         label: `⏩ ${FAST_FORWARD_BUTTON_TIME / 1000}s`,
         style: 'SECONDARY',
       }),
-    ],
+      commandName !== 'queue list' && new Discord.MessageButton({
+        customId: 'show-queue',
+        label: 'Show Queue',
+        style: 'SECONDARY',
+      }),
+    ]),
   });
 
   return [firstRow, secondRow];
@@ -82,7 +93,7 @@ export async function listenForPlayerButtons(
     const msg = await interaction.fetchReply();
     const collector = interaction.channel?.createMessageComponentCollector({
       filter: i => i.message.id === msg.id,
-      time: INTERACTION_MAX_TIMEOUT,
+      time: interaction.createdTimestamp + INTERACTION_MAX_TIMEOUT - Date.now(),
     });
     collector?.on('collect', async i => {
       i.deferUpdate().catch(() => {
@@ -156,16 +167,23 @@ export async function listenForPlayerButtons(
           }
           break;
         }
+        case 'show-queue': {
+          await handleList(interaction, session);
+          collector.stop('show-queue');
+          break;
+        }
         default: {
           break;
         }
       }
     });
-    collector?.on('end', () => {
+    collector?.on('end', (collected, reason) => {
       log('Ended collection of message components.');
-      interaction.editReply({
-        components: [],
-      });
+      if (reason !== 'show-queue') {
+        interaction.editReply({
+          components: [],
+        });
+      }
     });
   } catch (err) {
     log('Entered catch block for player buttons collector.');
@@ -181,7 +199,7 @@ export function attachPlayerButtons(
 ): void {
   // eventuallyRemoveComponents(interaction);
   async function populateButtons() {
-    const rows = getPlayerButtons(session);
+    const rows = getPlayerButtons(session, interaction);
     await interaction.editReply({
       components: rows,
     });
@@ -239,7 +257,7 @@ export async function replyWithSessionButtons({
       fields,
     })] : [];
     const content = title ? undefined : message;
-    const components = hideButtons ? [] : getPlayerButtons(session);
+    const components = hideButtons ? [] : getPlayerButtons(session, interaction);
     await interaction.editReply({
       embeds,
       components,

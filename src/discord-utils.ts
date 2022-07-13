@@ -28,7 +28,7 @@ import {
   DIGITS_REGEX,
   CHANNEL_ARG_REGEX,
   INTERACTION_MAX_TIMEOUT,
-  ONE_MINUTE,
+  ONE_MINUTE_MS,
   ROLE_ARG_REGEX,
   USER_ARG_REGEX,
   USER_DISCRIMINATOR_REGEX,
@@ -82,7 +82,7 @@ export function eventuallyRemoveComponents(interaction: CommandInteraction): voi
       // Intentionally empty
     });
   // Subtract one minute to beat the timeout
-  }, INTERACTION_MAX_TIMEOUT - ONE_MINUTE);
+  }, INTERACTION_MAX_TIMEOUT - ONE_MINUTE_MS);
 }
 
 export async function findMessageInGuild(
