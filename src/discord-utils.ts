@@ -27,8 +27,6 @@ import {
   MAX_MESSAGES_FETCH,
   DIGITS_REGEX,
   CHANNEL_ARG_REGEX,
-  INTERACTION_MAX_TIMEOUT,
-  ONE_MINUTE_MS,
   ROLE_ARG_REGEX,
   USER_ARG_REGEX,
   USER_DISCRIMINATOR_REGEX,
@@ -70,19 +68,6 @@ export async function handleError(
   }
   const msg = getErrorMsg(err);
   return sendResponse(msg).catch(error);
-}
-
-export function eventuallyRemoveComponents(interaction: CommandInteraction): void {
-  // Unfortunately, we can't catch this error. If message components exist 15 minutes after the interaction
-  // has been created, interacting with any of the components will crash the app.
-  setTimeout(() => {
-    interaction.editReply({
-      components: [],
-    }).catch(() => {
-      // Intentionally empty
-    });
-  // Subtract one minute to beat the timeout
-  }, INTERACTION_MAX_TIMEOUT - ONE_MINUTE_MS);
 }
 
 export async function findMessageInGuild(

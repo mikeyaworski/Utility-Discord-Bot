@@ -197,7 +197,6 @@ export function attachPlayerButtons(
   interaction: AnyInteraction,
   session: Session,
 ): void {
-  // eventuallyRemoveComponents(interaction);
   async function populateButtons() {
     const rows = getPlayerButtons(session, interaction);
     await interaction.editReply({
