@@ -12,6 +12,9 @@ import type {
   ModalSubmitInteraction,
   PermissionString,
   ContextMenuInteraction,
+  MessageComponentInteraction,
+  CacheType,
+  GuildCacheMessage,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
@@ -63,7 +66,13 @@ export interface Command {
   clientPermissions?: PermissionString | PermissionString[],
 }
 
-export type AnyInteraction = CommandInteraction | ContextMenuInteraction | ModalSubmitInteraction;
+export type AnyInteraction = CommandInteraction
+| ContextMenuInteraction
+| ModalSubmitInteraction
+| ButtonInteraction
+| MessageComponentInteraction<CacheType>;
+
+export type ApiMessage = GuildCacheMessage<CacheType>;
 
 export type CommandOrModalRunMethod = (interaction: CommandInteraction | ModalSubmitInteraction) => Promise<IntentionalAny>;
 export type CommandRunMethod = Command['runCommand'];
