@@ -458,7 +458,7 @@ async function handleChallenge(interaction: AnyInteraction) {
     fields: [
       {
         name: 'Accept',
-        value: 'Click a button within 15 mins, or use `/chess accept` to accept the challenge if 15 mins have passed.',
+        value: 'Click a button, or use `/chess accept` to accept the challenge.',
         inline: false,
       },
       {
@@ -493,7 +493,6 @@ async function handleChallenge(interaction: AnyInteraction) {
   try {
     const buttonInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.id === challengeMsg.id && i.user.id === targetId,
-      time: INTERACTION_MAX_TIMEOUT,
     }).catch(() => {
       // Intentionally empty catch
     });
