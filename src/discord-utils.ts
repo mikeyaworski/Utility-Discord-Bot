@@ -55,7 +55,7 @@ export function getErrorMsg(err: unknown): string {
  */
 export async function handleError(
   err: unknown,
-  interaction: CommandInteraction | ButtonInteraction | ContextMenuInteraction | ModalSubmitInteraction,
+  interaction: AnyInteraction,
 ): Promise<IntentionalAny> {
   // Modal interactions are really broken, so we need to defer and then edit the reply. Replying immediately doesn't work.
   async function sendResponse(msg: string) {
