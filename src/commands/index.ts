@@ -27,6 +27,7 @@ import NowPlaying from './player/now-playing';
 import Queue from './player/queue';
 import Shuffle from './player/shuffle';
 import Loop from './player/loop';
+import PlayerUpdates from './player/player-updates';
 
 const commands = [
   // Utilities
@@ -52,6 +53,7 @@ const commands = [
   Leave,
   Shuffle,
   Loop,
+  PlayerUpdates,
 
   // Chess
   Chess,
