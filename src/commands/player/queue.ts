@@ -76,7 +76,7 @@ export async function handleList(interaction: AnyInteraction, session: Session):
       const currentTrack = s.getCurrentTrack();
       if (!currentTrack) {
         return {
-          message: 'Nothing is playing',
+          description: 'Nothing is playing',
           hideButtons: true,
         };
       }
@@ -153,7 +153,7 @@ async function handleLoop(interaction: AnyInteraction, session: Session): Promis
     session: sessions.get(interaction.guild!),
     run: async s => {
       return {
-        message: `Queue loop: ${s.isLooped() ? 'ON' : 'OFF'}.`,
+        description: `Queue loop: ${s.isLooped() ? 'ON' : 'OFF'}.`,
       };
     },
   });

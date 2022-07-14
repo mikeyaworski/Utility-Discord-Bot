@@ -11,10 +11,14 @@ import type { Guild } from 'discord.js';
 
 import { promisify } from 'util';
 
+import { PlayerUpdates } from 'src/models/player-updates';
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
+import { getChannel } from 'src/discord-utils';
 import sessions from './sessions';
 import Track from './track';
+import { getMessageData, listenForPlayerButtons } from './utils';
+import { runNowPlaying } from './now-playing';
 
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
@@ -294,12 +298,42 @@ export default class Session {
       const resource = await this.currentTrack.getAudioResource();
       this.audioPlayer.play(resource);
       log('Playing new track', this.currentTrack.link, this.currentTrack.variant);
+
       this.currentTrackPlayTime = {
         started: Date.now(),
         pauseStarted: null,
         totalPauseTime: 0,
         seeked: null,
       };
+
+      // TODO: Extract this to a helper function
+      // Also consider baking this into replyWithSessionButtons, but adding an option
+      // to specify that we do not want to update the embeded data when buttons are interacted with
+      const playerUpdateSetting = await PlayerUpdates.findByPk(this.guild.id);
+      if (playerUpdateSetting) {
+        const channel = await getChannel(playerUpdateSetting.channel_id);
+        if (channel && channel.isText()) {
+          const nowPlayingData = await runNowPlaying(this);
+          const messageData = await getMessageData({
+            session: this,
+            run: () => Promise.resolve(nowPlayingData),
+          });
+          const message = await channel.send(messageData).catch(error);
+          if (message) {
+            listenForPlayerButtons({
+              session: this,
+              message,
+              cb: async () => {
+                const newMessageData = await getMessageData({
+                  session: this,
+                  run: () => Promise.resolve(nowPlayingData),
+                });
+                await message.edit(newMessageData);
+              },
+            });
+          }
+        }
+      }
     } catch (err) {
       error(err);
       log('Could not play track', this.currentTrack.link, this.currentTrack.variant);
