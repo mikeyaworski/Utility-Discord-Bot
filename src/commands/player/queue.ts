@@ -77,7 +77,7 @@ export async function handleList(interaction: AnyInteraction, session: Session):
       if (!currentTrack) {
         return {
           message: 'Nothing is playing',
-          showButtons: false,
+          hideButtons: true,
         };
       }
       const combinedQueue = s.isLooped() ? s.queue.concat(s.queueLoop) : s.queue;
