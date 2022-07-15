@@ -147,6 +147,9 @@ async function handleList(interaction: AnyInteraction) {
       guild_id: guildId,
     },
   });
+  if (!favorites.length) {
+    return interaction.editReply('There are no favorites.');
+  }
   const embeds = favorites.map(favorite => getFavoriteEmbed(favorite));
   return replyWithEmbeds({
     interaction,
