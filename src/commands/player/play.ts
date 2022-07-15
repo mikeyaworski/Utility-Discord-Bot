@@ -20,6 +20,7 @@ import {
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getFractionalDuration } from './utils';
+import { getFavorite } from './player-favorites';
 
 function respondWithEmbed(interaction: AnyInteraction, content: MessageEmbedOptions) {
   return interaction.editReply({
@@ -107,6 +108,7 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
 
 interface PlayInputs {
   vodLink: string | null,
+  favoriteId: string | null,
   streamLink: string | null,
   queryStr: string | null,
   pushToFront?: boolean,
@@ -116,6 +118,7 @@ interface PlayInputs {
 async function play({
   interaction,
   inputs: {
+    favoriteId,
     vodLink,
     streamLink,
     queryStr,
@@ -126,10 +129,16 @@ async function play({
   interaction: CommandInteraction | ModalSubmitInteraction,
   inputs: PlayInputs,
 }) {
-  const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
-
   // Assert guild since this is a guild-only command
   const guild = interaction.guild!;
+
+  if (favoriteId) {
+    const favorite = await getFavorite(favoriteId, guild.id);
+    if (favorite) {
+      vodLink = favorite.value;
+    }
+  }
+  const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
 
   const { user } = interaction;
   if (!user) {
@@ -148,7 +157,7 @@ async function play({
   if (session) session.resume();
 
   if (numArgs === 0 && !session) {
-    return interaction.editReply('You must provide at least one argument.');
+    return interaction.editReply('You must provide at least one argument. If you provided a favorite, then the favorite could not be found.');
   }
 
   if (!session) session = sessions.create(channel);
@@ -237,7 +246,8 @@ const commandBuilder = new SlashCommandBuilder()
   .setDescription('Plays audio into a voice channel.')
   .addStringOption(option => option.setName('link').setDescription('YouTube, Spotify, Twitch. No livestreams.').setRequired(false))
   .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube.').setRequired(false))
-  .addStringOption(option => option.setName('stream').setDescription('YouTube livestream. Twitch is not currently supported.').setRequired(false))
+  .addStringOption(option => option.setName('favorite').setDescription('Favorite ID.').setRequired(false))
+  // .addStringOption(option => option.setName('stream').setDescription('YouTube livestream. Twitch is not currently supported.').setRequired(false))
   .addBooleanOption(option => option.setName('front').setDescription('Push song (one) to the front of the queue.').setRequired(false))
   .addBooleanOption(option => option.setName('shuffle').setDescription('Shuffle the queue.').setRequired(false));
 
@@ -248,10 +258,12 @@ const PlayCommand: Command = {
 
   modalLabels: {
     stream: 'YouTube livestream. (Not Twitch).',
+    favorite: 'Favorite ID.',
   },
   modalPlaceholders: {
     link: 'https://...',
     query: 'A song',
+    favorite: '123 or my-custom-id',
     stream: 'https://...',
     front: 'yes/no',
     shuffle: 'yes/no',
@@ -267,7 +279,8 @@ const PlayCommand: Command = {
       interaction,
       inputs: {
         vodLink: inputs.link,
-        streamLink: inputs.stream,
+        favoriteId: inputs.favorite,
+        streamLink: null, // inputs.stream,
         queryStr: inputs.query,
         pushToFront: inputs.front,
         shuffle: inputs.shuffle,
@@ -278,7 +291,8 @@ const PlayCommand: Command = {
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
     const vodLink = interaction.options.getString('link');
-    const streamLink = interaction.options.getString('stream');
+    const favoriteId = interaction.options.getString('favorite');
+    // const streamLink = interaction.options.getString('stream');
     const queryStr = interaction.options.getString('query');
     const pushToFront = interaction.options.getBoolean('front') ?? false;
     const shuffle = interaction.options.getBoolean('shuffle') ?? false;
@@ -287,7 +301,8 @@ const PlayCommand: Command = {
       interaction,
       inputs: {
         vodLink,
-        streamLink,
+        favoriteId,
+        streamLink: null,
         queryStr,
         pushToFront,
         shuffle,

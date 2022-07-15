@@ -28,6 +28,7 @@ import Queue from './player/queue';
 import Shuffle from './player/shuffle';
 import Loop from './player/loop';
 import PlayerUpdates from './player/player-updates';
+import PlayerFavorites from './player/player-favorites';
 
 const commands = [
   // Utilities
@@ -54,6 +55,7 @@ const commands = [
   Shuffle,
   Loop,
   PlayerUpdates,
+  PlayerFavorites,
 
   // Chess
   Chess,
