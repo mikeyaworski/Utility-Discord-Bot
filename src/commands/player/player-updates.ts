@@ -8,7 +8,7 @@ import { PlayerUpdates } from 'src/models/player-updates';
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
   .setName('player-updates')
-  .setDescription('Decide where to send player update messages.');
+  .setDescription('Send player update messages publicly to a channel.');
 commandBuilder.addSubcommand(subcommand => {
   subcommand.setName('clear');
   subcommand.setDescription('Clear this preference (do not send update messages).');
