@@ -119,16 +119,16 @@ commandBuilder.addSubcommand(subcommand => {
 commandBuilder.addSubcommand(subcommand => {
   subcommand.setName('list')
     .setDescription('List upcoming reminders.')
-    .addChannelOption(option => {
-      return option
-        .setName('channel')
-        .setDescription('The channel to list reminders for.')
-        .setRequired(false);
-    })
     .addStringOption(option => {
       return option
         .setName('filter')
         .setDescription('Filter results by message content.')
+        .setRequired(false);
+    })
+    .addChannelOption(option => {
+      return option
+        .setName('channel')
+        .setDescription('The channel to list reminders for.')
         .setRequired(false);
     });
   return subcommand;
