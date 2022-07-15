@@ -136,7 +136,7 @@ commandBuilder.addSubcommand(subcommand => {
 
 function getReminderEmbed(reminder: Reminder, options: {
   showChannel?: boolean,
-} = {}) {
+} = {}): MessageEmbed {
   const { showChannel = true } = options;
   const isTimer = !reminder.message;
   const fields: MessageEmbedOptions['fields'] = [];
