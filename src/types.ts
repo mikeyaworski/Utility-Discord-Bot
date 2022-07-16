@@ -18,6 +18,7 @@ import type {
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
+import { editLatest } from './discord-utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
@@ -73,6 +74,7 @@ export type AnyInteraction = CommandInteraction
 | MessageComponentInteraction<CacheType>;
 
 export type ApiMessage = GuildCacheMessage<CacheType>;
+export type MessageResponse = Message | ApiMessage;
 
 export type CommandOrModalRunMethod = (interaction: CommandInteraction | ModalSubmitInteraction) => Promise<IntentionalAny>;
 export type CommandRunMethod = Command['runCommand'];
@@ -123,3 +125,5 @@ export type EventTrigger = [
 ];
 
 export type ModelDefinition = (sequelize: Sequelize) => void;
+
+export type EditReply = (data: Parameters<typeof editLatest>[0]['data']) => ReturnType<typeof editLatest>;

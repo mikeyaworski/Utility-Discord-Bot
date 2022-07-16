@@ -1,4 +1,4 @@
-import type {
+import {
   AnyChannel,
   Message,
   User,
@@ -9,16 +9,19 @@ import type {
   CommandInteraction,
   TextBasedChannel,
   GuildChannel,
-  ButtonInteraction,
-  ContextMenuInteraction,
   MessageEmbed,
   InteractionReplyOptions,
   ModalSubmitInteraction,
   CommandInteractionOption,
   Channel,
   GuildMember,
+  MessageSelectMenu,
+  MessageActionRow,
+  MessageSelectOptionData,
+  MessagePayload,
+  WebhookEditMessageOptions,
 } from 'discord.js';
-import type { IntentionalAny, Command, AnyInteraction, AnyMapping } from 'src/types';
+import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
@@ -30,6 +33,7 @@ import {
   ROLE_ARG_REGEX,
   USER_ARG_REGEX,
   USER_DISCRIMINATOR_REGEX,
+  INTERACTION_MAX_TIMEOUT,
 } from 'src/constants';
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
@@ -473,6 +477,76 @@ export async function replyWithEmbeds({
   }
 }
 
+export async function replyWithSelect({
+  interaction,
+  options,
+  placeholder,
+  label,
+  isFollowUp,
+  onSelect,
+  workingMsg,
+}: {
+  interaction: AnyInteraction,
+  options: MessageSelectOptionData[],
+  placeholder?: string,
+  label?: string,
+  isFollowUp?: boolean,
+  onSelect: (value: string, message: MessageResponse) => Promise<void | WebhookEditMessageOptions>,
+  workingMsg?: string,
+}): Promise<void> {
+  const menu = new MessageSelectMenu({
+    customId: 'select',
+    placeholder,
+    options: options.slice(0, 25),
+  });
+  const row = new MessageActionRow({
+    components: [menu],
+  });
+
+  const selectMsg = isFollowUp
+    ? await interaction.followUp({
+      ephemeral: true,
+      content: label,
+      components: [row],
+    })
+    : await interaction.editReply({
+      content: label,
+      components: [row],
+    });
+
+  try {
+    const selectInteraction = await interaction.channel?.awaitMessageComponent({
+      filter: i => i.message.id === selectMsg.id && i.user.id === interaction.user.id,
+      time: INTERACTION_MAX_TIMEOUT,
+    }).catch(() => {
+      // Intentionally empty catch
+    });
+    if (selectInteraction?.isSelectMenu()) {
+      await selectInteraction.deferUpdate().catch(() => {
+        log('Could not defer update for interaction', selectInteraction.customId);
+      });
+      if (workingMsg) {
+        await interaction.webhook.editMessage(selectMsg.id, {
+          content: workingMsg,
+          components: [],
+        });
+      }
+      const result = await onSelect(selectInteraction.values[0], selectMsg);
+      if (result) {
+        await interaction.webhook.editMessage(selectMsg.id, result);
+      }
+    } else {
+      // If we get here, then the interaction button was not clicked.
+      await interaction.webhook.editMessage(selectMsg.id, {
+        content: 'Favorites selection timed out.',
+        components: [],
+      });
+    }
+  } catch (err) {
+    await interaction.webhook.editMessage(selectMsg.id, `Error: ${get(err, 'message', 'Something went wrong.')}`);
+  }
+}
+
 export function getCommandInfoFromInteraction(interaction: ModalSubmitInteraction): {
   commandName: string,
   subcommand: string | null,
@@ -729,4 +803,17 @@ export function getSubcommand(interaction: CommandInteraction | ModalSubmitInter
     subcommand = interaction.options.getSubcommand();
   }
   return subcommand;
+}
+
+export function editLatest({
+  interaction,
+  messageId,
+  data,
+}: {
+  interaction: AnyInteraction,
+  messageId?: string,
+  data: string | MessagePayload | WebhookEditMessageOptions,
+}): ReturnType<AnyInteraction['editReply']> {
+  if (messageId) return interaction.webhook.editMessage(messageId, data);
+  return interaction.editReply(data);
 }
