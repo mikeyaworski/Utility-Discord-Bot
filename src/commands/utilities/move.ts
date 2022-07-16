@@ -16,7 +16,7 @@ import get from 'lodash.get';
 import {
   findMessageInGuild,
   getMessagesInRange,
-  usersHavePermission,
+  usersHaveChannelPermission,
   getInfoFromCommandInteraction,
   getChannel,
   parseInput,
@@ -122,12 +122,12 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
 
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHavePermission(toChannel, authorAndBot, ['SEND_MESSAGES', 'VIEW_CHANNEL'])) {
+  if (!usersHaveChannelPermission({ channel: toChannel, users: authorAndBot, permissions: ['SEND_MESSAGES', 'VIEW_CHANNEL'] })) {
     await interaction.editReply(`One of us not have access to send messages in <#${toChannel.id}>`);
     return null;
   }
 
-  if (!usersHavePermission(fromChannel, authorAndBot, ['MANAGE_MESSAGES', 'VIEW_CHANNEL'])) {
+  if (!usersHaveChannelPermission({ channel: fromChannel, users: authorAndBot, permissions: ['MANAGE_MESSAGES', 'VIEW_CHANNEL'] })) {
     await interaction.editReply(`One of us not have access to delete messages in <#${fromChannel.id}>`);
     return null;
   }
@@ -202,7 +202,7 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   const textChannelsWithPermission = allChannels
     .filter(channel => channel.isText())
     .filter(channel => {
-      return usersHavePermission(channel, authorAndBot, ['VIEW_CHANNEL', 'SEND_MESSAGES'])
+      return usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['VIEW_CHANNEL', 'SEND_MESSAGES'] })
         && channel.id !== ogChannel.id;
     });
 

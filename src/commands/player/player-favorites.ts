@@ -1,7 +1,7 @@
 import type { AnyInteraction, Command, CommandOrModalRunMethod } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { getSubcommand, parseInput, replyWithEmbeds } from 'src/discord-utils';
+import { getSubcommand, interactionHasServerPermission, parseInput, replyWithEmbeds } from 'src/discord-utils';
 import { FavoriteVariant, PlayerFavorites } from 'src/models/player-favorites';
 import { MessageEmbed, MessageEmbedOptions, PermissionString } from 'discord.js';
 import { filterOutFalsy } from 'src/utils';
@@ -180,11 +180,11 @@ async function handleRemove(interaction: AnyInteraction) {
     return interaction.editReply(`Could not find favorite with ID "${favoriteId}"`);
   }
 
-  const expectedPermissions: PermissionString[] = ['MANAGE_MESSAGES'];
-  const actualPermissions = interaction.member?.permissions;
-  const authorizedToDelete = interaction.user.id === favorite.user_id || (
-    actualPermissions && typeof actualPermissions !== 'string' && actualPermissions.has(expectedPermissions)
-  );
+  const authorizedToDelete = interaction.user.id === favorite.user_id
+    || interactionHasServerPermission({
+      interaction,
+      permissions: ['MANAGE_MESSAGES'],
+    });
 
   if (!authorizedToDelete) {
     return interaction.editReply('You are not allowed to delete someone else\'s favorite!');

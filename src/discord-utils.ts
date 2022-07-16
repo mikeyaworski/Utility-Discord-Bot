@@ -209,14 +209,30 @@ export function getRoleMentions(msg: string, guild: Guild): Role[] {
     .filter(role => Boolean(role)) as Role[];
 }
 
-export function usersHavePermission(
+export function usersHaveChannelPermission({
+  channel,
+  users,
+  permissions,
+}: {
   channel: TextBasedChannel | GuildChannel,
-  userOrUsers: User | User[],
-  permission: PermissionString | PermissionString[],
-): boolean {
-  const users = array(userOrUsers);
+  users: User | User[],
+  permissions: PermissionString | PermissionString[],
+}): boolean {
+  users = array(users);
   if (!('permissionsFor' in channel)) return true;
-  return users.every(user => Boolean(channel.permissionsFor(user)?.has(permission)));
+  return users.every(user => Boolean(channel.permissionsFor(user)?.has(permissions)));
+}
+
+export function interactionHasServerPermission({
+  interaction,
+  permissions,
+}: {
+  interaction: AnyInteraction,
+  permissions: PermissionString | PermissionString[],
+}): boolean {
+  if (!interaction.member) return true;
+  const actualPerms = interaction.member.permissions;
+  return typeof actualPerms !== 'string' && actualPerms.has(permissions);
 }
 
 export function isCustomEmoji(arg: string): boolean {
@@ -405,7 +421,7 @@ export function checkMessageErrors(interaction: AnyInteraction, {
 }): void {
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (channel && !usersHavePermission(channel, authorAndBot, 'SEND_MESSAGES')) {
+  if (channel && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'SEND_MESSAGES' })) {
     throw new Error(`One of us does not have permission to send messages in <#${channel.id}>`);
   }
 
@@ -416,12 +432,12 @@ export function checkMessageErrors(interaction: AnyInteraction, {
   // when the bot (with permission) posts the reminder.
 
   if (message && channel && interaction.guild) {
-    if (checkMentionsEveryone(message) && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+    if (checkMentionsEveryone(message) && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MENTION_EVERYONE' })) {
       throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
     }
 
     const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
-    if (unmentionableRoleMention && !usersHavePermission(channel, authorAndBot, 'MENTION_EVERYONE')) {
+    if (unmentionableRoleMention && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MENTION_EVERYONE' })) {
       throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
     }
   }

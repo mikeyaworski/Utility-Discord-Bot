@@ -7,7 +7,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import {
   findMessageInGuild,
   getMessagesInRange,
-  usersHavePermission,
+  usersHaveChannelPermission,
   getInfoFromCommandInteraction,
   findMessageInChannel,
   parseInput,
@@ -90,7 +90,7 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   }
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHavePermission(channel, authorAndBot, ['MANAGE_MESSAGES'])) {
+  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['MANAGE_MESSAGES'] })) {
     await interaction.editReply(`One of us not have permission to delete messages in <#${channel.id}>`);
     return null;
   }

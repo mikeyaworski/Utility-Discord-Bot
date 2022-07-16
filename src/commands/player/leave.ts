@@ -1,8 +1,7 @@
-import type { CommandInteraction } from 'discord.js';
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { usersHavePermission } from 'src/discord-utils';
+import { usersHaveChannelPermission } from 'src/discord-utils';
 import { client } from 'src/client';
 import sessions from './sessions';
 
@@ -28,7 +27,12 @@ const LeaveCommand: Command = {
     const { channel: botConnectedChannel } = botVoiceState;
     const invokerConnectedChannel = invokerVoiceState?.channel;
 
-    if (invokerConnectedChannel !== botConnectedChannel && !usersHavePermission(botConnectedChannel, interaction.user, 'MOVE_MEMBERS')) {
+    if (invokerConnectedChannel !== botConnectedChannel
+      && !usersHaveChannelPermission({
+        channel: botConnectedChannel,
+        users: interaction.user,
+        permissions: 'MOVE_MEMBERS',
+      })) {
       await interaction.editReply('You do not have permission to disconnect this bot.');
       return;
     }

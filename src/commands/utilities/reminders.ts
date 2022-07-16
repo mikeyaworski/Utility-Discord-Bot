@@ -11,7 +11,7 @@ import { Op } from 'sequelize';
 import { client } from 'src/client';
 import { Reminders } from 'src/models/reminders';
 import {
-  usersHavePermission,
+  usersHaveChannelPermission,
   getChannel,
   checkMessageErrors,
   findOptionalChannel,
@@ -397,7 +397,7 @@ async function handleDelete(interaction: AnyInteraction) {
     if (
       !channel || !channel.isText()
       || reminder.owner_id === interaction.user.id
-      || usersHavePermission(channel, interaction.user, 'MANAGE_MESSAGES')
+      || usersHaveChannelPermission({ channel, users: interaction.user, permissions: 'MANAGE_MESSAGES' })
     ) {
       await removeReminder(reminder.id);
       res = `Reminder deleted: ${reminder.id}`;
@@ -421,7 +421,7 @@ async function handleList(interaction: AnyInteraction) {
 
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHavePermission(channel, authorAndBot, 'VIEW_CHANNEL')) {
+  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'VIEW_CHANNEL' })) {
     return interaction.editReply(`One of us does not have access to channel <#${channel.id}>!`);
   }
 
