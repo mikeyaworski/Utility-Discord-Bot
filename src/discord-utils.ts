@@ -1,4 +1,4 @@
-import {
+import type {
   AnyChannel,
   Message,
   User,
@@ -15,11 +15,13 @@ import {
   CommandInteractionOption,
   Channel,
   GuildMember,
-  MessageSelectMenu,
-  MessageActionRow,
   MessageSelectOptionData,
   MessagePayload,
   WebhookEditMessageOptions,
+} from 'discord.js';
+import {
+  MessageSelectMenu,
+  MessageActionRow,
 } from 'discord.js';
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse } from 'src/types';
 

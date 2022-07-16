@@ -14,6 +14,7 @@ jest.mock('src/client', () => ({
     },
   },
 }));
+jest.mock('discord.js', () => ({}));
 
 describe('discord-utils', () => {
   describe('isCustomEmoji', () => {
