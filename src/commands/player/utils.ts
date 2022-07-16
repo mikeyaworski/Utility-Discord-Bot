@@ -1,10 +1,9 @@
-import Discord, { EmbedFieldData, Message, TextBasedChannel, GuildCacheMessage, CacheType } from 'discord.js';
-import { AnyInteraction, ApiMessage, IntentionalAny } from 'src/types';
+import Discord, { EmbedFieldData, TextBasedChannel } from 'discord.js';
+import { AnyInteraction, IntentionalAny, MessageResponse } from 'src/types';
 import { Colors, FAST_FORWARD_BUTTON_TIME, INTERACTION_MAX_TIMEOUT, REWIND_BUTTON_TIME } from 'src/constants';
 import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
-import { getErrorMsg } from 'src/discord-utils';
-import { MessageType } from 'discord-api-types/v9';
+import { editLatest, getErrorMsg } from 'src/discord-utils';
 import Session from './session';
 import Track, { VideoDetails } from './track';
 import { handleList } from './queue';
@@ -92,12 +91,12 @@ type ListenForPlayerButtonsOptions = {
   session: Session,
   cb?: () => Promise<unknown>,
   interaction?: AnyInteraction,
-  message?: Message | ApiMessage,
+  message?: MessageResponse,
 } & ({
   interaction: AnyInteraction,
   message?: undefined,
 } | {
-  message: Message | ApiMessage,
+  message: MessageResponse,
   interaction?: AnyInteraction,
 });
 
@@ -240,16 +239,22 @@ export async function listenForPlayerButtons({
 export function attachPlayerButtons(
   interaction: AnyInteraction,
   session: Session,
+  message?: MessageResponse,
 ): void {
   async function populateButtons() {
     const rows = getPlayerButtons(session, interaction);
-    await interaction.editReply({
-      components: rows,
+    await editLatest({
+      interaction,
+      messageId: message?.id,
+      data: {
+        components: rows,
+      },
     });
   }
   populateButtons();
   listenForPlayerButtons({
     interaction,
+    message,
     session,
     cb: async () => {
       await populateButtons();
@@ -341,7 +346,7 @@ export async function replyWithSessionButtons({
     });
     return;
   }
-  let message: Message<boolean> | ApiMessage | undefined | null;
+  let message: MessageResponse | undefined | null;
   async function runAndReply() {
     if (!session) return;
     const { content, embeds, components } = await getMessageData({

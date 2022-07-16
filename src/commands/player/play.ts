@@ -1,13 +1,13 @@
-import type { AnyInteraction, Command, IntentionalAny } from 'src/types';
+import type { AnyInteraction, Command, EditReply, IntentionalAny, MessageResponse } from 'src/types';
 
 import throttle from 'lodash.throttle';
 import YouTubeSr from 'youtube-sr';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { CommandInteraction, MessageEmbed, MessageEmbedOptions, ModalSubmitInteraction } from 'discord.js';
+import { MessageEmbed, MessageEmbedOptions } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
 import { isTwitchVodLink, shuffleArray } from 'src/utils';
-import { parseInput } from 'src/discord-utils';
+import { editLatest, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
 import Session from './session';
@@ -22,8 +22,8 @@ import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getFractionalDuration } from './utils';
 import { getFavorite } from './player-favorites';
 
-function respondWithEmbed(interaction: AnyInteraction, content: MessageEmbedOptions) {
-  return interaction.editReply({
+function respondWithEmbed(editReply: EditReply, content: MessageEmbedOptions) {
+  return editReply({
     embeds: [new MessageEmbed({
       color: Colors.SUCCESS,
       ...content,
@@ -66,7 +66,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
   }
 }
 
-async function enqueueQueries(session: Session, queries: string[], interaction: AnyInteraction): Promise<IntentionalAny> {
+async function enqueueQueries(session: Session, queries: string[], editReply: EditReply): Promise<IntentionalAny> {
   if (session.isShuffled()) shuffleArray(queries);
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
@@ -79,24 +79,24 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
     };
   }
 
-  await respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Fetching the other ${restQueries.length} tracks from YouTube...`));
+  await respondWithEmbed(editReply, concatDescription(firstTrackPartialMessage, `Fetching the other ${restQueries.length} tracks from YouTube...`));
 
   let numFetched = 0;
   const throttledMessageUpdate = throttle(async () => {
     if (numFetched === 0) {
       return respondWithEmbed(
-        interaction,
+        editReply,
         concatDescription(firstTrackPartialMessage, `Fetching the other ${restQueries.length} tracks from YouTube...`),
       );
     }
     if (numFetched < restQueries.length) {
-      return respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Queued ${
+      return respondWithEmbed(editReply, concatDescription(firstTrackPartialMessage, `Queued ${
         numFetched
       } tracks.\nFetching the other ${
         restQueries.length - numFetched
       } tracks from YouTube...`));
     }
-    return respondWithEmbed(interaction, concatDescription(firstTrackPartialMessage, `Queued ${numFetched} tracks from YouTube.`));
+    return respondWithEmbed(editReply, concatDescription(firstTrackPartialMessage, `Queued ${numFetched} tracks from YouTube.`));
   }, 5000);
 
   getTracksFromQueries(restQueries, async newTracks => {
@@ -107,16 +107,17 @@ async function enqueueQueries(session: Session, queries: string[], interaction: 
 }
 
 interface PlayInputs {
-  vodLink: string | null,
-  favoriteId: string | null,
-  streamLink: string | null,
-  queryStr: string | null,
+  vodLink?: string | null,
+  favoriteId?: string | null,
+  streamLink?: string | null,
+  queryStr?: string | null,
   pushToFront?: boolean,
   shuffle?: boolean,
 }
 
-async function play({
+export async function play({
   interaction,
+  message,
   inputs: {
     favoriteId,
     vodLink,
@@ -126,9 +127,13 @@ async function play({
     shuffle = false,
   },
 }: {
-  interaction: CommandInteraction | ModalSubmitInteraction,
+  interaction: AnyInteraction,
+  message?: MessageResponse,
   inputs: PlayInputs,
-}) {
+}): Promise<unknown> {
+  const messageId = message?.id;
+  const editReply: EditReply = data => editLatest({ interaction, messageId, data });
+
   // Assert guild since this is a guild-only command
   const guild = interaction.guild!;
 
@@ -142,22 +147,22 @@ async function play({
 
   const { user } = interaction;
   if (!user) {
-    return interaction.editReply('Could not resolve user invoking command.');
+    return editReply('Could not resolve user invoking command.');
   }
   const resolvedMember = await guild.members.fetch(user.id);
   const { channel } = resolvedMember.voice;
   if (!channel) {
-    return interaction.editReply('You must be connected to a voice channel.');
+    return editReply('You must be connected to a voice channel.');
   }
   if (!channel.joinable) {
-    return interaction.editReply('I don\'t have permission to connect to your voice channel.');
+    return editReply('I don\'t have permission to connect to your voice channel.');
   }
 
   let session = sessions.get(guild);
   if (session) session.resume();
 
   if (numArgs === 0 && !session) {
-    return interaction.editReply('You must provide at least one argument. If you provided a favorite, then the favorite could not be found.');
+    return editReply('You must provide at least one argument. If you provided a favorite, then the favorite could not be found.');
   }
 
   if (!session) session = sessions.create(channel);
@@ -168,8 +173,8 @@ async function play({
     if (isTwitchVodLink(vodLink)) {
       const track = new Track(vodLink, TrackVariant.TWITCH_VOD);
       const responseMessage = await enqueue(session, [track], pushToFront);
-      await respondWithEmbed(interaction, responseMessage);
-      return attachPlayerButtons(interaction, session);
+      await respondWithEmbed(editReply, responseMessage);
+      return attachPlayerButtons(interaction, session, message);
     }
 
     if (YouTubeSr.validate(vodLink, 'VIDEO') || YouTubeSr.validate(vodLink, 'PLAYLIST')) {
@@ -177,8 +182,8 @@ async function play({
         ? (await parseYoutubePlaylist(vodLink))
         : [new Track(vodLink, TrackVariant.YOUTUBE_VOD)];
       const responseMessage = await enqueue(session, tracks, pushToFront);
-      await respondWithEmbed(interaction, responseMessage);
-      return attachPlayerButtons(interaction, session);
+      await respondWithEmbed(editReply, responseMessage);
+      return attachPlayerButtons(interaction, session, message);
     }
 
     try {
@@ -187,30 +192,30 @@ async function play({
         case LinkType.PLAYLIST: {
           const queries = await parseSpotifyPlaylist(vodLink);
           if (queries.length > 1) {
-            await enqueueQueries(session, queries, interaction);
-            return attachPlayerButtons(interaction, session);
+            await enqueueQueries(session, queries, editReply);
+            return attachPlayerButtons(interaction, session, message);
           }
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
+          await respondWithEmbed(editReply, responseMessage);
+          return attachPlayerButtons(interaction, session, message);
         }
         case LinkType.ALBUM: {
           const queries = await parseSpotifyAlbum(vodLink);
           if (queries.length > 1) {
-            return enqueueQueries(session, queries, interaction);
+            return enqueueQueries(session, queries, editReply);
           }
           const tracks = await getTracksFromQueries(queries);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
+          await respondWithEmbed(editReply, responseMessage);
+          return attachPlayerButtons(interaction, session, message);
         }
         case LinkType.TRACK: {
           const query = await parseSpotifyTrack(vodLink);
           const tracks = await getTracksFromQueries([query]);
           const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(interaction, responseMessage);
-          return attachPlayerButtons(interaction, session);
+          await respondWithEmbed(editReply, responseMessage);
+          return attachPlayerButtons(interaction, session, message);
         }
         default: {
           throw new Error('Could not parse Spotify link.');
@@ -224,21 +229,21 @@ async function play({
   }
   if (streamLink) {
     if (!YouTubeSr.validate(streamLink, 'VIDEO')) {
-      return interaction.editReply('Invalid YouTube link.');
+      return editReply('Invalid YouTube link.');
     }
     const tracks = [new Track(streamLink, TrackVariant.YOUTUBE_LIVESTREAM)];
     const responseMessage = await enqueue(session, tracks, pushToFront);
-    await respondWithEmbed(interaction, responseMessage);
-    return attachPlayerButtons(interaction, session);
+    await respondWithEmbed(editReply, responseMessage);
+    return attachPlayerButtons(interaction, session, message);
   }
   if (queryStr) {
     const tracks = await getTracksFromQueries([queryStr]);
     const responseMessage = await enqueue(session, tracks, pushToFront);
-    await respondWithEmbed(interaction, responseMessage);
-    return attachPlayerButtons(interaction, session);
+    await respondWithEmbed(editReply, responseMessage);
+    return attachPlayerButtons(interaction, session, message);
   }
   await interaction.editReply('Resumed.');
-  return attachPlayerButtons(interaction, session);
+  return attachPlayerButtons(interaction, session, message);
 }
 
 const commandBuilder = new SlashCommandBuilder()
