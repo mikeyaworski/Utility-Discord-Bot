@@ -68,6 +68,35 @@ commandBuilder.addSubcommand(subcommand => {
   });
   return subcommand;
 });
+commandBuilder.addSubcommand(subcommand => {
+  subcommand.setName('edit');
+  subcommand.setDescription('Edit an existing favorite.');
+  subcommand.addStringOption(option => {
+    return option
+      .setName('favorite_id')
+      .setDescription('The ID of the favorite to edit.')
+      .setRequired(true);
+  });
+  subcommand.addStringOption(option => {
+    return option
+      .setName('link')
+      .setDescription('YouTube or Spotify link.')
+      .setRequired(false);
+  });
+  subcommand.addStringOption(option => {
+    return option
+      .setName('new_custom_id')
+      .setDescription('Custom ID to reference this favorite.')
+      .setRequired(false);
+  });
+  subcommand.addStringOption(option => {
+    return option
+      .setName('label')
+      .setDescription('Label to describe what this favorite is.')
+      .setRequired(false);
+  });
+  return subcommand;
+});
 
 function getFavoriteEmbed(favorite: PlayerFavorites): MessageEmbed {
   const id = String(favorite.custom_id || favorite.id);
@@ -111,6 +140,32 @@ async function handleCreate(interaction: AnyInteraction) {
   const embeds = [getFavoriteEmbed(favorite)];
   return interaction.editReply({
     content: 'Favorite created:',
+    embeds,
+  });
+}
+
+async function handleEdit(interaction: AnyInteraction) {
+  const guildId = interaction.guild!.id; // this is a guild-only command
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const favoriteId: string = inputs.favorite_id;
+  const link: string | null | undefined = inputs.link;
+  const customId: string | null | undefined = inputs.new_custom_id;
+  const label: string | null | undefined = inputs.label;
+  const favorite = await getFavorite(favoriteId, guildId);
+
+  if (!favorite) {
+    return interaction.editReply(`Could not find favorite with ID "${favoriteId}"`);
+  }
+
+  await favorite.update({
+    value: link || undefined,
+    custom_id: customId || undefined,
+    label: label || undefined,
+  });
+
+  const embeds = [getFavoriteEmbed(favorite)];
+  return interaction.editReply({
+    content: 'Favorite updated:',
     embeds,
   });
 }
@@ -165,6 +220,10 @@ const run: CommandOrModalRunMethod = async interaction => {
   switch (subcommand) {
     case 'add': {
       await handleCreate(interaction);
+      break;
+    }
+    case 'edit': {
+      await handleEdit(interaction);
       break;
     }
     case 'remove': {
