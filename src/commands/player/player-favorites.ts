@@ -213,9 +213,7 @@ async function handleList(interaction: AnyInteraction) {
 }
 
 const run: CommandOrModalRunMethod = async interaction => {
-  await interaction.deferReply({
-    ephemeral: true,
-  });
+  await interaction.deferReply({ ephemeral: true });
   const subcommand = getSubcommand(interaction);
   switch (subcommand) {
     case 'add': {
