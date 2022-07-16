@@ -1,4 +1,4 @@
-import type { AnyInteraction, Command, CommandOrModalRunMethod } from 'src/types';
+import { AnyInteraction, Command, CommandOrModalRunMethod, ContextMenuTypes } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { getSubcommand, interactionHasServerPermission, parseInput, replyWithEmbeds } from 'src/discord-utils';
@@ -243,6 +243,14 @@ const PlayerFavoritesCommand: Command = {
   slashCommandData: commandBuilder,
   runCommand: run,
   runModal: run,
+  contextMenuData: {
+    type: ContextMenuTypes.USER,
+    name: 'favorites list',
+  },
+  runContextMenu: async interaction => {
+    await interaction.deferReply({ ephemeral: true });
+    await handleList(interaction);
+  },
 };
 
 export default PlayerFavoritesCommand;
