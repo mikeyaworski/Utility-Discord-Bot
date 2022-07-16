@@ -86,7 +86,6 @@ function getFavoriteEmbed(favorite: PlayerFavorites): MessageEmbed {
     },
   ]);
   return new MessageEmbed({
-    title: 'Player Favorite',
     fields,
     footer: {
       text: `ID: ${id}`,
