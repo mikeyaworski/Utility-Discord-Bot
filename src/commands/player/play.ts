@@ -186,46 +186,40 @@ export async function play({
       return attachPlayerButtons(interaction, session, message);
     }
 
-    try {
-      const { type } = parseSpotifyLink(vodLink);
-      switch (type) {
-        case LinkType.PLAYLIST: {
-          const queries = await parseSpotifyPlaylist(vodLink);
-          if (queries.length > 1) {
-            await enqueueQueries(session, queries, editReply);
-            return attachPlayerButtons(interaction, session, message);
-          }
-          const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(editReply, responseMessage);
+    const { type } = parseSpotifyLink(vodLink);
+    switch (type) {
+      case LinkType.PLAYLIST: {
+        const queries = await parseSpotifyPlaylist(vodLink);
+        if (queries.length > 1) {
+          await enqueueQueries(session, queries, editReply);
           return attachPlayerButtons(interaction, session, message);
         }
-        case LinkType.ALBUM: {
-          const queries = await parseSpotifyAlbum(vodLink);
-          if (queries.length > 1) {
-            return enqueueQueries(session, queries, editReply);
-          }
-          const tracks = await getTracksFromQueries(queries);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(editReply, responseMessage);
-          return attachPlayerButtons(interaction, session, message);
-        }
-        case LinkType.TRACK: {
-          const query = await parseSpotifyTrack(vodLink);
-          const tracks = await getTracksFromQueries([query]);
-          const responseMessage = await enqueue(session, tracks, pushToFront);
-          await respondWithEmbed(editReply, responseMessage);
-          return attachPlayerButtons(interaction, session, message);
-        }
-        default: {
-          throw new Error('Could not parse Spotify link.');
-        }
+        const tracks = await getTracksFromQueries(queries);
+        const responseMessage = await enqueue(session, tracks, pushToFront);
+        await respondWithEmbed(editReply, responseMessage);
+        return attachPlayerButtons(interaction, session, message);
       }
-    } catch {
-      // Intentionally empty
+      case LinkType.ALBUM: {
+        const queries = await parseSpotifyAlbum(vodLink);
+        if (queries.length > 1) {
+          return enqueueQueries(session, queries, editReply);
+        }
+        const tracks = await getTracksFromQueries(queries);
+        const responseMessage = await enqueue(session, tracks, pushToFront);
+        await respondWithEmbed(editReply, responseMessage);
+        return attachPlayerButtons(interaction, session, message);
+      }
+      case LinkType.TRACK: {
+        const query = await parseSpotifyTrack(vodLink);
+        const tracks = await getTracksFromQueries([query]);
+        const responseMessage = await enqueue(session, tracks, pushToFront);
+        await respondWithEmbed(editReply, responseMessage);
+        return attachPlayerButtons(interaction, session, message);
+      }
+      default: {
+        throw new Error('Could not parse Spotify link.');
+      }
     }
-
-    throw new Error('Invalid link.');
   }
   if (streamLink) {
     if (!YouTubeSr.validate(streamLink, 'VIDEO')) {
