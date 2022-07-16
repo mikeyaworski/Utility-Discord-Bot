@@ -497,7 +497,10 @@ export async function replyWithSelect({
   const menu = new MessageSelectMenu({
     customId: 'select',
     placeholder,
-    options: options.slice(0, 25),
+    options: options.map(o => ({
+      ...o,
+      label: o.label.slice(0, 100),
+    })).slice(0, 25),
   });
   const row = new MessageActionRow({
     components: [menu],
