@@ -216,7 +216,7 @@ async function handleList(interaction: AnyInteraction) {
     interaction,
     options: favorites.map(favorite => ({
       label: String(favorite.label || favorite.custom_id || favorite.id),
-      value: String(favorite.id),
+      value: String(favorite.custom_id || favorite.id),
     })),
     placeholder: 'Select...',
     label: 'Play a favorite',
