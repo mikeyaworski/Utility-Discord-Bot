@@ -83,11 +83,14 @@ const getSpotifyAccessToken = (() => {
 })();
 
 export function getQueryFromSpotifyTrack(track: IntentionalAny): string {
+  // TODO: Consider adding "lyrics" or "audio" back to the end of this query.
+  // The problem is that for certain tracks, e.g. https://open.spotify.com/track/6j5mgCnmTNqU5h9dzY2aUH,
+  // this results in YouTube finding a bad result.
   return `${
     track.name
   } ${
     track.artists.map((artist: IntentionalAny) => artist.name).join(' ')
-  } lyrics`;
+  }`;
 }
 
 async function paginateSpotifyApi(route: string, params: [string, string][] = []): Promise<IntentionalAny> {
