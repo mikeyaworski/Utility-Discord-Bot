@@ -1,10 +1,11 @@
 import { AnyInteraction, Command, CommandOrModalRunMethod, ContextMenuTypes } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { getSubcommand, interactionHasServerPermission, parseInput, replyWithEmbeds } from 'src/discord-utils';
+import { editLatest, getSubcommand, interactionHasServerPermission, parseInput, replyWithEmbeds, replyWithSelect } from 'src/discord-utils';
 import { FavoriteVariant, PlayerFavorites } from 'src/models/player-favorites';
-import { MessageEmbed, MessageEmbedOptions, PermissionString } from 'discord.js';
+import { MessageEmbed, MessageEmbedOptions } from 'discord.js';
 import { filterOutFalsy } from 'src/utils';
+import { play } from './play';
 
 export async function getFavorite(favoriteId: string, guildId: string): Promise<PlayerFavorites | null> {
   let favorite = await PlayerFavorites.findOne({
@@ -202,13 +203,39 @@ async function handleList(interaction: AnyInteraction) {
     },
   });
   if (!favorites.length) {
-    return interaction.editReply('There are no favorites.');
+    await interaction.editReply('There are no favorites.');
+    return;
   }
   const embeds = favorites.map(favorite => getFavoriteEmbed(favorite));
-  return replyWithEmbeds({
+  await replyWithEmbeds({
     interaction,
     embeds,
     ephemeral: true,
+  });
+  await replyWithSelect({
+    interaction,
+    options: favorites.map(favorite => ({
+      label: String(favorite.label || favorite.custom_id || favorite.id),
+      value: String(favorite.id),
+    })),
+    placeholder: 'Select...',
+    label: 'Play a favorite',
+    isFollowUp: true,
+    onSelect: async (value, message) => {
+      await editLatest({
+        interaction,
+        messageId: message.id,
+        data: `Playing favorite: ${value}`,
+      });
+      await play({
+        interaction,
+        message,
+        inputs: {
+          favoriteId: value,
+        },
+      });
+    },
+    workingMsg: 'Working...',
   });
 }
 
