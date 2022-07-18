@@ -31,7 +31,7 @@ const LeaveCommand: Command = {
       && !usersHaveChannelPermission({
         channel: botConnectedChannel,
         users: interaction.user,
-        permissions: 'MOVE_MEMBERS',
+        permissions: 'MoveMembers',
       })) {
       await interaction.editReply('You do not have permission to disconnect this bot.');
       return;

@@ -1,17 +1,18 @@
-import { CommandInteraction, ContextMenuInteraction } from 'discord.js';
+import { CommandInteraction, ContextMenuCommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { isCommand } from 'src/discord-utils';
 import type { Command } from 'src/types';
 import { ContextMenuTypes } from 'src/types';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
-async function run(interaction: CommandInteraction | ContextMenuInteraction, shouldAttachButtons: boolean) {
+async function run(interaction: CommandInteraction | ContextMenuCommandInteraction, shouldAttachButtons: boolean) {
   await interaction.deferReply({ ephemeral: true });
   const session = sessions.get(interaction.guild!);
   if (!session) return interaction.editReply('Session does not exist.');
 
   let extraSkips = 0;
-  if (interaction.isCommand()) {
+  if (isCommand(interaction)) {
     const amount = interaction.options.getInteger('amount', false) || 1;
     extraSkips = Math.max(0, amount - 1);
   }

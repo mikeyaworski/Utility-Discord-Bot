@@ -1,4 +1,4 @@
-import type { Presence, Collection, Role } from 'discord.js';
+import { Presence, Collection, Role, ActivityType } from 'discord.js';
 import type { EventTrigger } from 'src/types';
 
 import { StreamerRollbackRoles } from 'src/models/streamer-rollback-roles';
@@ -15,8 +15,8 @@ function getNewRoles(existingRoles: Collection<string, Role>, rules: (StreamerRu
 }
 
 const StreamingEvent: EventTrigger = ['presenceUpdate', async (oldPresence: Presence, newPresence: Presence): Promise<void> => {
-  const wasStreaming = oldPresence?.activities.some(activity => activity.type === 'STREAMING');
-  const isStreaming = newPresence?.activities.some(activity => activity.type === 'STREAMING');
+  const wasStreaming = oldPresence?.activities.some(activity => activity.type === ActivityType.Streaming);
+  const isStreaming = newPresence?.activities.some(activity => activity.type === ActivityType.Streaming);
   // useful for debugging
   // const wasStreaming = oldPresence?.clientStatus.desktop === 'dnd';
   // const isStreaming = newPresence?.clientStatus.desktop === 'dnd';

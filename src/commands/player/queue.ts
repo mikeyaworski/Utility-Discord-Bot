@@ -1,5 +1,4 @@
-import { EmbedFieldData } from 'discord.js';
-import type { AnyInteraction, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
+import type { AnyInteraction, Command, CommandOrModalRunMethod, EmbedFields, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
@@ -104,7 +103,7 @@ export async function handleList(interaction: AnyInteraction, session: Session):
       const nowPlayingTitle = (await getVideoDetailsWithFallback(currentTrack)).title;
       const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
 
-      const fields: EmbedFieldData[] = [
+      const fields: EmbedFields = [
         {
           name: '🔊 Now Playing',
           value: nowPlayingTitle,

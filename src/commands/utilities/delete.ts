@@ -11,6 +11,8 @@ import {
   getInfoFromCommandInteraction,
   findMessageInChannel,
   parseInput,
+  isModalSubmit,
+  isCommand,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -48,7 +50,7 @@ commandBuilder.addBooleanOption(option => {
 const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async interaction => {
   let startId: string;
   let endId: string | null;
-  if (interaction.isModalSubmit()) {
+  if (isModalSubmit(interaction)) {
     const inputs = await parseInput({
       slashCommandData: commandBuilder,
       interaction,
@@ -90,7 +92,7 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   }
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['MANAGE_MESSAGES'] })) {
+  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['ManageMessages'] })) {
     await interaction.editReply(`One of us not have permission to delete messages in <#${channel.id}>`);
     return null;
   }
@@ -126,7 +128,7 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
 const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (interaction, result) => {
   const { msgs, channel } = result;
   let isOld: boolean;
-  if (interaction.isModalSubmit()) {
+  if (isModalSubmit(interaction)) {
     const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
     isOld = inputs.is_old;
   } else {

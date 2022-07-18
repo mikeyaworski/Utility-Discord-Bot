@@ -1,6 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { ChannelType } from 'discord.js';
 import sessions from './sessions';
 
 const ConnectCommand: Command = {
@@ -27,8 +28,8 @@ const ConnectCommand: Command = {
     }
 
     if (!channel) return interaction.editReply('I have no idea which channel to join.');
-    if (channel.type !== 'GUILD_VOICE') return interaction.editReply('That\'s not a voice channel.');
-    if (!channel.joinable) return interaction.editReply('I don\'t have permission to connect to your voice channel.');
+    if (channel.type !== ChannelType.GuildVoice) return interaction.editReply('That\'s not a voice channel.');
+    if (!('joinable' in channel) || !channel.joinable) return interaction.editReply('I don\'t have permission to connect to your voice channel.');
 
     sessions.create(channel);
     return interaction.editReply('Connected.');

@@ -1,6 +1,6 @@
 import type { Command, CommandOrModalRunMethod } from 'src/types';
 
-import { CommandInteraction, MessageEmbed, ModalSubmitInteraction, Role } from 'discord.js';
+import { CommandInteraction, EmbedBuilder, ModalSubmitInteraction, Role } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 
 import { BaseRoles } from 'src/models/base-roles';
@@ -56,7 +56,7 @@ async function handleList(interaction: CommandInteraction | ModalSubmitInteracti
   });
   if (!roles.length) return interaction.editReply('There are no base roles!');
 
-  const embed = new MessageEmbed({
+  const embed = new EmbedBuilder({
     title: 'Base Roles',
     description: roles.map(role => `<@&${
       role.role_id
@@ -140,8 +140,8 @@ const run: CommandOrModalRunMethod = async interaction => {
 
 const BaseRolesCommand: Command = {
   guildOnly: true,
-  userPermissions: 'MANAGE_ROLES',
-  clientPermissions: 'MANAGE_ROLES',
+  userPermissions: 'ManageRoles',
+  clientPermissions: 'ManageRoles',
   slashCommandData: commandBuilder,
   runCommand: run,
   runModal: run,

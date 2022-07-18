@@ -1,10 +1,21 @@
 import { WhereOptions, Op } from 'sequelize';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import Discord, { GuildMember, Message, TextChannel } from 'discord.js';
+import {
+  ButtonStyle,
+  GuildMember,
+  Message,
+  TextChannel,
+  Guild,
+  MessageOptions,
+  SelectMenuBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+} from 'discord.js';
 import type { Command, CommandOrModalRunMethod, AnyInteraction } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
-import { Colors, CONFIRMATION_DEFAULT_TIMEOUT, INTERACTION_MAX_TIMEOUT } from 'src/constants';
+import { Colors, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 import get from 'lodash.get';
 import { ChessGames } from 'src/models/chess-games';
 import { log } from 'src/logging';
@@ -29,11 +40,11 @@ commandBuilder.addSubcommand(subcommand => {
       return option
         .setName('color')
         .setDescription('Choose your color.')
-        .addChoices([
-          ['White', 'white'],
-          ['Black', 'black'],
-          ['Random', 'random'],
-        ])
+        .addChoices(
+          { name: 'White', value: 'white' },
+          { name: 'Black', value: 'black' },
+          { name: 'Random', value: 'random' },
+        )
         .setRequired(false);
     })
     .addStringOption(option => {
@@ -103,9 +114,8 @@ function getChessBoardEmbed(game: ChessGames) {
   const moves = chess.history();
   const lastMove = moves[moves.length - 1];
   const color = chess.turn() === 'w' ? '#FFFFFF' : '#000000';
-  return new Discord.MessageEmbed({
+  const embed = new EmbedBuilder({
     title: ':chess_pawn: Chess Game',
-    color,
     description: `<@${game.white_user_id}> vs <@${game.black_user_id}>${
       lastMove ? `\nLast move: \`${lastMove}\`` : ''
     }`,
@@ -114,9 +124,11 @@ function getChessBoardEmbed(game: ChessGames) {
       text: `ID: ${game.id}`,
     },
   });
+  embed.setColor(color);
+  return embed;
 }
 
-async function getChessPgnWithHeaders(game: ChessGames, guild: Discord.Guild) {
+async function getChessPgnWithHeaders(game: ChessGames, guild: Guild) {
   const chess = new Chess();
   chess.load_pgn(game.pgn);
   const [white, black] = await Promise.all([
@@ -149,7 +161,7 @@ async function followUp({
 }: {
   interaction: AnyInteraction,
   gameId: number,
-  options: string | Discord.MessageOptions
+  options: string | MessageOptions
 }): Promise<Message | null> {
   const game = await ChessGames.findByPk(gameId);
   if (!game) {
@@ -238,12 +250,12 @@ async function handleGameSelection({
     await interaction.deleteReply();
     return;
   }
-  const menu = new Discord.MessageSelectMenu({
+  const menu = new SelectMenuBuilder({
     customId: 'game',
     placeholder: 'Select a game...',
     options: options.slice(0, 25),
   });
-  const row = new Discord.MessageActionRow({
+  const row = new ActionRowBuilder<SelectMenuBuilder>({
     components: [menu],
   });
 
@@ -415,17 +427,17 @@ async function handleChallenge(interaction: AnyInteraction) {
     ? getRandomElement(['white', 'black'])
     : color as 'white' | 'black';
 
-  const buttonActionRow = new Discord.MessageActionRow({
+  const buttonActionRow = new ActionRowBuilder<ButtonBuilder>({
     components: [
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'accept',
         label: 'Accept',
-        style: 'SUCCESS',
+        style: ButtonStyle.Success,
       }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'decline',
         label: 'Decline',
-        style: 'DANGER',
+        style: ButtonStyle.Danger,
       }),
     ],
   });
@@ -451,9 +463,8 @@ async function handleChallenge(interaction: AnyInteraction) {
     started: false,
   });
 
-  const challengeEmbed = new Discord.MessageEmbed({
+  const challengeEmbed = new EmbedBuilder({
     title: ':chess_pawn: Chess Challenge!',
-    color: Colors.SUCCESS,
     description: `<@${user.id}> challenges <@${targetId}> to a game of chess!`,
     fields: [
       {
@@ -476,6 +487,7 @@ async function handleChallenge(interaction: AnyInteraction) {
       text: `ID: ${game.id}`,
     },
   });
+  challengeEmbed.setColor(Colors.SUCCESS);
 
   const challengeMsg = await followUp({
     interaction,
@@ -668,17 +680,16 @@ async function handleUndo(interaction: AnyInteraction) {
 }
 
 async function handleHelp(interaction: AnyInteraction) {
-  const acceptEmbed = new Discord.MessageEmbed({
+  const acceptEmbed = new EmbedBuilder({
     title: 'Accept game',
-    color: Colors.SUCCESS,
     description: [
       'Click the Accept button within 15 mins of being challenged.',
       'Or, type `/chess accept` if 15 mins have passed.',
     ].join('\n'),
   });
-  const playEmbed = new Discord.MessageEmbed({
+  acceptEmbed.setColor(Colors.SUCCESS);
+  const playEmbed = new EmbedBuilder({
     title: 'Make a move',
-    color: Colors.SUCCESS,
     description: 'Type `/chess move` and then provide the move in Standard Algebraic Notation.',
     fields: [
       {
@@ -707,6 +718,7 @@ async function handleHelp(interaction: AnyInteraction) {
       },
     ],
   });
+  playEmbed.setColor(Colors.SUCCESS);
   await interaction.reply({
     content: 'Type `/chess` to see all of the chess commands you can make.',
     embeds: [acceptEmbed, playEmbed],

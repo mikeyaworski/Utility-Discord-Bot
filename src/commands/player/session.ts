@@ -14,7 +14,7 @@ import { promisify } from 'util';
 import { PlayerUpdates } from 'src/models/player-updates';
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
-import { getChannel } from 'src/discord-utils';
+import { getChannel, isText } from 'src/discord-utils';
 import sessions from './sessions';
 import Track from './track';
 import { getMessageData, listenForPlayerButtons } from './utils';
@@ -52,7 +52,7 @@ export default class Session {
     this.audioPlayer = createAudioPlayer();
     this.queue = [];
 
-    this.voiceConnection.on<'stateChange'>('stateChange', async (oldState, newState) => {
+    this.voiceConnection.on('stateChange', async (oldState, newState) => {
       if (newState.status === VoiceConnectionStatus.Disconnected) {
         if (newState.reason === VoiceConnectionDisconnectReason.WebSocketClose && newState.closeCode === 4014) {
           // If the WebSocket closed with a 4014 code, this means that we should not manually attempt to reconnect,
@@ -95,7 +95,7 @@ export default class Session {
     });
 
     // For keeping track of play and pause time
-    this.audioPlayer.on<'stateChange'>('stateChange', (oldState, newState) => {
+    this.audioPlayer.on('stateChange', (oldState, newState) => {
       if (newState.status !== AudioPlayerStatus.Playing && oldState.status === AudioPlayerStatus.Playing) {
         this.currentTrackPlayTime.pauseStarted = Date.now();
         log('Paused at', this.currentTrackPlayTime.pauseStarted);
@@ -110,7 +110,7 @@ export default class Session {
       }
     });
 
-    this.audioPlayer.on<'stateChange'>('stateChange', (oldState, newState) => {
+    this.audioPlayer.on('stateChange', (oldState, newState) => {
       if (newState.status === AudioPlayerStatus.Idle && oldState.status !== AudioPlayerStatus.Idle) {
         // If the Idle state is entered from a non-Idle state, it means that an audio resource has finished playing.
         this.processQueue();
@@ -312,7 +312,7 @@ export default class Session {
       const playerUpdateSetting = await PlayerUpdates.findByPk(this.guild.id);
       if (playerUpdateSetting) {
         const channel = await getChannel(playerUpdateSetting.channel_id);
-        if (channel && channel.isText()) {
+        if (channel && isText(channel)) {
           const nowPlayingData = await runNowPlaying(this);
           const messageData = await getMessageData({
             session: this,

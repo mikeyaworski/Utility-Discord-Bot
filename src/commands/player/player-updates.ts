@@ -1,4 +1,4 @@
-import { CommandInteraction } from 'discord.js';
+import { ChatInputCommandInteraction } from 'discord.js';
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
@@ -26,7 +26,7 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-async function handleSet(interaction: CommandInteraction) {
+async function handleSet(interaction: ChatInputCommandInteraction) {
   const channel = interaction.options.getChannel('channel', true);
   await PlayerUpdates.upsert({
     guild_id: interaction.guildId!,
@@ -35,7 +35,7 @@ async function handleSet(interaction: CommandInteraction) {
   return interaction.editReply(`Player updates will be publicly sent to <#${channel.id}>`);
 }
 
-async function handleClear(interaction: CommandInteraction) {
+async function handleClear(interaction: ChatInputCommandInteraction) {
   await PlayerUpdates.destroy({
     where: {
       guild_id: interaction.guildId!,

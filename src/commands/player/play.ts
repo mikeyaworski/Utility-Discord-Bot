@@ -3,7 +3,7 @@ import type { AnyInteraction, Command, EditReply, IntentionalAny, MessageRespons
 import throttle from 'lodash.throttle';
 import YouTubeSr from 'youtube-sr';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { MessageEmbed, MessageEmbedOptions } from 'discord.js';
+import { EmbedBuilder, EmbedData } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
 import { isTwitchVodLink, shuffleArray } from 'src/utils';
@@ -22,16 +22,17 @@ import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getFractionalDuration } from './utils';
 import { getFavorite } from './player-favorites';
 
-function respondWithEmbed(editReply: EditReply, content: MessageEmbedOptions) {
+function respondWithEmbed(editReply: EditReply, content: EmbedData) {
+  const embed = new EmbedBuilder({
+    ...content,
+  });
+  embed.setColor(Colors.SUCCESS);
   return editReply({
-    embeds: [new MessageEmbed({
-      color: Colors.SUCCESS,
-      ...content,
-    })],
+    embeds: [embed],
   });
 }
 
-async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<MessageEmbedOptions> {
+async function enqueue(session: Session, tracks: Track[], pushToFront: boolean): Promise<EmbedData> {
   const wasPlayingAnything = Boolean(session.getCurrentTrack());
   await session.enqueue(tracks, pushToFront);
 
@@ -52,9 +53,9 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
         name: '🔊 Now Playing',
       },
       description: videoDetails.title,
-      footer: {
-        text: footerText || undefined,
-      },
+      footer: footerText ? {
+        text: footerText,
+      } : undefined,
     };
   } catch (err) {
     error(tracks[0].link, tracks[0].variant, err);
@@ -72,7 +73,7 @@ async function enqueueQueries(session: Session, queries: string[], editReply: Ed
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
   const firstTrackPartialMessage = await enqueue(session, [firstTrack], false);
 
-  function concatDescription(oldOptions: MessageEmbedOptions, newDescription: string): MessageEmbedOptions {
+  function concatDescription(oldOptions: EmbedData, newDescription: string): EmbedData {
     return {
       ...oldOptions,
       description: oldOptions.description ? `${oldOptions.description}\n${newDescription}` : newDescription,

@@ -1,9 +1,9 @@
-import { AnyInteraction, Command, CommandOrModalRunMethod, ContextMenuTypes } from 'src/types';
+import { AnyInteraction, Command, CommandOrModalRunMethod, ContextMenuTypes, EmbedFields } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { editLatest, getSubcommand, interactionHasServerPermission, parseInput, replyWithEmbeds, replyWithSelect } from 'src/discord-utils';
 import { FavoriteVariant, PlayerFavorites } from 'src/models/player-favorites';
-import { MessageEmbed, MessageEmbedOptions } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { filterOutFalsy } from 'src/utils';
 import { play } from './play';
 
@@ -99,11 +99,11 @@ commandBuilder.addSubcommand(subcommand => {
   return subcommand;
 });
 
-function getFavoriteEmbed(favorite: PlayerFavorites): MessageEmbed {
+function getFavoriteEmbed(favorite: PlayerFavorites): EmbedBuilder {
   const id = String(favorite.custom_id || favorite.id);
   const { label, value } = favorite;
 
-  const fields: MessageEmbedOptions['fields'] = filterOutFalsy([
+  const fields: EmbedFields = filterOutFalsy([
     {
       name: 'Link',
       value,
@@ -115,7 +115,7 @@ function getFavoriteEmbed(favorite: PlayerFavorites): MessageEmbed {
       inline: false,
     },
   ]);
-  return new MessageEmbed({
+  return new EmbedBuilder({
     fields,
     footer: {
       text: `ID: ${id}`,
@@ -184,7 +184,7 @@ async function handleRemove(interaction: AnyInteraction) {
   const authorizedToDelete = interaction.user.id === favorite.user_id
     || interactionHasServerPermission({
       interaction,
-      permissions: ['MANAGE_MESSAGES'],
+      permissions: ['ManageMessages'],
     });
 
   if (!authorizedToDelete) {

@@ -1,85 +1,85 @@
-import Discord, { EmbedFieldData, TextBasedChannel } from 'discord.js';
-import { AnyInteraction, IntentionalAny, MessageResponse } from 'src/types';
+import Discord, { TextBasedChannel, ButtonBuilder, ButtonStyle, MessageType } from 'discord.js';
+import { AnyInteraction, EmbedFields, IntentionalAny, MessageResponse } from 'src/types';
 import { Colors, FAST_FORWARD_BUTTON_TIME, INTERACTION_MAX_TIMEOUT, REWIND_BUTTON_TIME } from 'src/constants';
 import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
-import { editLatest, getErrorMsg } from 'src/discord-utils';
+import { editLatest, getErrorMsg, isCommand, isContextMenu } from 'src/discord-utils';
 import Session from './session';
 import Track, { VideoDetails } from './track';
 import { handleList } from './queue';
 
 const SHOW_QUEUE_ID = 'show-queue';
 
-export function getPlayerButtons(session: Session, interaction?: AnyInteraction): Discord.MessageActionRow[] {
-  const commandName = interaction?.isCommand()
+export function getPlayerButtons(session: Session, interaction?: AnyInteraction): Discord.ActionRowBuilder<ButtonBuilder>[] {
+  const commandName = interaction && isCommand(interaction)
     ? `${interaction.commandName} ${interaction.options.getSubcommand(false)}`
-    : interaction?.isContextMenu()
+    : interaction && isContextMenu(interaction)
       ? interaction.commandName
       : null;
   const customId = interaction && 'customId' in interaction ? interaction.customId : null;
   const showQueueButton = commandName !== 'queue list' && customId !== SHOW_QUEUE_ID;
-  const firstRow = new Discord.MessageActionRow<Discord.MessageButton>({
+  const firstRow = new Discord.ActionRowBuilder<ButtonBuilder>({
     components: [
       session.isPaused()
-        ? new Discord.MessageButton({
+        ? new ButtonBuilder({
           customId: 'resume',
           label: 'Resume',
-          style: 'SUCCESS',
+          style: ButtonStyle.Success,
         })
-        : new Discord.MessageButton({
+        : new ButtonBuilder({
           customId: 'pause',
           label: 'Pause',
-          style: 'SUCCESS',
+          style: ButtonStyle.Success,
         }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'skip',
         label: 'Skip',
-        style: 'SUCCESS',
+        style: ButtonStyle.Success,
       }),
       session.isLooped()
-        ? new Discord.MessageButton({
+        ? new ButtonBuilder({
           customId: 'unloop',
           label: 'Unloop',
-          style: 'PRIMARY',
+          style: ButtonStyle.Primary,
         })
-        : new Discord.MessageButton({
+        : new ButtonBuilder({
           customId: 'loop',
           label: 'Loop',
-          style: 'PRIMARY',
+          style: ButtonStyle.Primary,
         }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'shuffle',
         label: 'Shuffle',
-        style: 'PRIMARY',
+        style: ButtonStyle.Primary,
       }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'clear',
         label: 'Clear',
-        style: 'DANGER',
+        style: ButtonStyle.Danger,
       }),
     ],
   });
-  const secondRow = new Discord.MessageActionRow<Discord.MessageButton>({
+  const secondRow = new Discord.ActionRowBuilder<ButtonBuilder>({
     components: filterOutFalsy([
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'refresh',
         label: 'Refresh',
-        style: 'SECONDARY',
+        style: ButtonStyle.Secondary,
       }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'rewind',
         label: `⏪ ${REWIND_BUTTON_TIME / 1000}s`,
-        style: 'SECONDARY',
+        style: ButtonStyle.Secondary,
       }),
-      new Discord.MessageButton({
+      new ButtonBuilder({
         customId: 'fast-forward',
         label: `⏩ ${FAST_FORWARD_BUTTON_TIME / 1000}s`,
-        style: 'SECONDARY',
+        style: ButtonStyle.Secondary,
       }),
-      showQueueButton && new Discord.MessageButton({
+      showQueueButton && new ButtonBuilder({
         customId: SHOW_QUEUE_ID,
         label: 'Show Queue',
-        style: 'SECONDARY',
+        style: ButtonStyle.Secondary,
       }),
     ]),
   });
@@ -120,7 +120,7 @@ export async function listenForPlayerButtons({
   }
 
   async function removeButtons() {
-    if (!interaction && message && 'edit' in message && message.editable && message.type === 'DEFAULT') {
+    if (!interaction && message && 'edit' in message && message.editable && message.type === MessageType.Default) {
       // This is a channel message (outside of an interaction)
       // Note: Message collectors for non-ephemeral messages like this should probably never stop,
       // but this code is here in the event that they do, for whatever reason.
@@ -264,7 +264,7 @@ export function attachPlayerButtons(
 
 type RunMethod = (session: Session) => Promise<{
   description?: string,
-  fields?: EmbedFieldData[],
+  fields?: EmbedFields,
   footerText?: string,
   title?: string,
   hideButtons?: boolean,
@@ -293,7 +293,7 @@ export async function getMessageData({
   interaction?: AnyInteraction,
   run: RunMethod,
 }): Promise<{
-  embeds: Discord.MessageEmbed[],
+  embeds: Discord.EmbedBuilder[],
   content: string | undefined,
   components: ReturnType<typeof getPlayerButtons>,
 }> {
@@ -305,22 +305,28 @@ export async function getMessageData({
     hideButtons,
     link,
   } = await run(session);
-  const embeds = title ? [new Discord.MessageEmbed({
-    author: {
-      name: title,
-    },
-    color: Colors.SUCCESS,
-    description: filterOutFalsy([description, link]).join('\n'),
-    footer: {
+
+  const embed = title
+    ? new Discord.EmbedBuilder({
+      author: {
+        name: title,
+      },
+      description: filterOutFalsy([description, link]).join('\n'),
+      fields,
+    })
+    : null;
+  embed?.setColor(Colors.SUCCESS);
+  if (footerText) {
+    embed?.setFooter({
       text: footerText,
-    },
-    fields,
-  })] : [];
+    });
+  }
+
   const content = title ? undefined : description;
   const components = hideButtons ? [] : getPlayerButtons(session, interaction);
 
   return {
-    embeds,
+    embeds: filterOutFalsy([embed]),
     content,
     components,
   };

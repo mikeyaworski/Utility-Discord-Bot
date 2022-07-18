@@ -1,6 +1,6 @@
-import type { CommandRunMethod, ModalRunMethod, AnyRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
+import type { CommandRunMethod, ModalRunMethod, CommandBeforeConfirmMethod, CommandAfterConfirmMethod } from 'src/types';
 
-import Discord, { CommandInteraction, ModalSubmitInteraction } from 'discord.js';
+import Discord, { ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ModalSubmitInteraction } from 'discord.js';
 import get from 'lodash.get';
 
 import { CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
@@ -39,7 +39,7 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
   const options: Options = { ...DEFAULT_OPTIONS, ...partialOptions };
   const { ephemeral = true } = options;
   // Can't use "run: AnyRunMethod" because TS is really stupid here
-  const run = async (interaction: ModalSubmitInteraction | CommandInteraction) => {
+  const run = async (interaction: ChatInputCommandInteraction | ModalSubmitInteraction) => {
     await interaction.deferReply({ ephemeral });
 
     if (options.workingMessage) {
@@ -57,17 +57,17 @@ export default function ConfirmationCommandRunner<IntermediateResult>(
       declinedMessage = options.declinedMessage || 'Nothing was done.',
     } = beforeConfirmResult;
 
-    const buttonActionRow = new Discord.MessageActionRow({
+    const buttonActionRow = new Discord.ActionRowBuilder<ButtonBuilder>({
       components: [
-        new Discord.MessageButton({
+        new ButtonBuilder({
           customId: 'confirm',
           label: 'Confirm',
-          style: 'SUCCESS',
+          style: ButtonStyle.Success,
         }),
-        new Discord.MessageButton({
+        new ButtonBuilder({
           customId: 'decline',
           label: 'Decline',
-          style: 'SECONDARY',
+          style: ButtonStyle.Secondary,
         }),
       ],
     });

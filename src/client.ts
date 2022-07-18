@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Client } from 'discord.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v9';
 
@@ -18,23 +18,24 @@ const isDev = process.env.ENVIRONMENT === 'development';
 const slashCommandsGuildId = process.env.SLASH_COMMANDS_GUILD_ID || '';
 
 export const client = new Client({
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   intents: [
-    'GUILDS',
-    'GUILD_BANS',
-    'GUILD_MEMBERS',
-    'GUILD_PRESENCES',
-    'GUILD_MESSAGES',
-    'GUILD_MESSAGE_REACTIONS',
-    'GUILD_MESSAGE_TYPING',
-    'DIRECT_MESSAGES',
-    'DIRECT_MESSAGE_REACTIONS',
-    'DIRECT_MESSAGE_TYPING',
-    'GUILD_VOICE_STATES',
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildBans,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMessageTyping,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageReactions,
+    GatewayIntentBits.DirectMessageTyping,
   ],
 });
 
-const rest = new REST({ version: '9' }).setToken(token);
+const rest = new REST({ version: '10' }).setToken(token);
 
 export function initClient(): Promise<IntentionalAny> {
   return Promise.all([
@@ -59,7 +60,7 @@ export function initClient(): Promise<IntentionalAny> {
       const slashCommands = commands.map(command => {
         const data = command.slashCommandData?.toJSON();
         if (command.runModal && data) {
-          data.options = data?.options.map(option => {
+          data.options = data?.options?.map(option => {
             if (option.type === 1) {
               return {
                 ...option,

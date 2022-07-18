@@ -1,6 +1,6 @@
 import type { Command, GenericMapping, BooleanMapping, AnyInteraction, CommandOrModalRunMethod } from 'src/types';
 
-import { CommandInteraction, Message, MessageEmbed, Role } from 'discord.js';
+import { Message, EmbedBuilder, Role } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import removeDuplicates from 'lodash.uniq';
 import get from 'lodash.get';
@@ -175,7 +175,7 @@ async function handleList(interaction: AnyInteraction) {
     const emojiResponse = Object.entries(info.emojis).map(([emoji, roleIds]) => {
       return `${emoji} - ${roleIds.map(roleId => `<@&${roleId}>`).join(' ')}`;
     }).join('\n');
-    return new MessageEmbed({
+    return new EmbedBuilder({
       title: 'Reaction Roles',
       fields: [
         {
@@ -316,8 +316,8 @@ const run: CommandOrModalRunMethod = async interaction => {
 
 const ReactionRolesCommand: Command = {
   guildOnly: true,
-  userPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
-  clientPermissions: ['MANAGE_ROLES', 'ADD_REACTIONS'],
+  userPermissions: ['ManageRoles', 'AddReactions'],
+  clientPermissions: ['ManageRoles', 'AddReactions'],
   slashCommandData: commandBuilder,
   runCommand: run,
   runModal: run,

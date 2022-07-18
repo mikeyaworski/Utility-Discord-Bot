@@ -1,4 +1,4 @@
-import { MessageEmbed, Role } from 'discord.js';
+import { EmbedBuilder, Role } from 'discord.js';
 import type { AnyInteraction, Command, CommandOrModalRunMethod } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
@@ -65,7 +65,7 @@ async function handleList(interaction: AnyInteraction) {
   const rolesToAdd = rules.filter(row => row.add).map(row => row.role_id);
   const rolesToRemove = rules.filter(row => !row.add).map(row => row.role_id);
 
-  const embed = new MessageEmbed({
+  const embed = new EmbedBuilder({
     title: 'Streamer Rules',
     description: 'These roles will be added or removed from members who are streaming',
     fields: [
@@ -159,8 +159,8 @@ const run: CommandOrModalRunMethod = async interaction => {
 
 const StreamerRulesCommand: Command = {
   guildOnly: true,
-  userPermissions: 'MANAGE_ROLES',
-  clientPermissions: 'MANAGE_ROLES',
+  userPermissions: 'ManageRoles',
+  clientPermissions: 'ManageRoles',
   slashCommandData: commandBuilder,
   runCommand: run,
   runModal: run,

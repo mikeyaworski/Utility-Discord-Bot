@@ -1,9 +1,8 @@
-import type { MessageEmbedOptions } from 'discord.js';
-import type { AnyInteraction, AnyMapping, Command, CommandOrModalRunMethod, IntentionalAny } from 'src/types';
+import type { AnyInteraction, AnyMapping, Command, CommandOrModalRunMethod, EmbedFields, IntentionalAny } from 'src/types';
 import type { Reminder } from 'models/reminders';
 import type { SlashCommandChannelOption, SlashCommandStringOption, SlashCommandIntegerOption } from '@discordjs/builders';
 
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { parseDate } from 'chrono-node';
 import { Op } from 'sequelize';
@@ -19,6 +18,7 @@ import {
   replyWithEmbeds,
   parseInput,
   getSubcommand,
+  isText,
 } from 'src/discord-utils';
 import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy, humanizeDuration } from 'src/utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
@@ -136,10 +136,10 @@ commandBuilder.addSubcommand(subcommand => {
 
 function getReminderEmbed(reminder: Reminder, options: {
   showChannel?: boolean,
-} = {}): MessageEmbed {
+} = {}): EmbedBuilder {
   const { showChannel = true } = options;
   const isTimer = !reminder.message;
-  const fields: MessageEmbedOptions['fields'] = [];
+  const fields: EmbedFields = [];
   if (reminder.message) {
     fields.push({
       name: 'Message',
@@ -201,7 +201,7 @@ function getReminderEmbed(reminder: Reminder, options: {
       inline: false,
     });
   }
-  return new MessageEmbed({
+  return new EmbedBuilder({
     title: isTimer ? 'Timer' : 'Reminder',
     fields,
     footer: {
@@ -395,9 +395,9 @@ async function handleDelete(interaction: AnyInteraction) {
     const channel = await getChannel(reminder.channel_id);
     let res: string;
     if (
-      !channel || !channel.isText()
+      !channel || !isText(channel)
       || reminder.owner_id === interaction.user.id
-      || usersHaveChannelPermission({ channel, users: interaction.user, permissions: 'MANAGE_MESSAGES' })
+      || usersHaveChannelPermission({ channel, users: interaction.user, permissions: 'ManageMessages' })
     ) {
       await removeReminder(reminder.id);
       res = `Reminder deleted: ${reminder.id}`;
@@ -421,7 +421,7 @@ async function handleList(interaction: AnyInteraction) {
 
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'VIEW_CHANNEL' })) {
+  if (!usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'ViewChannel' })) {
     return interaction.editReply(`One of us does not have access to channel <#${channel.id}>!`);
   }
 

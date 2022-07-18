@@ -3,7 +3,7 @@ import type { Reminder } from 'src/models/reminders';
 import { CronJob } from 'cron';
 import { Reminders } from 'src/models/reminders';
 import { log } from 'src/logging';
-import { getChannel } from 'src/discord-utils';
+import { getChannel, isText } from 'src/discord-utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 
 type Timeouts = {
@@ -32,7 +32,7 @@ async function handleReminder(reminder: Reminder, destroy: boolean) {
     await removeReminder(reminder.id);
     return;
   }
-  if (channel.isText()) {
+  if (isText(channel)) {
     await channel.send(reminder.message || 'Timer is up!');
   }
   if (destroy) {

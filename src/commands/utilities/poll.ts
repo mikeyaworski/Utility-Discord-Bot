@@ -51,7 +51,7 @@ async function poll({
   }, '');
   const reactions = reactionsAndText.map(([reaction]) => reaction);
 
-  const poll = new Discord.MessageEmbed({
+  const poll = new Discord.EmbedBuilder({
     title: `:bar_chart: ${question}`,
     description: pollBody,
   });

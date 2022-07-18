@@ -1,8 +1,13 @@
-import { MessageActionRow, Modal, ModalActionRowComponent, ModalSubmitInteraction, TextInputComponent } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from 'discord.js';
 
 import { client } from 'src/client';
 import { array } from 'src/utils';
-import { handleError, getCommandInfoFromInteraction } from 'src/discord-utils';
+import { handleError, getCommandInfoFromInteraction, isModalSubmit, isCommand, isContextMenu, isButton } from 'src/discord-utils';
 
 import Poll from './utilities/poll';
 import Move from './utilities/move';
@@ -64,17 +69,17 @@ export default commands;
 export function listenToCommands(): void {
   client.on('interactionCreate', async interaction => {
     const command = commands.find(c => {
-      if (interaction.isModalSubmit()) {
+      if (isModalSubmit(interaction)) {
         const { commandName } = getCommandInfoFromInteraction(interaction);
         return commandName === c.slashCommandData?.name;
       }
-      if (interaction.isCommand()) {
+      if (isCommand(interaction)) {
         return interaction.commandName === c.slashCommandData?.name;
       }
-      if (interaction.isContextMenu()) {
+      if (interaction.isContextMenuCommand()) {
         return interaction.commandName === c.contextMenuData?.name;
       }
-      if (interaction.isButton()) {
+      if (isButton(interaction)) {
         return interaction.message.interaction
             && 'commandName' in interaction.message.interaction
             && interaction.message.interaction.commandName === c.slashCommandData?.name;
@@ -83,7 +88,7 @@ export function listenToCommands(): void {
     });
     if (!command) return;
 
-    if (interaction.isCommand()) {
+    if (isCommand(interaction)) {
       if (command.guildOnly && !interaction.guild) {
         await interaction.reply({
           ephemeral: true,
@@ -93,7 +98,7 @@ export function listenToCommands(): void {
       }
       if (interaction.guild && command.clientPermissions) {
         const expectedClientPermissions = array(command.clientPermissions);
-        const actualClientPermissions = interaction.guild.me?.permissions;
+        const actualClientPermissions = interaction.guild.members.me?.permissions;
         if (actualClientPermissions && typeof actualClientPermissions !== 'string' && !actualClientPermissions.has(expectedClientPermissions)) {
           await interaction.reply({
             ephemeral: true,
@@ -137,7 +142,7 @@ export function listenToCommands(): void {
         if (hasMissingOptions || (command.showModalWithNoArgs && hasNoOptions)) {
           // Note: customId can only be 100 characters
           const customId = subcommand ? `${commandName} ${subcommand}` : commandName;
-          const modal = new Modal()
+          const modal = new ModalBuilder()
             .setCustomId(customId)
             .setTitle(`/${customId}`.slice(0, 45));
           commandOptions
@@ -153,15 +158,15 @@ export function listenToCommands(): void {
               const value = interaction.options.get(option.name)?.value;
               const label = command.modalLabels?.[option.name] || option.description;
               const placeholder = command.modalPlaceholders?.[option.name] || '';
-              const input = new TextInputComponent()
+              const input = new TextInputBuilder()
                 .setCustomId(option.name)
                 .setLabel(label.slice(0, 45))
                 .setPlaceholder(placeholder.slice(0, 100))
                 .setValue(value == null ? '' : String(value))
                 .setRequired(option.required)
-                .setStyle(option.name === 'message' ? 'PARAGRAPH' : 'SHORT');
+                .setStyle(option.name === 'message' ? TextInputStyle.Paragraph : TextInputStyle.Short);
               // Each row can only hold one input
-              const row = new MessageActionRow<ModalActionRowComponent>().addComponents(input);
+              const row = new ActionRowBuilder<TextInputBuilder>().addComponents(input);
               modal.addComponents(row);
             });
           try {
@@ -177,7 +182,7 @@ export function listenToCommands(): void {
       } catch (err) {
         handleError(err, interaction);
       }
-    } else if (interaction.isContextMenu()) {
+    } else if (isContextMenu(interaction)) {
       if (command.guildOnly && !interaction.guild) {
         await interaction.reply({
           ephemeral: true,
@@ -190,13 +195,13 @@ export function listenToCommands(): void {
       } catch (err) {
         handleError(err, interaction);
       }
-    } else if (interaction.isButton()) {
+    } else if (isButton(interaction)) {
       try {
         if (command.buttonAction) await command.buttonAction(interaction);
       } catch (err) {
         handleError(err, interaction);
       }
-    } else if (interaction.isModalSubmit()) {
+    } else if (isModalSubmit(interaction)) {
       try {
         if (command.runModal) await command.runModal(interaction);
       } catch (err) {

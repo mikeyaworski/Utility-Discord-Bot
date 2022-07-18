@@ -10,11 +10,13 @@ import type {
   CommandInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
-  PermissionString,
-  ContextMenuInteraction,
+  ContextMenuCommandInteraction,
   MessageComponentInteraction,
   CacheType,
   GuildCacheMessage,
+  PermissionResolvable,
+  APIEmbedField,
+  ChatInputCommandInteraction,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
@@ -55,26 +57,28 @@ export interface Command {
     name: string,
     type: ContextMenuTypes,
   },
-  runCommand?: (interaction: CommandInteraction) => Promise<IntentionalAny>,
-  runContextMenu?: (interaction: ContextMenuInteraction) => Promise<IntentionalAny>,
+  runCommand?: (interaction: ChatInputCommandInteraction) => Promise<IntentionalAny>,
+  runContextMenu?: (interaction: ContextMenuCommandInteraction) => Promise<IntentionalAny>,
   runModal?: (interaction: ModalSubmitInteraction) => Promise<IntentionalAny>,
   modalLabels?: StringMapping,
   modalPlaceholders?: StringMapping,
   showModalWithNoArgs?: boolean,
   buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
   guildOnly?: boolean,
-  userPermissions?: PermissionString | PermissionString[],
-  clientPermissions?: PermissionString | PermissionString[],
+  userPermissions?: PermissionResolvable,
+  clientPermissions?: PermissionResolvable,
 }
 
 export type AnyInteraction = CommandInteraction
-| ContextMenuInteraction
+| ContextMenuCommandInteraction
 | ModalSubmitInteraction
 | ButtonInteraction
 | MessageComponentInteraction<CacheType>;
 
 export type ApiMessage = GuildCacheMessage<CacheType>;
 export type MessageResponse = Message | ApiMessage;
+
+export type EmbedFields = APIEmbedField[];
 
 export type CommandOrModalRunMethod = (interaction: CommandInteraction | ModalSubmitInteraction) => Promise<IntentionalAny>;
 export type CommandRunMethod = Command['runCommand'];
@@ -90,11 +94,11 @@ export type BeforeConfirmResponse<T> = null | {
 }
 
 export type CommandBeforeConfirmMethod<T = unknown> = (
-  interaction: CommandInteraction | ModalSubmitInteraction,
+  interaction: ChatInputCommandInteraction | ModalSubmitInteraction,
 ) => Promise<BeforeConfirmResponse<T>>;
 
 export type CommandAfterConfirmMethod<T = unknown> = (
-  interaction: CommandInteraction | ModalSubmitInteraction,
+  interaction: ChatInputCommandInteraction | ModalSubmitInteraction,
   beforeResult: T,
 ) => Promise<string | null>;
 

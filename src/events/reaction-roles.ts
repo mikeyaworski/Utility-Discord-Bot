@@ -35,14 +35,6 @@ const ReactionAddEvent: EventTrigger = ['messageReactionAdd', async (messageReac
     force: true,
   });
 
-  type UniqueRule = {
-    unique: boolean;
-  }
-  type Rule = {
-    role_id: string;
-    emoji: string;
-  }
-
   const [uniqueRule, rules] = await Promise.all([
     ReactionMessagesUnique.findOne({
       where: {

@@ -1,28 +1,36 @@
-import type {
-  AnyChannel,
+import {
   Message,
   User,
-  PermissionString,
+  PermissionResolvable,
   EmojiIdentifierResolvable,
   Guild,
   Role,
   CommandInteraction,
   TextBasedChannel,
   GuildChannel,
-  MessageEmbed,
+  EmbedBuilder,
   InteractionReplyOptions,
   ModalSubmitInteraction,
   CommandInteractionOption,
   Channel,
   GuildMember,
-  MessageSelectOptionData,
+  SelectMenuComponentOptionData,
   MessagePayload,
   WebhookEditMessageOptions,
+  ChannelType,
+  TextChannel,
+  SelectMenuBuilder,
+  ActionRowBuilder,
+  InteractionType,
+  ContextMenuCommandInteraction,
+  ButtonInteraction,
+  ComponentType,
+  ApplicationCommandOptionType,
+  Interaction,
+  ChatInputCommandInteraction,
+  BaseInteraction,
 } from 'discord.js';
-import {
-  MessageSelectMenu,
-  MessageActionRow,
-} from 'discord.js';
+
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
@@ -41,7 +49,26 @@ import { error, log } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
-import { APIApplicationCommandOption } from 'discord-api-types/v9';
+import { APIApplicationCommandOption, ApplicationCommandType } from 'discord-api-types/v10';
+
+export function isText(channel: Channel): channel is TextChannel {
+  return channel.type === ChannelType.GuildText;
+}
+// export function isCommand(interaction: AnyInteraction): interaction is CommandInteraction {
+//   return interaction.type === InteractionType.ApplicationCommand;
+// }
+export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
+  return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
+}
+export function isModalSubmit(interaction: BaseInteraction): interaction is ModalSubmitInteraction {
+  return interaction.type === InteractionType.ModalSubmit;
+}
+export function isButton(interaction: Interaction): interaction is ButtonInteraction {
+  return interaction.type === InteractionType.MessageComponent && interaction.componentType === ComponentType.Button;
+}
+export function isContextMenu(interaction: BaseInteraction): interaction is ContextMenuCommandInteraction {
+  return interaction.type === InteractionType.ApplicationCommand && interaction.isContextMenuCommand();
+}
 
 export function getErrorMsg(err: unknown): string {
   const name: string | undefined = get(err, 'name');
@@ -65,7 +92,7 @@ export async function handleError(
 ): Promise<IntentionalAny> {
   // Modal interactions are really broken, so we need to defer and then edit the reply. Replying immediately doesn't work.
   async function sendResponse(msg: string) {
-    if (interaction.isModalSubmit() && !interaction.deferred) {
+    if (isModalSubmit(interaction) && !interaction.deferred) {
       await interaction.deferReply({ ephemeral: true });
       await interaction.editReply(msg);
       return;
@@ -93,7 +120,7 @@ export async function findMessageInGuild(
   const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
-    if (!channel.isText() || channel === startingChannel) continue;
+    if (!isText(channel) || channel === startingChannel) continue;
     try {
       const foundMsg = await channel.messages.fetch(messageId);
       return [foundMsg, channel];
@@ -188,7 +215,7 @@ export function getUserIdFromArg(userArg: string): string | null {
   return null;
 }
 
-export async function getChannel(channelArg: string): Promise<AnyChannel | null> {
+export async function getChannel(channelArg: string): Promise<Channel | null> {
   const channelId = getChannelIdFromArg(channelArg);
   if (!channelId) return null;
   try {
@@ -222,7 +249,7 @@ export function usersHaveChannelPermission({
 }: {
   channel: TextBasedChannel | GuildChannel,
   users: User | User[],
-  permissions: PermissionString | PermissionString[],
+  permissions: PermissionResolvable,
 }): boolean {
   users = array(users);
   if (!('permissionsFor' in channel)) return true;
@@ -234,7 +261,7 @@ export function interactionHasServerPermission({
   permissions,
 }: {
   interaction: AnyInteraction,
-  permissions: PermissionString | PermissionString[],
+  permissions: PermissionResolvable,
 }): boolean {
   if (!interaction.member) return true;
   const actualPerms = interaction.member.permissions;
@@ -285,7 +312,8 @@ export async function fetchMessageInGuild(guild: Guild, messageId: string, given
   if (givenChannel) {
     try {
       await givenChannel.fetch(true);
-      const message = await givenChannel.messages.fetch(messageId, {
+      const message = await givenChannel.messages.fetch({
+        message: messageId,
         cache: false,
         force: true,
       });
@@ -300,9 +328,10 @@ export async function fetchMessageInGuild(guild: Guild, messageId: string, given
   const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
-    if (!channel.isText() || channel === givenChannel) continue;
+    if (!isText(channel) || channel === givenChannel) continue;
     try {
-      const message = await channel.messages.fetch(messageId, {
+      const message = await channel.messages.fetch({
+        message: messageId,
         cache: false,
         force: true,
       });
@@ -340,7 +369,7 @@ export async function getInfoFromCommandInteraction(
   // Guild
   if (interaction.inGuild()) {
     const channel = await interaction.guild!.channels.fetch(interaction.channelId);
-    if (!channel || !channel.isText()) {
+    if (!channel || !isText(channel)) {
       return {
         message: null,
         channel: null,
@@ -370,7 +399,7 @@ export async function getInfoFromCommandInteraction(
 
 export async function findOptionalChannel(
   interaction: AnyInteraction,
-  channelArg: ReturnType<CommandInteraction['options']['getChannel']>,
+  channelArg: ReturnType<ChatInputCommandInteraction['options']['getChannel']>,
 ): Promise<{
   channel: TextBasedChannel | null | undefined,
   message: Message | null | undefined,
@@ -381,7 +410,7 @@ export async function findOptionalChannel(
   const channelIdArg = channelArg?.id;
   if (channelIdArg) {
     const fetchedArgChannel = await client.channels.fetch(channelIdArg);
-    if (fetchedArgChannel?.isText()) channel = fetchedArgChannel;
+    if (fetchedArgChannel && isText(fetchedArgChannel)) channel = fetchedArgChannel;
   }
   return {
     channel,
@@ -392,7 +421,7 @@ export async function findOptionalChannel(
 /**
  * Naive argument parsing. Splits by whitespace, but quoted sections are treated as one entire argument.
  */
-export async function parseArguments(input: string, options: { parseChannels?: boolean } = {}): Promise<(string | AnyChannel)[]> {
+export async function parseArguments(input: string, options: { parseChannels?: boolean } = {}): Promise<(string | Channel)[]> {
   const { parseChannels = true } = options;
 
   // https://stackoverflow.com/a/16261693/2554605
@@ -427,7 +456,7 @@ export function checkMessageErrors(interaction: AnyInteraction, {
 }): void {
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (channel && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'SEND_MESSAGES' })) {
+  if (channel && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'SendMessages' })) {
     throw new Error(`One of us does not have permission to send messages in <#${channel.id}>`);
   }
 
@@ -438,12 +467,12 @@ export function checkMessageErrors(interaction: AnyInteraction, {
   // when the bot (with permission) posts the reminder.
 
   if (message && channel && interaction.guild) {
-    if (checkMentionsEveryone(message) && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MENTION_EVERYONE' })) {
+    if (checkMentionsEveryone(message) && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MentionEveryone' })) {
       throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
     }
 
     const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
-    if (unmentionableRoleMention && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MENTION_EVERYONE' })) {
+    if (unmentionableRoleMention && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MentionEveryone' })) {
       throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
     }
   }
@@ -456,7 +485,7 @@ export async function replyWithEmbeds({
   ephemeral,
 }: {
   interaction: AnyInteraction,
-  embeds: MessageEmbed[],
+  embeds: EmbedBuilder[],
   messageArgs?: InteractionReplyOptions,
   ephemeral?: boolean,
 }): Promise<void> {
@@ -489,14 +518,14 @@ export async function replyWithSelect({
   workingMsg,
 }: {
   interaction: AnyInteraction,
-  options: MessageSelectOptionData[],
+  options: SelectMenuComponentOptionData[],
   placeholder?: string,
   label?: string,
   isFollowUp?: boolean,
   onSelect: (value: string, message: MessageResponse) => Promise<void | WebhookEditMessageOptions>,
   workingMsg?: string,
 }): Promise<void> {
-  const menu = new MessageSelectMenu({
+  const menu = new SelectMenuBuilder({
     customId: 'select',
     placeholder,
     options: options.map(o => ({
@@ -504,7 +533,7 @@ export async function replyWithSelect({
       label: o.label.slice(0, 100),
     })).slice(0, 25),
   });
-  const row = new MessageActionRow({
+  const row = new ActionRowBuilder<SelectMenuBuilder>({
     components: [menu],
   });
 
@@ -634,39 +663,39 @@ export async function parseInput({
 }): Promise<AnyMapping> {
   const resolvedInputs: AnyMapping = {};
   function parseCommandOption(option: CommandInteractionOption) {
-    if (!interaction.isCommand()) return;
-    if (option.type === 'SUB_COMMAND') {
+    if (!isCommand(interaction)) return;
+    if (option.type === ApplicationCommandOptionType.Subcommand) {
       option.options?.forEach(option => {
         parseCommandOption(option);
       });
     } else {
       const { options } = interaction;
       switch (option.type) {
-        case 'ROLE': {
+        case ApplicationCommandOptionType.Role: {
           resolvedInputs[option.name] = options.getRole(option.name);
           break;
         }
-        case 'CHANNEL': {
+        case ApplicationCommandOptionType.Channel: {
           resolvedInputs[option.name] = options.getChannel(option.name);
           break;
         }
-        case 'INTEGER': {
+        case ApplicationCommandOptionType.Integer: {
           resolvedInputs[option.name] = options.getInteger(option.name);
           break;
         }
-        case 'NUMBER': {
+        case ApplicationCommandOptionType.Number: {
           resolvedInputs[option.name] = options.getNumber(option.name);
           break;
         }
-        case 'MENTIONABLE': {
+        case ApplicationCommandOptionType.Mentionable: {
           resolvedInputs[option.name] = options.getMentionable(option.name);
           break;
         }
-        case 'STRING': {
+        case ApplicationCommandOptionType.String: {
           resolvedInputs[option.name] = options.getString(option.name);
           break;
         }
-        case 'USER': {
+        case ApplicationCommandOptionType.User: {
           resolvedInputs[option.name] = options.getUser(option.name);
           break;
         }
@@ -677,7 +706,7 @@ export async function parseInput({
     }
   }
 
-  if (interaction.isCommand()) {
+  if (isCommand(interaction)) {
     interaction.options.data.forEach(option => {
       parseCommandOption(option);
     });
@@ -685,7 +714,7 @@ export async function parseInput({
   }
 
   async function parseModalOption(option: APIApplicationCommandOption) {
-    if (!interaction.isModalSubmit()) return;
+    if (!isModalSubmit(interaction)) return;
     let input: string;
     try {
       input = interaction.fields.getTextInputValue(option.name);
@@ -780,7 +809,7 @@ export async function parseInput({
     }
   }
 
-  if (interaction.isModalSubmit()) {
+  if (isModalSubmit(interaction)) {
     const { subcommand } = getCommandInfoFromInteraction(interaction);
     await Promise.all(slashCommandData.options.map(async option => {
       const json = option.toJSON();
@@ -801,13 +830,17 @@ export async function parseInput({
 }
 
 export function getSubcommand(interaction: CommandInteraction | ModalSubmitInteraction): string | null {
-  let subcommand: string | null;
-  if (interaction.isModalSubmit()) {
+  let subcommand: string | null = null;
+  if (isModalSubmit(interaction)) {
     subcommand = getCommandInfoFromInteraction(interaction).subcommand;
-  } else {
+  } else if (isCommand(interaction)) {
     subcommand = interaction.options.getSubcommand();
   }
   return subcommand;
+}
+
+export function getSubcommand2(interaction: ChatInputCommandInteraction): string | null {
+  return interaction.options.getSubcommand();
 }
 
 export function editLatest({

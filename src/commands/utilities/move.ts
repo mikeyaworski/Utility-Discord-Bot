@@ -1,4 +1,13 @@
-import type { Message, TextBasedChannel, TextChannel, ContextMenuInteraction } from 'discord.js';
+import {
+  Message,
+  TextBasedChannel,
+  TextChannel,
+  ContextMenuCommandInteraction,
+  SelectMenuBuilder,
+  ActionRowBuilder,
+  EmbedBuilder,
+  MessageOptions,
+} from 'discord.js';
 import {
   Command,
   CommandBeforeConfirmMethod,
@@ -9,7 +18,6 @@ import {
   GenericMapping,
 } from 'src/types';
 
-import Discord from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import get from 'lodash.get';
 
@@ -20,6 +28,9 @@ import {
   getInfoFromCommandInteraction,
   getChannel,
   parseInput,
+  isText,
+  isModalSubmit,
+  isCommand,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -57,15 +68,15 @@ commandBuilder.addStringOption(option => {
 
 async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message, replyTo?: Message): Promise<Message> {
   await channel.sendTyping();
-  const newMessageEmbed = new Discord.MessageEmbed({
+  const newMessageEmbed = new EmbedBuilder({
     author: {
       name: msg.author.username,
       icon_url: msg.author.avatarURL() || undefined,
     },
     description: msg.content,
   });
-  const newMessageArgs = {
-    embeds: [newMessageEmbed].concat(msg.embeds),
+  const newMessageArgs: MessageOptions = {
+    embeds: [newMessageEmbed, ...msg.embeds],
     files: Array.from(msg.attachments.values()),
   };
   const newMessage = await (replyTo ? replyTo.reply(newMessageArgs) : channel.send(newMessageArgs));
@@ -77,7 +88,7 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
   let channelId: string;
   let startId: string;
   let endId: string | null;
-  if (interaction.isModalSubmit()) {
+  if (isModalSubmit(interaction)) {
     const inputs = await parseInput({
       slashCommandData: commandBuilder,
       interaction,
@@ -91,8 +102,11 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
     endId = interaction.options.getString('end_message_id');
   }
 
+  if (!channelId) throw new Error('Error finding channel');
+  if (!startId) throw new Error('Error finding starting message ID');
+
   const toChannel = await interaction.guild!.channels.fetch(channelId);
-  if (!toChannel || !toChannel.isText()) {
+  if (!toChannel || !isText(toChannel)) {
     interaction.editReply(`Could not resolve toChannel: <#${channelId}>`);
     return null;
   }
@@ -122,12 +136,12 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
 
   const authorAndBot = filterOutFalsy([author, client.user]);
 
-  if (!usersHaveChannelPermission({ channel: toChannel, users: authorAndBot, permissions: ['SEND_MESSAGES', 'VIEW_CHANNEL'] })) {
+  if (!usersHaveChannelPermission({ channel: toChannel, users: authorAndBot, permissions: ['SendMessages', 'ViewChannel'] })) {
     await interaction.editReply(`One of us not have access to send messages in <#${toChannel.id}>`);
     return null;
   }
 
-  if (!usersHaveChannelPermission({ channel: fromChannel, users: authorAndBot, permissions: ['MANAGE_MESSAGES', 'VIEW_CHANNEL'] })) {
+  if (!usersHaveChannelPermission({ channel: fromChannel, users: authorAndBot, permissions: ['ManageMessages', 'ViewChannel'] })) {
     await interaction.editReply(`One of us not have access to delete messages in <#${fromChannel.id}>`);
     return null;
   }
@@ -183,13 +197,13 @@ const afterConfirm: CommandAfterConfirmMethod<IntermediateResult> = async (inter
   return `${msgs.length} messages have been moved to <#${toChannel.id}>`;
 };
 
-async function handleContextMenu(interaction: ContextMenuInteraction): Promise<IntentionalAny> {
+async function handleContextMenu(interaction: ContextMenuCommandInteraction): Promise<IntentionalAny> {
   await interaction.deferReply({ ephemeral: true });
 
   const ogChannelId = interaction.channelId;
   const ogMessageId = interaction.options.getMessage('message')?.id;
   const ogChannel = ogChannelId && await getChannel(ogChannelId);
-  const ogMessage = ogMessageId && ogChannel && ogChannel.isText() && await ogChannel.messages.fetch(ogMessageId);
+  const ogMessage = ogMessageId && ogChannel && isText(ogChannel) && await ogChannel.messages.fetch(ogMessageId);
 
   if (!ogMessage) return interaction.editReply('Could not fetch original message!');
   if (!ogChannel) return interaction.editReply('Could not fetch original channel!');
@@ -200,9 +214,9 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   const authorAndBot = filterOutFalsy([author, client.user]);
 
   const textChannelsWithPermission = allChannels
-    .filter(channel => channel.isText())
+    .filter(channel => isText(channel))
     .filter(channel => {
-      return usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['VIEW_CHANNEL', 'SEND_MESSAGES'] })
+      return usersHaveChannelPermission({ channel, users: authorAndBot, permissions: ['ViewChannel', 'SendMessages'] })
         && channel.id !== ogChannel.id;
     });
 
@@ -223,12 +237,12 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
       };
     });
 
-  const menu = new Discord.MessageSelectMenu({
+  const menu = new SelectMenuBuilder({
     customId: 'channel',
     placeholder: 'Select a channel...',
     options,
   });
-  const row = new Discord.MessageActionRow({
+  const row = new ActionRowBuilder<SelectMenuBuilder>({
     components: [menu],
   });
   const msg = await interaction.editReply({
@@ -237,6 +251,7 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
   });
 
   try {
+    const channel = interaction.channel;
     const selectInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.id === msg.id,
       time: CONFIRMATION_DEFAULT_TIMEOUT,
@@ -254,7 +269,7 @@ async function handleContextMenu(interaction: ContextMenuInteraction): Promise<I
       const toChannelId = selectInteraction.values[0];
       const toChannel = await getChannel(toChannelId);
 
-      if (!toChannel || !toChannel.isText()) throw new Error(`Could not fetch channel from ID: ${toChannelId}`);
+      if (!toChannel || !isText(toChannel)) throw new Error(`Could not fetch channel from ID: ${toChannelId}`);
 
       await moveMessage(toChannel, ogMessage);
       return interaction.editReply('1 message moved.');
