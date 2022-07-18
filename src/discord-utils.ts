@@ -54,9 +54,6 @@ import { APIApplicationCommandOption, ApplicationCommandType } from 'discord-api
 export function isText(channel: Channel): channel is TextChannel {
   return channel.type === ChannelType.GuildText;
 }
-// export function isCommand(interaction: AnyInteraction): interaction is CommandInteraction {
-//   return interaction.type === InteractionType.ApplicationCommand;
-// }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
   return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
 }
@@ -837,10 +834,6 @@ export function getSubcommand(interaction: CommandInteraction | ModalSubmitInter
     subcommand = interaction.options.getSubcommand();
   }
   return subcommand;
-}
-
-export function getSubcommand2(interaction: ChatInputCommandInteraction): string | null {
-  return interaction.options.getSubcommand();
 }
 
 export function editLatest({
