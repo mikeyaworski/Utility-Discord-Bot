@@ -90,7 +90,7 @@ export function getQueryFromSpotifyTrack(track: IntentionalAny): string {
     track.name
   } ${
     track.artists.map((artist: IntentionalAny) => artist.name).join(' ')
-  }`;
+  } lyrics`;
 }
 
 async function paginateSpotifyApi(route: string, params: [string, string][] = []): Promise<IntentionalAny> {
