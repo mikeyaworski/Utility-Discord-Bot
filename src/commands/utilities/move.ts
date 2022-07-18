@@ -102,9 +102,6 @@ const beforeConfirm: CommandBeforeConfirmMethod<IntermediateResult> = async inte
     endId = interaction.options.getString('end_message_id');
   }
 
-  if (!channelId) throw new Error('Error finding channel');
-  if (!startId) throw new Error('Error finding starting message ID');
-
   const toChannel = await interaction.guild!.channels.fetch(channelId);
   if (!toChannel || !isText(toChannel)) {
     interaction.editReply(`Could not resolve toChannel: <#${channelId}>`);
