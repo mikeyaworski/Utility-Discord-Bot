@@ -76,7 +76,7 @@ export function listenToCommands(): void {
       if (isCommand(interaction)) {
         return interaction.commandName === c.slashCommandData?.name;
       }
-      if (interaction.isContextMenuCommand()) {
+      if (isContextMenu(interaction)) {
         return interaction.commandName === c.contextMenuData?.name;
       }
       if (isButton(interaction)) {
