@@ -52,7 +52,7 @@ import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption, ApplicationCommandType } from 'discord-api-types/v10';
 
 export function isText(channel: Channel): channel is TextChannel {
-  return channel.type === ChannelType.GuildText;
+  return channel.type === ChannelType.GuildText || channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM;
 }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
   return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
