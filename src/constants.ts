@@ -22,14 +22,18 @@ export const Colors = Object.freeze({
 export const BULK_MESSAGES_LIMIT = 100;
 export const MAX_MESSAGES_FETCH = 500;
 
-export const MIN_REMINDER_INTERVAL = 10 * 60;
+export const MIN_REMINDER_INTERVAL = 5;
 export const WAKE_INTERVAL = 10 * 60 * 1000;
 export const MESSAGE_PREVIEW_LENGTH = 50;
 
 export const YT_PLAYLIST_PAGE_SIZE = 50;
 export const MAX_YT_PLAYLIST_PAGE_FETCHES = 4;
 
-export const SPOTIFY_PLAYLIST_PAGE_SIZE = 50;
-export const MAX_SPOTIFY_PLAYLIST_PAGE_FETCHES = 4;
+export const SPOTIFY_API_ROOT = 'https://api.spotify.com/v1';
+export const SPOTIFY_ABLUMS_FETCH_SIZE = 20;
+export const SPOTIFY_PAGE_SIZE = 50;
+export const MAX_SPOTIFY_PAGE_FETCHES = 4;
+
+export const MAX_QUEUE_LENGTH = 300;
 
 export const CONCURRENCY_LIMIT = 10;

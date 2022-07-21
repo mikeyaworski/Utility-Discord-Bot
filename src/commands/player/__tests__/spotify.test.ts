@@ -20,9 +20,14 @@ describe('spotify', () => {
       expect(res.type).toEqual(LinkType.TRACK);
       expect(res.id).toEqual('foo');
     });
+    test('Valid artist', () => {
+      const res = parseSpotifyLink('https://open.spotify.com/artist/foo?si=bar');
+      expect(res.type).toEqual(LinkType.ARTIST);
+      expect(res.id).toEqual('foo');
+    });
     test('Invalid spotify link', () => {
       expect(() => {
-        parseSpotifyLink('https://open.spotify.com/artist/foo?si=bar&dl_branch=1');
+        parseSpotifyLink('https://open.spotify.com/foobar/foo?si=bar&dl_branch=1');
       }).toThrowError();
     });
     test('Totally wrong link', () => {
