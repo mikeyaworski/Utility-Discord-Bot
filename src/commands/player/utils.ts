@@ -66,16 +66,18 @@ export function getPlayerButtons(session: Session, interaction?: AnyInteraction)
         label: 'Refresh',
         style: ButtonStyle.Secondary,
       }),
-      new ButtonBuilder({
-        customId: 'rewind',
-        label: `⏪ ${REWIND_BUTTON_TIME / 1000}s`,
-        style: ButtonStyle.Secondary,
-      }),
-      new ButtonBuilder({
-        customId: 'fast-forward',
-        label: `⏩ ${FAST_FORWARD_BUTTON_TIME / 1000}s`,
-        style: ButtonStyle.Secondary,
-      }),
+      // Seeking too quickly is super flakey, so these buttons are prone to being abused.
+      // For now, they'll be left out.
+      // new ButtonBuilder({
+      //   customId: 'rewind',
+      //   label: `⏪ ${REWIND_BUTTON_TIME / 1000}s`,
+      //   style: ButtonStyle.Secondary,
+      // }),
+      // new ButtonBuilder({
+      //   customId: 'fast-forward',
+      //   label: `⏩ ${FAST_FORWARD_BUTTON_TIME / 1000}s`,
+      //   style: ButtonStyle.Secondary,
+      // }),
       showQueueButton && new ButtonBuilder({
         customId: SHOW_QUEUE_ID,
         label: 'Show Queue',
