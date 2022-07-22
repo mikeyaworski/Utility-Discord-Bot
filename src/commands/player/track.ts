@@ -11,8 +11,9 @@ export interface VideoDetails {
   duration?: number,
 }
 
-interface AudioResourceOptions {
+export interface AudioResourceOptions {
   seek?: number, // in seconds
+  speed?: number, // multiplier
 }
 
 export enum TrackVariant {
@@ -34,37 +35,49 @@ export default class Track {
   }
 
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
+    const { seek, speed } = options;
+
+    const tryPlayDl: () => Promise<AudioResource<Track>> = async () => {
+      const source = options.seek
+        ? await play.stream(this.link, {
+          seek: options.seek,
+        })
+        : await play.stream(this.link);
+      const audioResource = await createAudioResource(source.stream, {
+        metadata: this,
+        inputType: source.type,
+      });
+      return audioResource;
+    };
+
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        // This now breaks in the middle of songs
-        try {
-          const source = options.seek
-            ? await play.stream(this.link, {
-              seek: options.seek,
-            })
-            : await play.stream(this.link);
-          const audioResource = await createAudioResource(source.stream, {
-            metadata: this,
-            inputType: source.type,
-          });
-          return audioResource;
-        } catch (err) {
-          error(err);
+        if (!speed) {
+          try {
+            const audioResource = await tryPlayDl();
+            return audioResource;
+          } catch (err) {
+            error(err);
+          }
         }
       }
-      // We want to fall through if play-dl doesn't work
+      // We want to fall through if play-dl doesn't work, or the speed option is provided
       // eslint-disable-next-line no-fallthrough
       default: {
-        const { seek = 0 } = options;
         const stream = ytdl(this.link);
-        const seekedStream = seek
-          ? ffmpeg({ source: stream }).toFormat('mp3').setStartTime(Math.ceil(seek))
-          : stream;
+        if (!seek && !speed) {
+          return createAudioResource(stream, { metadata: this });
+        }
+        const manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3');
+        if (seek) {
+          manipulatedStream.setStartTime(Math.ceil(seek));
+        }
+        if (speed) {
+          manipulatedStream.audioFilters(`atempo=${speed}`);
+        }
         // @ts-expect-error This actually works
-        return createAudioResource(seekedStream, {
-          metadata: this,
-        });
+        return createAudioResource(manipulatedStream, { metadata: this });
       }
     }
   }

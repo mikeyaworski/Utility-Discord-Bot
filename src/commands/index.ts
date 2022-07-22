@@ -24,6 +24,7 @@ import Chess from './chess';
 import Play from './player/play';
 import Connect from './player/connect';
 import Seek from './player/seek';
+import Speed from './player/speed';
 import Skip from './player/skip';
 import Leave from './player/leave';
 import Pause from './player/pause';
@@ -50,6 +51,7 @@ const commands = [
   Play,
   Connect,
   Seek,
+  Speed,
   Skip,
   Pause,
   Resume,

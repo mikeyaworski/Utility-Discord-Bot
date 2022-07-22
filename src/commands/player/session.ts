@@ -16,7 +16,7 @@ import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
 import { getChannel, isText } from 'src/discord-utils';
 import sessions from './sessions';
-import Track from './track';
+import Track, { AudioResourceOptions } from './track';
 import { getMessageData, listenForPlayerButtons } from './utils';
 import { runNowPlaying } from './now-playing';
 
@@ -31,6 +31,7 @@ export default class Session {
   private readonly guild: Guild;
   private queueLock = false;
   private readyLock = false;
+  private playbackSpeed = 1;
 
   // DiscordJS does not provide this for us, so we manually keep track of an approximate duration in the current track
   private currentTrackPlayTime: {
@@ -39,11 +40,13 @@ export default class Session {
     pauseStarted: number | null, // timestamp
     totalPauseTime: number,
     seeked: number | null,
+    speed: number,
   } = {
     started: null,
     pauseStarted: null,
     totalPauseTime: 0,
     seeked: null,
+    speed: 1,
   };
 
   public constructor(guild: Guild, voiceConnection: VoiceConnection) {
@@ -225,6 +228,7 @@ export default class Session {
       pauseStarted: null,
       totalPauseTime: 0,
       seeked: null,
+      speed: this.playbackSpeed,
     };
   }
 
@@ -236,9 +240,20 @@ export default class Session {
     return this.processQueue(true);
   }
 
+  public setPlaybackSpeed(speed: number): void {
+    this.playbackSpeed = speed;
+  }
+
+  private getAudioResourceOptions(): AudioResourceOptions {
+    return {
+      speed: this.playbackSpeed !== 1 ? this.playbackSpeed : undefined,
+    };
+  }
+
   public async seek(amountSeconds: number): Promise<void> {
     if (!this.currentTrack) return;
     const resource = await this.currentTrack.getAudioResource({
+      ...this.getAudioResourceOptions(),
       seek: amountSeconds,
     });
     this.audioPlayer.play(resource);
@@ -247,6 +262,7 @@ export default class Session {
       seeked: amountSeconds * 1000,
       pauseStarted: null,
       totalPauseTime: 0,
+      speed: this.playbackSpeed,
     };
   }
 
@@ -259,7 +275,7 @@ export default class Session {
     const totalPauseTime = this.isPaused() && this.currentTrackPlayTime.pauseStarted != null
       ? (Date.now() - this.currentTrackPlayTime.pauseStarted) + this.currentTrackPlayTime.totalPauseTime
       : this.currentTrackPlayTime.totalPauseTime;
-    const timePlayed = timeSinceStart - totalPauseTime;
+    const timePlayed = (timeSinceStart - totalPauseTime) * this.currentTrackPlayTime.speed;
     if (this.currentTrackPlayTime.seeked != null) {
       return timePlayed + this.currentTrackPlayTime.seeked;
     }
@@ -295,7 +311,7 @@ export default class Session {
     }
 
     try {
-      const resource = await this.currentTrack.getAudioResource();
+      const resource = await this.currentTrack.getAudioResource(this.getAudioResourceOptions());
       this.audioPlayer.play(resource);
       log('Playing new track', this.currentTrack.link, this.currentTrack.variant);
 
@@ -304,6 +320,7 @@ export default class Session {
         pauseStarted: null,
         totalPauseTime: 0,
         seeked: null,
+        speed: this.playbackSpeed,
       };
 
       // TODO: Extract this to a helper function
