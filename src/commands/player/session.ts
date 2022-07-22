@@ -99,6 +99,9 @@ export default class Session {
 
     // For keeping track of play and pause time
     this.audioPlayer.on('stateChange', (oldState, newState) => {
+      if (newState.status === AudioPlayerStatus.Playing && this.currentTrackPlayTime.started == null) {
+        this.currentTrackPlayTime.started = Date.now();
+      }
       if (newState.status !== AudioPlayerStatus.Playing && oldState.status === AudioPlayerStatus.Playing) {
         this.currentTrackPlayTime.pauseStarted = Date.now();
         log('Paused at', this.currentTrackPlayTime.pauseStarted);
@@ -258,7 +261,8 @@ export default class Session {
     });
     this.audioPlayer.play(resource);
     this.currentTrackPlayTime = {
-      started: Date.now(),
+      // It could buffer before starting, so we don't initialize the start time just yet
+      started: null,
       seeked: amountSeconds * 1000,
       pauseStarted: null,
       totalPauseTime: 0,
@@ -316,7 +320,8 @@ export default class Session {
       log('Playing new track', this.currentTrack.link, this.currentTrack.variant);
 
       this.currentTrackPlayTime = {
-        started: Date.now(),
+        // It could buffer before starting, so we don't initialize the start time just yet
+        started: null,
         pauseStarted: null,
         totalPauseTime: 0,
         seeked: null,
