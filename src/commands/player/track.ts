@@ -59,7 +59,6 @@ export default class Track {
             output: '-',
             quiet: true,
             format: 'bestaudio',
-            limitRate: '100K',
           }, {
             stdio: ['ignore', 'pipe', 'ignore'],
           },
