@@ -419,7 +419,7 @@ export async function replyWithSessionButtons({
   }
 }
 
-export function getFractionalDuration(
+export function getTrackDurationString(
   playedDuration: number,
   videoDetails: VideoDetails,
 ): string | null {
@@ -429,7 +429,7 @@ export function getFractionalDuration(
   return `${getClockString(playedDuration, minPortions)} / ${totalDuration}`;
 }
 
-export async function getTrackDurationString(
+export async function getTrackDurationStringFromSession(
   session: Session,
 ): Promise<string | null> {
   const currentTrack = session.getCurrentTrack();
@@ -437,11 +437,28 @@ export async function getTrackDurationString(
   try {
     const videoDetails = await currentTrack.getVideoDetails();
     const playedDuration = session.getCurrentTrackPlayTime();
-    return getFractionalDuration(playedDuration, videoDetails);
+    return getTrackDurationString(playedDuration, videoDetails);
   } catch (err) {
     error(err);
     return null;
   }
+}
+
+export function getTrackDurationAndSpeed(duration: string | null, speed: number): string {
+  let text = '';
+  if (duration) {
+    text = duration;
+  }
+  if (speed !== 1) {
+    text = text ? `${text} (${speed}x speed)` : `${speed}x speed`;
+  }
+  return text;
+}
+
+export async function getTrackDurationAndSpeedFromSession(session: Session): Promise<string> {
+  const durationStr = await getTrackDurationStringFromSession(session);
+  const speed = session.getPlaybackSpeed();
+  return getTrackDurationAndSpeed(durationStr, speed);
 }
 
 export async function getVideoDetailsWithFallback(track: Track): Promise<VideoDetails> {

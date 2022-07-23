@@ -247,6 +247,10 @@ export default class Session {
     this.playbackSpeed = speed;
   }
 
+  public getPlaybackSpeed(): number {
+    return this.currentTrackPlayTime.speed;
+  }
+
   private getAudioResourceOptions(): AudioResourceOptions {
     return {
       speed: this.playbackSpeed !== 1 ? this.playbackSpeed : undefined,

@@ -2,7 +2,7 @@ import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import sessions from './sessions';
-import { getTrackDurationString, getVideoDetailsWithFallback, replyWithSessionButtons } from './utils';
+import { getTrackDurationAndSpeedFromSession, getVideoDetailsWithFallback, replyWithSessionButtons } from './utils';
 
 export const runNowPlaying: Parameters<typeof replyWithSessionButtons>[0]['run'] = async session => {
   const currentTrack = session.getCurrentTrack();
@@ -13,12 +13,12 @@ export const runNowPlaying: Parameters<typeof replyWithSessionButtons>[0]['run']
     };
   }
   const videoDetails = await getVideoDetailsWithFallback(currentTrack);
-  const duration = await getTrackDurationString(session);
+  const footerText = await getTrackDurationAndSpeedFromSession(session);
   return {
     title: '🔊 Now Playing',
     description: videoDetails.title,
     link: currentTrack.link,
-    footerText: duration || undefined,
+    footerText,
   };
 };
 

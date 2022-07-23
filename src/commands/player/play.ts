@@ -20,7 +20,7 @@ import {
   parseSpotifyTrack,
 } from './spotify';
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
-import { attachPlayerButtons, getFractionalDuration } from './utils';
+import { attachPlayerButtons, getTrackDurationString, getTrackDurationAndSpeed } from './utils';
 import { getFavorite } from './player-favorites';
 
 function respondWithEmbed(editReply: EditReply, content: EmbedData) {
@@ -48,12 +48,14 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
     if (wasPlayingAnything) {
       return { description: `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}` };
     }
-    const footerText = getFractionalDuration(0, videoDetails);
+    const duration = getTrackDurationString(0, videoDetails);
+    const speed = session.getPlaybackSpeed();
+    const footerText = getTrackDurationAndSpeed(duration, speed);
     return {
       author: {
         name: '🔊 Now Playing',
       },
-      description: videoDetails.title,
+      description: `${videoDetails.title}\n${tracks[0].link}`,
       footer: footerText ? {
         text: footerText,
       } : undefined,

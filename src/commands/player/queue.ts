@@ -6,7 +6,7 @@ import { CONCURRENCY_LIMIT } from 'src/constants';
 import { getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
-import { replyWithSessionButtons, attachPlayerButtons, getTrackDurationString, getVideoDetailsWithFallback } from './utils';
+import { replyWithSessionButtons, attachPlayerButtons, getVideoDetailsWithFallback, getTrackDurationAndSpeedFromSession } from './utils';
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -133,10 +133,11 @@ export async function handleList(interaction: AnyInteraction, session: Session):
         });
       }
 
+      const footerText = await getTrackDurationAndSpeedFromSession(session);
       return {
         fields,
         title: '🎵 Queue List 🎵',
-        footerText: await getTrackDurationString(session) || undefined,
+        footerText,
       };
     },
   });
