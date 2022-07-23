@@ -173,7 +173,7 @@ export async function listenForPlayerButtons({
           break;
         }
         case 'skip': {
-          session.skip();
+          await session.skip();
           if (cb) cb();
           break;
         }
