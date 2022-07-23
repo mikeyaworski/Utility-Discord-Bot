@@ -61,6 +61,8 @@ export default class Track {
             format: 'bestaudio',
           }, {
             stdio: ['ignore', 'pipe', 'ignore'],
+            maxBuffer: 10_000_000,
+            buffer: false,
           },
         );
         if (!process.stdout) {
