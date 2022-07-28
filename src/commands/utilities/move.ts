@@ -225,9 +225,11 @@ async function handleContextMenu(interaction: ContextMenuCommandInteraction): Pr
           && textChannel.name === channel.name
           && textChannel.parentId !== channel.parentId;
       });
+      const icon = channel.isVoiceBased() ? '🔊 ' : '#';
+      const baseLabel = `${icon}${channel.name}`;
       const label = (duplicateNamedChannel && parentCategory)
-        ? `#${channel.name} (${parentCategory.name})`
-        : `#${channel.name}`;
+        ? `${baseLabel} (${parentCategory.name})`
+        : baseLabel;
       return {
         label,
         value: channel.id,
