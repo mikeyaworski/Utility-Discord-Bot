@@ -40,7 +40,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     ```
 1. 
     ```
-    npm ci`
+    npm ci
 1. Retrieve your `DATABASE_URL` environment variable with:
     ```
     heroku config:get DATABASE_URL -a miky-utility-discord-bot
@@ -112,4 +112,4 @@ cat log
 
 # TODOs
 
-1. Build this VM from an image.
+1. Rewrite this documentation to use Docker.

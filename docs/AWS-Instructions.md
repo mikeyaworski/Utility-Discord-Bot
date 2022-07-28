@@ -30,8 +30,8 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
 1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
-    git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
-    cd Utility-Discord-Bot
+    git clone https://github.com/mikeyaworski/utility-discord-bot.git
+    cd utility-discord-bot
     ```
 1. Start Docker and give yourself (`ec2-user`) permission to run Docker commands. If you skip the command `sudo usermod -a -G docker ec2-user`, then you need to run `sudo docker ...` every time (you would also need to update `package.json`).
     ```
@@ -41,7 +41,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
 1. Exit the ssh session and reconnect, so that user permissions get updated. Otherwise, you will need to use `sudo` for every `docker` command.
 1. Pull the latest Docker image.
     ```
-    cd ~/Utility-Discord-Bot
+    cd ~/utility-discord-bot
     npm run docker-pull
     ```
     Or, if you want to use a specific Docker image (other than `latest`), find the tag from https://hub.docker.com/repository/docker/mikeyaworski/utility-discord-bot and use this command, where `...` is the tag you want to use:
@@ -58,18 +58,30 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     As previously mentioned, these instructions assume you have gone through the [Heroku instructions](./Heroku-Instructions.md) to create a Heroku app with a free PostgreSQL database.
 1.  Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
 
+    You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather the environment variables in the [Heroku instructions](./Heroku-Instructions.md).
+
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
     1. Create it on your local computer and copy the contents of the file.
-    1. In your SSH session, run `vi .env` (make sure you are inside the `Utility-Discord-Bot` folder).
+    1. In your SSH session, run `vi .env` (make sure you are inside the `utility-discord-bot` folder).
     1. Press `i` to enter Insert mode
     1. Paste. This pastes the content of the `.env` file. If on Windows WSL, you may need to right click your WSL bar, click Properties and check "Use Ctrl+Shift+C/V as Copy/Paste" first. And then use `Ctrl + Shift + V` to paste.
     1. Type `:x` to save and quit.
 
     You can use something like nano instead of vim if you struggle with the instructions above.
+1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then generate an SSL certificate and run the nginx server:
+   1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
+   1. `npm run dhparam`
+   1. Update `deploy/nginx-conf-http/nginx.conf` and `deploy/nginx-conf-https/nginx.conf` by replacing the server name `api.utilitydiscordbot.com` (and possibly port number) with your own.
+   1. Update `deploy/docker-compose.yml` by replacing `api.utilitydiscordbot.com` and `michael@mikeyaworski.com` with your own.
+   1. TODO: This may also require security group changes.
 1.  Start the bot:
     ```
     npm run start:docker
+    ```
+    Or, if you are running the nginx server mentioned in the previous step, instead start the bot with:
+    ```
+    npm run start:docker-compose
     ```
 1. View logs to see if everything is successful:
    ```
@@ -77,32 +89,82 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
    Use `Ctrl + C` to get out of the logs.
 
+   If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+   ```
+   docker logs certbot -f
+   docker logs http-server -f
+   docker logs https-server -f
+   ```
+1. (Optional) If you enabled HTTPS, then you should also create a cronjob to run the `deploy/renew-ssl.sh` script. This will both renew the SSL certificate and restart the https nginx server, so that the server will use the new certificate.
+   1. TODO: Write these instructions.
+
 ## Restarting
 
+Without HTTPS:
+
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run restart:docker
+```
+
+With HTTPS:
+
+```
+cd ~/utility-discord-bot
+npm run docker-pull
+npm run restart:docker-compose
 ```
 
 ## Updating
 
+Without HTTPS:
+
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run docker-pull
 npm run restart:docker
 ```
 
-## Stopping
+With HTTPS:
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
+npm run docker-pull
+npm run restart:docker-compose
+```
+
+## Stopping
+
+Without HTTPS:
+
+```
+cd ~/utility-discord-bot
 npm run stop:docker
+```
+
+With HTTPS:
+
+```
+cd ~/utility-discord-bot
+npm run stop:docker-compose
 ```
 
 ## Reading Logs
 
 ```
-cd ~/Utility-Discord-Bot
+cd ~/utility-discord-bot
 npm run logs:bot
 ```
 Use `Ctrl + C` to get out of the logs.
+
+If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+```
+npm run logs:cert
+npm run logs:http
+npm run logs:https
+```
+
+You may also want to read the cronjob logs for renewing your SSL certificate. You can do that with:
+```
+npm run logs:cron
+```

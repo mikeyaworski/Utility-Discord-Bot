@@ -45,5 +45,5 @@
 
 11. You can click the `More` button at the top right of your Heroku app and select `View logs` to see if your app is successfully building / deploying. You can view the specific build logs by going to `Activity` on your Heroku app and selecting `View build log` for a specific build.
 
-12. If you just want to use the bot on your server, you're done! Just invite it with the link I provided in step 2. Otherwise, continue reading the next steps.
+12. If you just want to use the bot on your server, you're done! Just invite it with the link I provided in step 2.
 
