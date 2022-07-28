@@ -12,7 +12,6 @@ import {
   findMessageInChannel,
   parseInput,
   isModalSubmit,
-  isCommand,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';

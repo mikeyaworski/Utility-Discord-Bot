@@ -1,6 +1,6 @@
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { getInfoFromCommandInteraction, checkMessageErrors, parseArguments, parseInput } from 'src/discord-utils';
+import { getInfoFromCommandInteraction, checkMessageErrors, parseInput } from 'src/discord-utils';
 import { CommandInteraction, ModalSubmitInteraction } from 'discord.js';
 
 const commandBuilder = new SlashCommandBuilder();

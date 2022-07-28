@@ -30,7 +30,6 @@ import {
   parseInput,
   isText,
   isModalSubmit,
-  isCommand,
 } from 'src/discord-utils';
 import { client } from 'src/client';
 import { filterOutFalsy } from 'src/utils';
@@ -250,7 +249,6 @@ async function handleContextMenu(interaction: ContextMenuCommandInteraction): Pr
   });
 
   try {
-    const channel = interaction.channel;
     const selectInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.id === msg.id,
       time: CONFIRMATION_DEFAULT_TIMEOUT,

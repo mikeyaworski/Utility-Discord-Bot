@@ -21,9 +21,6 @@ overrides:
 rules:
   # Rules which will be overriden (see overrides).
   '@typescript-eslint/explicit-module-boundary-types': off
-  
-  # Redundant TS rules which can just be disabled.
-  '@typescript-eslint/no-unused-vars': off
 
   # TS rules
   '@typescript-eslint/ban-ts-comment': off # we obviously need to use this in certain cases
