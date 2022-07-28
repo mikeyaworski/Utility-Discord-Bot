@@ -21,7 +21,7 @@
     "docker-push": "./docker-push.sh",
     "docker-push:latest": "./docker-push.sh latest",
     "docker-pull": "docker pull mikeyaworski/utility-discord-bot:latest",
-    "start:docker": "docker run -d --env-file .env --publish 80:3000 --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
+    "start:docker": "docker run -d --restart unless-stopped --env-file .env --publish 80:3000 --name utility-discord-bot mikeyaworski/utility-discord-bot:latest",
     "stop:docker": "docker stop utility-discord-bot && docker rm utility-discord-bot",
     "restart:docker": "npm run stop:docker && npm run start:docker",
     "dhparam": "mkdir -p deploy/dhparam && openssl dhparam -out ./deploy/dhparam/dhparam-2048.pem 2048",
