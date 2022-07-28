@@ -17,7 +17,6 @@ import {
   SelectMenuComponentOptionData,
   MessagePayload,
   WebhookEditMessageOptions,
-  ChannelType,
   TextChannel,
   SelectMenuBuilder,
   ActionRowBuilder,
@@ -49,10 +48,11 @@ import { error, log } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
-import { APIApplicationCommandOption, ApplicationCommandType } from 'discord-api-types/v10';
+import { APIApplicationCommandOption } from 'discord-api-types/v10';
 
+// TODO: This type guard is probably not accurate, though is practically fine for now
 export function isText(channel: Channel): channel is TextChannel {
-  return channel.type === ChannelType.GuildText || channel.type === ChannelType.DM || channel.type === ChannelType.GroupDM;
+  return channel.isDMBased() || channel.isTextBased() || channel.isThread();
 }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
   return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
