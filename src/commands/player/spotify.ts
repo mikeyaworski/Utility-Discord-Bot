@@ -198,7 +198,8 @@ export async function parseSpotifyArtist(link: string): Promise<string[]> {
     ]).then(r => r.tracks);
     const topTrackIds = new Set(topTracks.map((track: IntentionalAny) => track.id));
     const items = await paginateSpotifyApi(`/artists/${artistId}/albums`, [
-      ['include_groups', 'album,single'],
+      // 'album,single' is an alternative query, but it seems to return a lot duplicate & irrelevant results
+      ['include_groups', 'album'],
     ]);
     const albumIds: string[] = items.map((item: IntentionalAny) => item.id);
     const albums = await fetchSpotifyAlbums(albumIds);
