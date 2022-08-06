@@ -2,7 +2,7 @@ version: '2'
 services:
   utility-discord-bot:
     build: .
-    restart: always
+    restart: unless-stopped
     container_name: utility-discord-bot
     tty: true
     command: npm run dev
