@@ -13,8 +13,6 @@ services:
       - 3000:3000
     depends_on:
       - utility-discord-bot-db
-    links:
-      - utility-discord-bot-db
   utility-discord-bot-db:
     container_name: utility-discord-bot-db
     volumes:
