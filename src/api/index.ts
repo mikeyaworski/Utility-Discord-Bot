@@ -9,6 +9,8 @@ import { log, error } from 'src/logging';
 
 // Routers
 import authRouter from './routes/auth';
+import remindersRouter from './routes/reminders';
+import channelsRouter from './routes/channels';
 
 dotenv.config();
 
@@ -43,6 +45,8 @@ export function initApi(): void {
   app.use(cookieParser());
   app.use(express.json());
   app.use('/auth', authRouter);
+  app.use('/reminders', remindersRouter);
+  app.use('/channels', channelsRouter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   app.listen(port, () => {
     log('Listening on port', port);
