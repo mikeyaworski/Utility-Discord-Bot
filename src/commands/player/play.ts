@@ -6,7 +6,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import { EmbedBuilder, EmbedData } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
-import { isTwitchVodLink, shuffleArray } from 'src/utils';
+import { filterOutFalsy, isTwitchVodLink, shuffleArray } from 'src/utils';
 import { editLatest, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
@@ -22,6 +22,7 @@ import {
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getTrackDurationString, getTrackDurationAndSpeed } from './utils';
 import { getFavorite } from './player-favorites';
+import type { Query } from './types';
 
 function respondWithEmbed(editReply: EditReply, content: EmbedData) {
   const embed = new EmbedBuilder({
@@ -55,7 +56,11 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
       author: {
         name: '🔊 Now Playing',
       },
-      description: `${videoDetails.title}\n${tracks[0].link}`,
+      description: filterOutFalsy([
+        videoDetails.title,
+        tracks[0].link,
+        tracks[0].sourceLink,
+      ]).join('\n'),
       footer: footerText ? {
         text: footerText,
       } : undefined,
@@ -70,7 +75,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
   }
 }
 
-async function enqueueQueries(session: Session, queries: string[], editReply: EditReply): Promise<IntentionalAny> {
+async function enqueueQueries(session: Session, queries: Query[], editReply: EditReply): Promise<IntentionalAny> {
   if (session.isShuffled()) shuffleArray(queries);
   const [firstQuery, ...restQueries] = queries;
   const [firstTrack] = await getTracksFromQueries([firstQuery]);
@@ -175,7 +180,7 @@ export async function play({
 
   if (vodLink) {
     if (isTwitchVodLink(vodLink)) {
-      const track = new Track(vodLink, TrackVariant.TWITCH_VOD);
+      const track = new Track({ link: vodLink, variant: TrackVariant.TWITCH_VOD });
       const responseMessage = await enqueue(session, [track], pushToFront);
       await respondWithEmbed(editReply, responseMessage);
       return attachPlayerButtons(interaction, session, message);
@@ -184,14 +189,14 @@ export async function play({
     if (YouTubeSr.validate(vodLink, 'VIDEO') || YouTubeSr.validate(vodLink, 'PLAYLIST')) {
       const tracks = YouTubeSr.isPlaylist(vodLink)
         ? (await parseYoutubePlaylist(vodLink))
-        : [new Track(vodLink, TrackVariant.YOUTUBE_VOD)];
+        : [new Track({ link: vodLink, variant: TrackVariant.YOUTUBE_VOD })];
       const responseMessage = await enqueue(session, tracks, pushToFront);
       await respondWithEmbed(editReply, responseMessage);
       return attachPlayerButtons(interaction, session, message);
     }
 
     const { type } = parseSpotifyLink(vodLink);
-    const queries: string[] = [];
+    const queries: Query[] = [];
     switch (type) {
       case LinkType.PLAYLIST: {
         queries.push(...await parseSpotifyPlaylist(vodLink));
@@ -226,13 +231,13 @@ export async function play({
     if (!YouTubeSr.validate(streamLink, 'VIDEO')) {
       return editReply('Invalid YouTube link.');
     }
-    const tracks = [new Track(streamLink, TrackVariant.YOUTUBE_LIVESTREAM)];
+    const tracks = [new Track({ link: streamLink, variant: TrackVariant.YOUTUBE_LIVESTREAM })];
     const responseMessage = await enqueue(session, tracks, pushToFront);
     await respondWithEmbed(editReply, responseMessage);
     return attachPlayerButtons(interaction, session, message);
   }
   if (queryStr) {
-    const tracks = await getTracksFromQueries([queryStr]);
+    const tracks = await getTracksFromQueries([{ query: queryStr }]);
     const responseMessage = await enqueue(session, tracks, pushToFront);
     await respondWithEmbed(editReply, responseMessage);
     return attachPlayerButtons(interaction, session, message);

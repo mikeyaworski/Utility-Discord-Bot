@@ -24,15 +24,24 @@ export enum TrackVariant {
   TWITCH_LIVESTREAM,
 }
 
+interface TrackConstructorOptions {
+  link: string,
+  variant: TrackVariant,
+  details?: VideoDetails,
+  sourceLink?: string,
+}
+
 export default class Track {
   public readonly link: string;
   public readonly variant: TrackVariant;
+  public readonly sourceLink: string | undefined;
   private details: VideoDetails | undefined;
 
-  public constructor(link: string, variant: TrackVariant, details?: VideoDetails) {
-    this.link = link;
-    this.variant = variant;
-    this.details = details;
+  public constructor(options: TrackConstructorOptions) {
+    this.link = options.link;
+    this.variant = options.variant;
+    this.details = options.details;
+    this.sourceLink = options.sourceLink;
   }
 
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {

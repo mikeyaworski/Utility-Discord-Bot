@@ -133,7 +133,11 @@ export default class Session {
    * it cannot be reused.
    */
   private duplicateTracks(tracks: Track[]): Track[] {
-    return tracks.map(track => new Track(track.link, track.variant));
+    return tracks.map(track => new Track({
+      link: track.link,
+      variant: track.variant,
+      sourceLink: track.sourceLink,
+    }));
   }
 
   public getCurrentTrack(): Track | undefined {

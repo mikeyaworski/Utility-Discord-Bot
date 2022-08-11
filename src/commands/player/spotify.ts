@@ -13,6 +13,8 @@ import {
   MAX_QUEUE_LENGTH,
 } from 'src/constants';
 import chunk from 'lodash.chunk';
+import get from 'lodash.get';
+import type { Query } from './types';
 
 dotenv.config();
 
@@ -99,15 +101,23 @@ const getSpotifyAccessToken = (() => {
   };
 })();
 
-export function getQueryFromSpotifyTrack(track: IntentionalAny): string {
+export function getQueryFromSpotifyTrack(track: IntentionalAny): Query {
   // TODO: Consider adding "lyrics" or "audio" back to the end of this query.
   // The problem is that for certain tracks, e.g. https://open.spotify.com/track/6j5mgCnmTNqU5h9dzY2aUH,
   // this results in YouTube finding a bad result.
-  return `${
+  const query = `${
     track.name
   } ${
     track.artists.map((artist: IntentionalAny) => artist.name).join(' ')
   } lyrics`;
+  const sourceLink: string | undefined = get(track, [
+    'external_urls',
+    'spotify',
+  ]);
+  return {
+    query,
+    sourceLink,
+  };
 }
 
 async function fetchSpotify(route: string, params: [string, string][] = []): Promise<IntentionalAny> {
@@ -150,13 +160,13 @@ async function paginateSpotifyApi(route: string, params: [string, string][] = []
   return paginate(url.href);
 }
 
-async function getSpotifyTracksFallback(link: string): Promise<string[]> {
+async function getSpotifyTracksFallback(link: string): Promise<Query[]> {
   // This is capped at 100
   const tracks = await Spotify.getTracks(link);
   return tracks.map(track => getQueryFromSpotifyTrack(track));
 }
 
-export async function parseSpotifyPlaylist(link: string): Promise<string[]> {
+export async function parseSpotifyPlaylist(link: string): Promise<Query[]> {
   const { id: playlistId } = parseSpotifyLink(link);
   try {
     const items = await paginateSpotifyApi(`/playlists/${playlistId}/tracks`, [
@@ -169,7 +179,7 @@ export async function parseSpotifyPlaylist(link: string): Promise<string[]> {
   }
 }
 
-export async function parseSpotifyAlbum(link: string): Promise<string[]> {
+export async function parseSpotifyAlbum(link: string): Promise<Query[]> {
   const { id: albumId } = parseSpotifyLink(link);
   try {
     const items = await paginateSpotifyApi(`/albums/${albumId}/tracks`);
@@ -190,7 +200,7 @@ async function fetchSpotifyAlbums(albumIds: string[]): Promise<IntentionalAny[]>
   })).then((chunks: IntentionalAny[]) => chunks.flat());
 }
 
-export async function parseSpotifyArtist(link: string): Promise<string[]> {
+export async function parseSpotifyArtist(link: string): Promise<Query[]> {
   const { id: artistId } = parseSpotifyLink(link);
   try {
     const topTracks = await fetchSpotify(`/artists/${artistId}/top-tracks`, [
@@ -219,7 +229,7 @@ export async function parseSpotifyArtist(link: string): Promise<string[]> {
   }
 }
 
-export async function parseSpotifyTrack(link: string): Promise<string> {
+export async function parseSpotifyTrack(link: string): Promise<Query> {
   const { id: trackId } = parseSpotifyLink(link);
   try {
     const data = await fetchSpotify(`/tracks/${trackId}`);

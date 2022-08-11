@@ -8,28 +8,37 @@ import { log, error } from 'src/logging';
 import { filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
 import Track, { TrackVariant } from './track';
+import type { Query } from './types';
 
 type TracksFetchedCallback = (newTracks: Track[]) => void;
 
 export const getTracksFromQueries = (() => {
   const queryCache = new Map<string, string>();
-  return async (queries: string[], tracksFetchedCb?: TracksFetchedCallback): Promise<Track[]> => {
+  return async (queries: Query[], tracksFetchedCb?: TracksFetchedCallback): Promise<Track[]> => {
     // Arbitrary concurrency limit to prevent rate limiting or audio hitching.
     const limit = pLimit(CONCURRENCY_LIMIT);
-    const promises = queries.map(query => limit(async () => {
+    const promises = queries.map(({ query, sourceLink }) => limit(async () => {
       try {
         if (queryCache.has(query)) {
-          return new Track(queryCache.get(query)!, TrackVariant.YOUTUBE_VOD);
+          return new Track({
+            link: queryCache.get(query)!,
+            variant: TrackVariant.YOUTUBE_VOD,
+          });
         }
         const res = await YouTubeSr.searchOne(query, 'video');
         const youtubeLink = `https://youtube.com/watch?v=${res.id}`;
         const youtubeTitle = res.title;
         const youtubeDuration = res.duration;
         queryCache.set(query, youtubeLink);
-        const newTrack = new Track(youtubeLink, TrackVariant.YOUTUBE_VOD, youtubeTitle ? {
-          title: youtubeTitle,
-          duration: youtubeDuration,
-        } : undefined);
+        const newTrack = new Track({
+          link: youtubeLink,
+          variant: TrackVariant.YOUTUBE_VOD,
+          details: youtubeTitle ? {
+            title: youtubeTitle,
+            duration: youtubeDuration,
+          } : undefined,
+          sourceLink,
+        });
         // We can't do this because this messes with the order of the queries that get enqueued
         // if (tracksFetchedCb) {
         //   tracksFetchedCb([newTrack]);
@@ -84,8 +93,12 @@ export async function parseYoutubePlaylistFromApi(playlistUrl: string): Promise<
         link: `https://youtube.com/watch?v=${item.snippet?.resourceId.videoId}`,
         title: item.snippet?.title,
       }));
-    tracks.push(...youtubeResults.map(({ link, title }) => new Track(link, TrackVariant.YOUTUBE_VOD, {
-      title,
+    tracks.push(...youtubeResults.map(({ link, title }) => new Track({
+      link,
+      variant: TrackVariant.YOUTUBE_VOD,
+      details: {
+        title,
+      },
     })));
   } while (nextPageToken && numPagesFetched < MAX_YT_PLAYLIST_PAGE_FETCHES);
 
@@ -101,9 +114,13 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
     const limit = YT_PLAYLIST_PAGE_SIZE * MAX_YT_PLAYLIST_PAGE_FETCHES;
     const playlist = await YouTubeSr.getPlaylist(playlistUrl, { limit });
     const allResults = await playlist.fetch(limit);
-    return allResults.videos.map(video => new Track(video.url, TrackVariant.YOUTUBE_VOD, video.title ? {
-      title: video.title,
-    } : undefined));
+    return allResults.videos.map(video => new Track({
+      link: video.url,
+      variant: TrackVariant.YOUTUBE_VOD,
+      details: video.title ? {
+        title: video.title,
+      } : undefined,
+    }));
   }
 }
 

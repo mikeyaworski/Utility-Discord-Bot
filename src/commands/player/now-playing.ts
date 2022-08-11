@@ -1,6 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { filterOutFalsy } from 'src/utils';
 import sessions from './sessions';
 import { getTrackDurationAndSpeedFromSession, getVideoDetailsWithFallback, replyWithSessionButtons } from './utils';
 
@@ -17,7 +18,7 @@ export const runNowPlaying: Parameters<typeof replyWithSessionButtons>[0]['run']
   return {
     title: '🔊 Now Playing',
     description: videoDetails.title,
-    link: currentTrack.link,
+    link: filterOutFalsy([currentTrack.link, currentTrack.sourceLink]).join('\n'),
     footerText,
   };
 };
