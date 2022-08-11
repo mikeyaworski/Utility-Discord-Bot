@@ -313,7 +313,10 @@ export default class Session {
 
     this.currentTrack = this.queue.shift();
     if (!this.currentTrack) {
-      if (forceSkip) this.audioPlayer.stop(true);
+      if (forceSkip) {
+        console.log('stopping audio player');
+        this.audioPlayer.stop(true);
+      }
       this.queueLock = false;
       return;
     }

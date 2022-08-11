@@ -149,27 +149,33 @@ export async function play({
   }
   const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
 
+  let session = sessions.get(guild);
   const { user } = interaction;
   if (!user) {
     return editReply('Could not resolve user invoking command.');
   }
-  const resolvedMember = await guild.members.fetch(user.id);
-  const { channel } = resolvedMember.voice;
-  if (!channel) {
+  const resolvedMember: GuildMember | null = await guild.members.fetch(user.id);
+  // if (!resolvedMember.voice.channel) {
+  //   resolvedMember = guild.members.me;
+  //   console.log('me', guild.members.me);
+  //   console.log('me fetched', await guild.members.fetchMe());
+  // }
+  const channel = resolvedMember?.voice.channel;
+  if (!channel && !session) {
     return editReply('You must be connected to a voice channel.');
   }
-  if (!channel.joinable) {
+  if (!channel?.joinable && !session) {
     return editReply('I don\'t have permission to connect to your voice channel.');
   }
 
-  let session = sessions.get(guild);
   if (session) session.resume();
 
   if (numArgs === 0 && !session) {
     return editReply('You must provide at least one argument. If you provided a favorite, then the favorite could not be found.');
   }
 
-  if (!session) session = sessions.create(channel);
+  if (!session && channel) session = sessions.create(channel);
+  if (!session) return editReply('TODO: Remove (debugging)');
 
   if (shuffle) session.shuffle();
 
@@ -253,7 +259,7 @@ const commandBuilder = new SlashCommandBuilder()
 
 const PlayCommand: Command = {
   guildOnly: true,
-  showModalWithNoArgs: true,
+  // showModalWithNoArgs: true,
   slashCommandData: commandBuilder,
 
   modalLabels: {
@@ -281,7 +287,7 @@ const PlayCommand: Command = {
         vodLink: inputs.link,
         favoriteId: inputs.favorite,
         streamLink: null, // inputs.stream,
-        queryStr: inputs.query,
+        queryStr: inputs.query || 'okay dude',
         pushToFront: inputs.front,
         shuffle: inputs.shuffle,
       },
@@ -303,7 +309,7 @@ const PlayCommand: Command = {
         vodLink,
         favoriteId,
         streamLink: null,
-        queryStr,
+        queryStr: queryStr || 'okay dude',
         pushToFront,
         shuffle,
       },

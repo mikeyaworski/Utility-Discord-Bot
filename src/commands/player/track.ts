@@ -1,7 +1,7 @@
 import { AudioResource, createAudioResource } from '@discordjs/voice';
 
 import { exec as ytdlExec } from 'youtube-dl-exec';
-import ffmpeg from 'fluent-ffmpeg';
+import ffmpeg, { FfmpegCommand } from 'fluent-ffmpeg';
 import play from 'play-dl';
 import ytdl from 'ytdl-core';
 import { error } from 'src/logging';
@@ -71,6 +71,7 @@ export default class Track {
         }
         const stream = process.stdout;
         const onError = (err: unknown) => {
+          console.log('TODO onError');
           if (!process.killed) process.kill();
           stream.resume();
           reject(err);
@@ -82,17 +83,36 @@ export default class Track {
           }
           error(err);
         };
+        let manipulatedStream: FfmpegCommand | undefined;
         process.once('spawn', () => {
-          const manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3');
-          if (speed) {
-            manipulatedStream.audioFilters(`atempo=${speed}`);
-          }
-          if (seek) {
-            manipulatedStream.setStartTime(Math.ceil(seek));
+          // TODO: This stream is from process.stdout. Need to clean this up
+          // when ffmpeg closes right?
+          // manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3');
+          if (speed && !seek) {
+            manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3').audioFilters(`atempo=${speed}`);
+            // manipulatedStream.audioFilters(`atempo=${speed}`);
+          } else if (seek && !speed) {
+            manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3').setStartTime(Math.ceil(seek));
+            // manipulatedStream.setStartTime(Math.ceil(seek));
+          } else if (seek && speed) {
+            manipulatedStream = ffmpeg({ source: stream })
+              .toFormat('mp3')
+              .audioFilters(`atempo=${speed}`)
+              .setStartTime(Math.ceil(seek));
+            // manipulatedStream.setStartTime(Math.ceil(seek));
+          } else {
+            manipulatedStream = ffmpeg({ source: stream })
+              .toFormat('mp3');
           }
           // @ts-expect-error This actually works
-          return resolve(createAudioResource(manipulatedStream, { metadata: this }));
+          const audioResource = createAudioResource(manipulatedStream, { metadata: this });
+          return resolve(audioResource);
         }).catch(onError);
+
+        // TODO: Can this work? To flush stdout and reclaim memory?
+        process.once('close', () => {
+          process.stdin?.write('');
+        });
       });
     };
 
@@ -122,8 +142,8 @@ export default class Track {
       case TrackVariant.YOUTUBE_VOD: {
         if (!speed) {
           try {
-            const audioResource = await tryPlayDl();
-            return audioResource;
+            // const audioResource = await tryPlayDl();
+            // return audioResource;
           } catch (err) {
             error(err);
           }
