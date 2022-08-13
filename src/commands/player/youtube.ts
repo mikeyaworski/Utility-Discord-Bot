@@ -23,6 +23,7 @@ export const getTracksFromQueries = (() => {
           return new Track({
             link: queryCache.get(query)!,
             variant: TrackVariant.YOUTUBE_VOD,
+            sourceLink,
           });
         }
         const res = await YouTubeSr.searchOne(query, 'video');
