@@ -170,7 +170,7 @@ export async function parseSpotifyPlaylist(link: string): Promise<Query[]> {
   const { id: playlistId } = parseSpotifyLink(link);
   try {
     const items = await paginateSpotifyApi(`/playlists/${playlistId}/tracks`, [
-      ['fields', 'next,items(track(name,artists))'],
+      ['fields', 'next,items(track(name,artists,external_urls))'],
     ]);
     return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item.track));
   } catch (err) {
