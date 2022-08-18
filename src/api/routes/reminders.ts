@@ -55,8 +55,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
       ],
     },
   });
+  const canView = await Promise.all(reminders.map(reminder => userCanManageReminder(reminder, req.user.id)));
   const json = reminders
-    .filter(reminder => userCanManageReminder(reminder, req.user.id))
+    .filter((reminder, i) => canView[i])
     .map(getReminderResponse);
   res.status(200).json(json);
 });
