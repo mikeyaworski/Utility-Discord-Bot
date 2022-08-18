@@ -133,7 +133,6 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
 // @ts-expect-error
 router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // TODO: Make sure they're able to create reminders in the channel + guild + are allowed to do things like @ everyone, etc
     type Payload = Omit<Reminder, 'id' | 'guild_id' | 'owner_id'>;
     const body: Payload = req.body;
     const channel = await client.channels.fetch(body.channel_id);
