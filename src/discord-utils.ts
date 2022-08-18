@@ -48,11 +48,22 @@ import { error, log } from 'src/logging';
 import { client } from 'src/client';
 import { array, filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
-import { APIApplicationCommandOption } from 'discord-api-types/v10';
+import { APIApplicationCommandOption, ChannelType } from 'discord-api-types/v10';
+import { Reminder } from './models/reminders';
 
 // TODO: This type guard is probably not accurate, though is practically fine for now
-export function isText(channel: Channel): channel is TextChannel {
+export function isText(channel: Channel): channel is TextBasedChannel {
   return channel.isDMBased() || channel.isTextBased() || channel.isThread();
+}
+// TODO: Use a more accurate type guard
+export function isGuildChannel(channel: Channel): channel is TextChannel {
+  return channel.type === ChannelType.GuildText
+    || channel.type === ChannelType.GuildVoice
+    || channel.type === ChannelType.GuildPublicThread
+    || channel.type === ChannelType.GuildPrivateThread
+    || channel.type === ChannelType.GuildNews
+    || channel.type === ChannelType.GuildNewsThread
+    || channel.type === ChannelType.GuildStageVoice;
 }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
   return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
@@ -245,7 +256,7 @@ export function usersHaveChannelPermission({
   permissions,
 }: {
   channel: TextBasedChannel | GuildChannel,
-  users: User | User[],
+  users: string | User | (string | User)[],
   permissions: PermissionResolvable,
 }): boolean {
   users = array(users);
@@ -442,15 +453,17 @@ export async function parseArguments(input: string, options: { parseChannels?: b
   }));
 }
 
-export function checkMessageErrors(interaction: AnyInteraction, {
+export function checkMessageErrors({
   message,
   channel,
   author,
 }: {
   message: string | null,
   channel: TextBasedChannel | null | undefined,
-  author: User,
+  author: User | string,
 }): void {
+  if (!channel || channel.isDMBased()) return;
+  const guild = channel.guild;
   const authorAndBot = filterOutFalsy([author, client.user]);
 
   if (channel && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'SendMessages' })) {
@@ -463,12 +476,12 @@ export function checkMessageErrors(interaction: AnyInteraction, {
   // if the user does not have permission, but will register as a mention
   // when the bot (with permission) posts the reminder.
 
-  if (message && channel && interaction.guild) {
+  if (message && channel && guild) {
     if (checkMentionsEveryone(message) && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MentionEveryone' })) {
       throw new Error(`One of us does not have permission to mention everyone in <#${channel.id}>`);
     }
 
-    const unmentionableRoleMention = getRoleMentions(message, interaction.guild).find(role => !role.mentionable);
+    const unmentionableRoleMention = getRoleMentions(message, guild).find(role => !role.mentionable);
     if (unmentionableRoleMention && !usersHaveChannelPermission({ channel, users: authorAndBot, permissions: 'MentionEveryone' })) {
       throw new Error(`One of us does not have permission to mention the role: ${unmentionableRoleMention.name}`);
     }
@@ -847,4 +860,51 @@ export function editLatest({
 }): ReturnType<AnyInteraction['editReply']> {
   if (messageId) return interaction.webhook.editMessage(messageId, data);
   return interaction.editReply(data);
+}
+
+export async function userCanViewReminder(reminder: Reminder, userId: string): Promise<boolean> {
+  if (reminder.owner_id === userId) return true;
+  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
+  const channel = await client.channels.fetch(reminder.channel_id);
+  if (!channel) return false;
+  if (!isText(channel)) return false;
+  return usersHaveChannelPermission({
+    channel,
+    users: userId,
+    permissions: ['ViewChannel'],
+  });
+}
+
+export async function userCanManageReminder(reminder: Reminder, userId: string): Promise<boolean> {
+  if (reminder.owner_id === userId) return true;
+  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
+  const channel = await client.channels.fetch(reminder.channel_id);
+  if (!channel) return false;
+  if (!isText(channel)) return false;
+  return usersHaveChannelPermission({
+    channel,
+    users: userId,
+    permissions: ['ManageMessages', 'SendMessages', 'ViewChannel'],
+  });
+}
+
+export async function isChannelInSameGuild(reminder: Reminder, newChannelId: string): Promise<boolean> {
+  if (reminder.channel_id === newChannelId) return true;
+  const channel = await client.channels.fetch(newChannelId);
+  if (!channel) return false;
+  if (isGuildChannel(channel)) {
+    return channel.guildId === reminder.guild_id;
+  }
+  return false;
+}
+
+export async function canMessageChannel(userId: string, channelId: string): Promise<boolean> {
+  const channel = await client.channels.fetch(channelId);
+  if (!channel) return false;
+  if (!isText(channel)) return false;
+  return usersHaveChannelPermission({
+    channel,
+    users: userId,
+    permissions: ['SendMessages', 'ViewChannel'],
+  });
 }

@@ -22,7 +22,7 @@ async function run(interaction: CommandInteraction | ModalSubmitInteraction): Pr
   if (!author) throw new Error('Could not find author.');
 
   // Throws if there is an issue
-  checkMessageErrors(interaction, {
+  checkMessageErrors({
     channel,
     author,
     message,

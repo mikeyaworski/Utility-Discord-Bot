@@ -3,6 +3,7 @@ import axios from 'axios';
 import NodeCache from 'node-cache';
 import type { IntentionalAny } from 'src/types';
 import { error } from 'src/logging';
+import { client } from 'src/client';
 
 const cache = new NodeCache({
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -62,11 +63,13 @@ export default async function authMiddleware(req: Request, res: Response, next: 
         username: userData.username,
         discriminator: userData.discriminator,
         avatar: userData.avatar,
-        guilds: guildsData.map((guild: IntentionalAny) => ({
-          id: guild.id,
-          name: guild.name,
-          icon: guild.icon,
-        })),
+        guilds: guildsData
+          .filter((guild: IntentionalAny) => client.guilds.cache.has(guild.id))
+          .map((guild: IntentionalAny) => ({
+            id: guild.id,
+            name: guild.name,
+            icon: guild.icon,
+          })),
       };
       cache.set(req.cookies.auth, authReq.user);
     }

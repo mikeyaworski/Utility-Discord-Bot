@@ -302,7 +302,7 @@ export async function handleUpsert(
     } = await parseReminderOptions({ interaction, inputs, editing });
 
     // Throws if there is an issue
-    checkMessageErrors(interaction, {
+    checkMessageErrors({
       channel,
       author,
       message,
@@ -310,6 +310,14 @@ export async function handleUpsert(
 
     const existingReminder = id ? await Reminders.findByPk(id) : null;
     if (id && !existingReminder) return interaction.editReply('Reminder does not exist!');
+
+    if (existingReminder
+      && channel
+      && existingReminder.owner_id !== interaction.user.id
+      && !usersHaveChannelPermission({ channel, users: interaction.user, permissions: 'ManageMessages' })
+    ) {
+      return interaction.editReply('You cannot edit a reminder that you don\'t own.');
+    }
 
     const timeIsInPast = times.some(time => time < Date.now() / 1000);
     if (timeIsInPast && !interval && !existingReminder?.interval) {
