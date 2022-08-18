@@ -11,6 +11,7 @@ import { log, error } from 'src/logging';
 import authRouter from './routes/auth';
 import remindersRouter from './routes/reminders';
 import guildsRouter from './routes/guilds';
+import dmsRouter from './routes/dms';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ export function initApi(): void {
   app.use('/auth', authRouter);
   app.use('/reminders', remindersRouter);
   app.use('/guilds', guildsRouter);
+  app.use('/dms', dmsRouter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   app.listen(port, () => {
     log('Listening on port', port);
