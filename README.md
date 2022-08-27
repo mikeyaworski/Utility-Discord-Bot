@@ -4,15 +4,17 @@
 
 This is a private bot. To get this bot in your server, please host this yourself. It is very easy to do so and there are instructions on how to do so. The easiest approach is to host it on Heroku. The best approach would be to host it on a cloud VM.
 
-### Hosting it on Heroku
-
-[How to host on Heroku](/docs/Heroku-Instructions.md)
-
 ### Hosting it on Cloud VMs
 
 - [AWS instructions](/docs/AWS-Instructions.md)
 - [Google Cloud Engine (GCE) instructions](/docs/GCE-Instructions.md)
 - [Digital Ocean Droplet instructions](/docs/DO-Instructions.md)
+
+### Hosting it on Heroku
+
+Note: Heroku no longer has a free tier, so hosting on Heroku is no longer recommended. More details are provided on the Heroku instructions page, but it's recommended to choose an alternative free platform, or use the cheaper (and better) option of hosting on a cloud VM.
+
+[How to host on Heroku](/docs/Heroku-Instructions.md)
 
 ## Environment Variables
 Create a `.env` file in the root of your project folder. You can use `.env.example` as a starting point.
@@ -25,17 +27,21 @@ Optional variables:
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
 
 ```
+# Use "production" when deploying
 ENVIRONMENT=development
+
 PORT=3000
+
+# Replace with your hosted database URL when deploying
+DATABASE_URL=postgres://user:password@utility-discord-bot-db:5432/utility-discord-bot-db
 
 DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_TOKEN=...
-DATABASE_URL=postgres://user:password@utility-discord-bot-db:5432/utility-discord-bot-db
 YOUTUBE_API_KEY=...
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
 
-# Slash Commands in Development
+# Slash Commands in development. Remove this during deployment.
 SLASH_COMMANDS_GUILD_ID=...
 ```
 

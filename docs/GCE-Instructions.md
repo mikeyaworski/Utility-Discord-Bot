@@ -4,16 +4,20 @@ These instructions describe a process for manually hosting the bot on GCE. This 
 
 Note: These instructions were written before Docker images were created for this project. Check the [AWS instructions](./AWS-Instructions.md) to get a general idea of how to run a Docker container instead.
 
-These instructions do not mention how to gather your environment variables. You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather them in the [Heroku instructions](./Heroku-Instructions.md).
-
-These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
-
 ## Startup
 
+1. Follow the [general instructions](./General-Instructions.md) to create your bot and collect your environment variables that will be needed later.
+
+1. Create a PostgreSQL database somewhere (probably Supabase) and collect your database URL. You can find instructions on how to create a PostgreSQL database on Supabase [here](./Supabase-Instructions.md).
+
 1. Create a VM instance under the Google Compute Engine.
+
 1. Use an `e2-micro` instance in a free region if you want to remain in the free tier. For example, the `us-central1` region.
+
 1. (Optional) Choose an Ubuntu machine (latest version).
+
 1. SSH into the instance.
+
 1. 
    ```
    sudo apt update
@@ -30,7 +34,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
    sudo apt install -y nodejs
    ```
-1.  
+1. 
     ```
     git clone https://github.com/mikeyaworski/Utility-Discord-Bot.git
     ```
@@ -41,16 +45,11 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
 1. 
     ```
     npm ci
-1. Retrieve your `DATABASE_URL` environment variable with:
     ```
-    heroku config:get DATABASE_URL -a miky-utility-discord-bot
-    ```
-    Where `miky-utility-discord-bot` is replaced to whatever your Heroku app is named. Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
 
-    As previously mentioned, these instructions assume you have gone through the [Heroku instructions](./Heroku-Instructions.md) to create a Heroku app with a free PostgreSQL database.
 1. Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
 
-    You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather the environment variables in the [Heroku instructions](./Heroku-Instructions.md).
+    You can see the structure of the `.env` file [here](../README.md#environment-variables). Make sure to replace the `DATABASE_URL` value with whatever your hosted database URL is (probably Supabase from the instructions linked in step 2). The example environment variables show values for local development, so several of them will need to be changed for the deployment.
 
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
@@ -61,6 +60,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     1. Type `:x` to save and quit.
 
     You can use something like nano instead of vim if you struggle with the instructions above.
+
 1. 
     ```
     npm run start:nohup

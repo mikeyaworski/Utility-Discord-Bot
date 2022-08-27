@@ -2,19 +2,24 @@
 
 These instructions describe a process for manually hosting the bot on GCE. This will not have automated deployments.
 
-These instructions do not mention how to gather your environment variables. You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather them in the [Heroku instructions](./Heroku-Instructions.md).
-
-These instructions also assume you have created a PostgreSQL database on Heroku, as instructed in the [Heroku instructions](./Heroku-Instructions.md). Even if you do not want to host the bot on Heroku, you probably want to utilize Heroku's free PostgreSQL database. It's recommended to go through the Heroku instructions, create your Heroku app with the database, then disable the dyno and proceed to host the bot on the VM described here.
-
 ## Startup
 
+1. Follow the [general instructions](./General-Instructions.md) to create your bot and collect your environment variables that will be needed later.
+
+1. Create a PostgreSQL database somewhere (probably Supabase) and collect your database URL. You can find instructions on how to create a PostgreSQL database on Supabase [here](./Supabase-Instructions.md).
+
 1. Navigate to the EC2 section of the dashboard in your preferred region, and launch an instance.
+
 1. Choose `Amazon Linux 2 AMI (HVM) - Kernel 5.10` for the AMI (or a new version) and select `Arm` for the processor.
+
 1. Choose a `t4g.micro` or `t4g.nano` for the instance type (not free), or `t2.micro`/`t3.micro` if you are looking to stay in the free tier. Opt for the `t4g` if not staying in the free tier, since they are cheaper (weird). Obviously, you can choose a totally different one depending on your needs, but all of the aforementioned instance types work well for small server usage.
+
 1. Create a security group called "connect" (or whatever you want) and use it for your instance. The security group will let you SSH into your instance, which is not something that the default security group would let you do.
    1. Create two inbound rules. Both types are `SSH`.
    1. Change the source on one of them to be `Anywhere-IPv4` and the other to be `Anywhere-IPv6`.
+
 1. Everything else can be left default. Finish launching the instance and create your key pair that allows you to SSH into your new instance. Either key pair type is fine (RSA or ED25519). Download the private key as it describes.
+
 1. Click on your instance, then click Connect. Connect to the instance with your SSH client (instructions will be listed and you will need to use your private key). For example, on a Windows machine in WSL:
    ```
    ssh -i "/mnt/myDriveLetter/.../utility-discord-bot.pem" ec2-user@ec2-...compute.amazonaws.com
@@ -23,21 +28,25 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    ```
    ssh -i "/myDriveLetter/.../utility-discord-bot.pem ec2-user@ec2-...compute.amazonaws.com
    ```
+
 1. Install Node, Git and Docker. Node and Git are optional, but the benefit is that you may run scripts from `package.json` from the Git repository.
    ```
    curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
    sudo yum install nodejs docker git
    ```
-1.  As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
+
+1. As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
     ```
     git clone https://github.com/mikeyaworski/utility-discord-bot.git
     cd utility-discord-bot
     ```
+
 1. Start Docker and give yourself (`ec2-user`) permission to run Docker commands. If you skip the command `sudo usermod -a -G docker ec2-user`, then you need to run `sudo docker ...` every time (you would also need to update `package.json`).
     ```
     sudo service docker start
     sudo usermod -a -G docker ec2-user
-    ``` 
+    ```
+
 1. Exit the ssh session and reconnect, so that user permissions get updated. Otherwise, you will need to use `sudo` for every `docker` command.
 1. Pull the latest Docker image.
     ```
@@ -49,16 +58,10 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     docker pull mikeyaworski/utility-discord-bot:...
     ```
     If you are wanting to use a specific tag, you will also need to update the `start:docker` script to use that tag.
-1.  Retrieve your `DATABASE_URL` environment variable with:
-    ```
-    heroku config:get DATABASE_URL -a miky-utility-discord-bot
-    ```
-    Where `miky-utility-discord-bot` is replaced to whatever your Heroku app is named. Note that this value is subject to change. When/if it changes, you will need to update the environment variable and restart the app.
 
-    As previously mentioned, these instructions assume you have gone through the [Heroku instructions](./Heroku-Instructions.md) to create a Heroku app with a free PostgreSQL database.
-1.  Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
+1. Create a `.env` file with all of the environment variables filled in. This means your secrets are written to the instance's disk. If this is a security concern for you, then there are alternative ways to define secrets, but are more effort.
 
-    You can see the structure of the `.env` file [here](../README.md#environment-variables) and instructions on how to gather the environment variables in the [Heroku instructions](./Heroku-Instructions.md).
+    You can see the structure of the `.env` file [here](../README.md#environment-variables). Make sure to replace the `DATABASE_URL` value with whatever your hosted database URL is (probably Supabase from the instructions linked in step 2). The example environment variables show values for local development, so several of them will need to be changed for the deployment.
 
     If unfamiliar with the command line, here are instructions to create the `.env` file using vim:
 
@@ -69,13 +72,15 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     1. Type `:x` to save and quit.
 
     You can use something like nano instead of vim if you struggle with the instructions above.
+
 1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then generate an SSL certificate and run the nginx server:
    1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
    1. `npm run dhparam`
    1. Update `deploy/nginx-conf-http/nginx.conf` and `deploy/nginx-conf-https/nginx.conf` by replacing the server name `api.utilitydiscordbot.com` (and possibly port number) with your own.
    1. Update `deploy/docker-compose.yml` by replacing `api.utilitydiscordbot.com` and `michael@mikeyaworski.com` with your own.
    1. TODO: This may also require security group changes.
-1.  Start the bot:
+
+1. Start the bot:
     ```
     npm run start:docker
     ```
@@ -83,6 +88,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
     ```
     npm run start:docker-compose
     ```
+
 1. View logs to see if everything is successful:
    ```
    npm run logs:bot
@@ -95,6 +101,7 @@ These instructions also assume you have created a PostgreSQL database on Heroku,
    docker logs http-server -f
    docker logs https-server -f
    ```
+
 1. (Optional) If you enabled HTTPS, then you should also create a cronjob to run the `deploy/renew-ssl.sh` script. This will both renew the SSL certificate and restart the https nginx server, so that the server will use the new certificate.
    1. TODO: Write these instructions.
 
