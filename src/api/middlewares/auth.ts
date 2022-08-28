@@ -31,23 +31,34 @@ export type AuthRequest<T = Request> = T & {
   user: User,
 }
 
+// Storing promises in a global variable lets us avoid rate limiting issues if multiple
+// endpoints are hit simultaneously and there is a cache miss. This ensures the Discord API
+// requests will be made only once since all request handlers will await the same promise
+// instead of making duplicate requests to Discord.
+const discordPromises: {
+  [authToken: string]: Promise<IntentionalAny>[],
+} = {};
+
 export async function getUserFromAuthToken(auth: string): Promise<User> {
   const cacheRes = cache.get<User>(auth);
-  if (cacheRes) {
-    return cacheRes;
+  if (cacheRes) return cacheRes;
+
+  if (!discordPromises[auth]) {
+    discordPromises[auth] = [
+      axios.get('https://discord.com/api/users/@me', {
+        headers: {
+          authorization: auth,
+        },
+      }),
+      axios.get('https://discord.com/api/users/@me/guilds', {
+        headers: {
+          authorization: auth,
+        },
+      }),
+    ];
   }
-  const [userRes, guildsRes] = await Promise.all([
-    axios.get('https://discord.com/api/users/@me', {
-      headers: {
-        authorization: auth,
-      },
-    }),
-    axios.get('https://discord.com/api/users/@me/guilds', {
-      headers: {
-        authorization: auth,
-      },
-    }),
-  ]);
+  const [userRes, guildsRes] = await Promise.all(discordPromises[auth]);
+
   const { data: userData } = userRes;
   const { data: guildsData } = guildsRes;
   const user: User = {
@@ -64,6 +75,7 @@ export async function getUserFromAuthToken(auth: string): Promise<User> {
       })),
   };
   cache.set(auth, user);
+  delete discordPromises[auth];
   return user;
 }
 
