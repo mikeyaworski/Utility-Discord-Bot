@@ -24,6 +24,9 @@ import { getTimezoneOffsetFromFilter, getDateString, parseDelay, filterOutFalsy,
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { setReminder, removeReminder, getNextInvocation } from 'src/jobs/reminders';
 import { error } from 'src/logging';
+import { emit, getManageReminderRooms } from 'src/api/sockets';
+import { SocketEventTypes } from 'src/types/sockets';
+import { getReminderResponse } from 'src/api/routes/reminders';
 
 const timeOption = ({ required }: { required: boolean }) => (option: SlashCommandStringOption) => {
   return option
@@ -368,6 +371,13 @@ export async function handleUpsert(
       setReminder(reminder);
       return reminder;
     }));
+    reminders.forEach(async (reminder, idx) => {
+      const reminderResponse = getReminderResponse(reminder);
+      emit({
+        type: (editing && idx === 0) ? SocketEventTypes.REMINDER_UPDATED : SocketEventTypes.REMINDER_CREATED,
+        data: reminderResponse,
+      }, getManageReminderRooms(reminder));
+    });
     const content = editing ? (
       reminders.length > 1 ? 'Reminders updated:' : 'Reminder updated:'
     ) : (

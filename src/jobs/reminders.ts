@@ -5,6 +5,9 @@ import { Reminders } from 'src/models/reminders';
 import { log } from 'src/logging';
 import { getChannel, isText } from 'src/discord-utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
+import { emit, getManageReminderRooms } from 'src/api/sockets';
+import { SocketEventTypes } from 'src/types/sockets';
+import { getReminderResponse } from 'src/api/routes/reminders';
 
 type Timeouts = {
   [reminderId: string]: CronJob;
@@ -23,6 +26,12 @@ export async function removeReminder(id: string): Promise<void> {
     timeouts[id].stop();
     delete timeouts[id];
   }
+  emit({
+    type: SocketEventTypes.REMINDER_DELETED,
+    data: {
+      id,
+    },
+  });
 }
 
 async function handleReminder(reminder: Reminder, destroy: boolean) {
@@ -95,7 +104,7 @@ export function setReminder(reminder: Reminder): void {
     return;
   }
 
-  async function handleFirst() {
+  function handleFirst() {
     handleReminder(reminder, !reminder.interval);
     if (reminder.interval) {
       (function interval() {
@@ -112,6 +121,10 @@ export function setReminder(reminder: Reminder): void {
               interval();
             },
           });
+          emit({
+            type: SocketEventTypes.REMINDER_UPDATED,
+            data: getReminderResponse(reminder),
+          }, getManageReminderRooms(reminder));
         }
       }());
     }

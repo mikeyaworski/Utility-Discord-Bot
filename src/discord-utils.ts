@@ -862,10 +862,14 @@ export function editLatest({
   return interaction.editReply(data);
 }
 
-export async function userCanViewReminder(reminder: Reminder, userId: string): Promise<boolean> {
-  if (reminder.owner_id === userId) return true;
-  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
-  const channel = await client.channels.fetch(reminder.channel_id);
+export async function userCanViewChannel({
+  userId,
+  channelId,
+}: {
+  userId: string,
+  channelId: string,
+}): Promise<boolean> {
+  const channel = await client.channels.fetch(channelId);
   if (!channel) return false;
   if (!isText(channel)) return false;
   return usersHaveChannelPermission({
@@ -875,16 +879,38 @@ export async function userCanViewReminder(reminder: Reminder, userId: string): P
   });
 }
 
-export async function userCanManageReminder(reminder: Reminder, userId: string): Promise<boolean> {
-  if (reminder.owner_id === userId) return true;
-  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
-  const channel = await client.channels.fetch(reminder.channel_id);
+export async function userCanManageChannel({
+  userId,
+  channelId,
+}: {
+  userId: string,
+  channelId: string,
+}): Promise<boolean> {
+  const channel = await client.channels.fetch(channelId);
   if (!channel) return false;
   if (!isText(channel)) return false;
   return usersHaveChannelPermission({
     channel,
     users: userId,
     permissions: ['ManageMessages', 'SendMessages', 'ViewChannel'],
+  });
+}
+
+export async function userCanViewReminder(reminder: Reminder, userId: string): Promise<boolean> {
+  if (reminder.owner_id === userId) return true;
+  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
+  return userCanViewChannel({
+    userId,
+    channelId: reminder.channel_id,
+  });
+}
+
+export async function userCanManageReminder(reminder: Reminder, userId: string): Promise<boolean> {
+  if (reminder.owner_id === userId) return true;
+  if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
+  return userCanManageChannel({
+    userId,
+    channelId: reminder.channel_id,
   });
 }
 

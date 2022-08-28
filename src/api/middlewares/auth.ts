@@ -31,7 +31,46 @@ export type AuthRequest<T = Request> = T & {
   user: User,
 }
 
-export default async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getUserFromAuthToken(auth: string): Promise<User> {
+  const cacheRes = cache.get<User>(auth);
+  if (cacheRes) {
+    return cacheRes;
+  }
+  const [userRes, guildsRes] = await Promise.all([
+    axios.get('https://discord.com/api/users/@me', {
+      headers: {
+        authorization: auth,
+      },
+    }),
+    axios.get('https://discord.com/api/users/@me/guilds', {
+      headers: {
+        authorization: auth,
+      },
+    }),
+  ]);
+  const { data: userData } = userRes;
+  const { data: guildsData } = guildsRes;
+  const user: User = {
+    id: userData.id,
+    username: userData.username,
+    discriminator: userData.discriminator,
+    avatar: userData.avatar,
+    guilds: guildsData
+      .filter((guild: IntentionalAny) => client.guilds.cache.has(guild.id))
+      .map((guild: IntentionalAny) => ({
+        id: guild.id,
+        name: guild.name,
+        icon: guild.icon,
+      })),
+  };
+  cache.set(auth, user);
+  return user;
+}
+
+export default async function authMiddleware(
+  req: Request, res: Response,
+  next: NextFunction,
+): Promise<void> {
   if (!req.cookies.auth) {
     res.status(401).end();
     return;
@@ -39,40 +78,7 @@ export default async function authMiddleware(req: Request, res: Response, next: 
   try {
     // @ts-expect-error
     const authReq: AuthRequest = req;
-
-    const cacheRes = cache.get<User>(req.cookies.auth);
-    if (cacheRes) {
-      authReq.user = cacheRes;
-    } else {
-      const [userRes, guildsRes] = await Promise.all([
-        axios.get('https://discord.com/api/users/@me', {
-          headers: {
-            authorization: req.cookies.auth,
-          },
-        }),
-        axios.get('https://discord.com/api/users/@me/guilds', {
-          headers: {
-            authorization: req.cookies.auth,
-          },
-        }),
-      ]);
-      const { data: userData } = userRes;
-      const { data: guildsData } = guildsRes;
-      authReq.user = {
-        id: userData.id,
-        username: userData.username,
-        discriminator: userData.discriminator,
-        avatar: userData.avatar,
-        guilds: guildsData
-          .filter((guild: IntentionalAny) => client.guilds.cache.has(guild.id))
-          .map((guild: IntentionalAny) => ({
-            id: guild.id,
-            name: guild.name,
-            icon: guild.icon,
-          })),
-      };
-      cache.set(req.cookies.auth, authReq.user);
-    }
+    authReq.user = await getUserFromAuthToken(req.cookies.auth);
     next();
   } catch (err) {
     error(err);

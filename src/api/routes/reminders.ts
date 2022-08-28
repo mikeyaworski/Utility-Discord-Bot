@@ -12,15 +12,13 @@ import {
 import { getNextInvocation, removeReminder, setReminder } from 'src/jobs/reminders';
 import { error } from 'src/logging';
 import { Reminder, Reminders } from 'src/models/reminders';
+import { ReminderResponse } from 'src/types';
+import { SocketEventTypes } from 'src/types/sockets';
+import { emit, getManageReminderRooms } from 'src/api/sockets';
 
 const router = express.Router();
 
-interface ReminderResponse {
-  model: Reminder,
-  nextRun: number | null | undefined,
-}
-
-function getReminderResponse(reminder: Reminder): ReminderResponse {
+export function getReminderResponse(reminder: Reminder): ReminderResponse {
   try {
     return {
       model: reminder,
@@ -123,8 +121,13 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
       author: req.user.id,
     });
     await reminder.update(body);
+    const reminderResponse = getReminderResponse(reminder);
+    emit({
+      type: SocketEventTypes.REMINDER_UPDATED,
+      data: reminderResponse,
+    }, getManageReminderRooms(reminder));
     setReminder(reminder);
-    return res.status(200).json(getReminderResponse(reminder));
+    return res.status(200).json(reminderResponse);
   } catch (err) {
     error(err);
     return res.status(400).send(err);
@@ -150,8 +153,13 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
       owner_id: req.user.id,
       guild_id: channel.isDMBased() ? null : channel.guildId,
     });
+    const reminderResponse = getReminderResponse(reminder);
+    emit({
+      type: SocketEventTypes.REMINDER_CREATED,
+      data: reminderResponse,
+    }, getManageReminderRooms(reminder));
     setReminder(reminder);
-    return res.status(200).json(getReminderResponse(reminder));
+    return res.status(200).json(reminderResponse);
   } catch (err) {
     error(err);
     return res.status(400).end();

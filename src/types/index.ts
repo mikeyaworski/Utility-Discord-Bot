@@ -20,7 +20,8 @@ import type {
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
-import { editLatest } from './discord-utils';
+import { Reminder } from 'src/models/reminders';
+import { editLatest } from 'src/discord-utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
@@ -131,3 +132,8 @@ export type EventTrigger = [
 export type ModelDefinition = (sequelize: Sequelize) => void;
 
 export type EditReply = (data: Parameters<typeof editLatest>[0]['data']) => ReturnType<typeof editLatest>;
+
+export interface ReminderResponse {
+  model: Reminder,
+  nextRun: number | null | undefined,
+}
