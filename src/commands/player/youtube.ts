@@ -26,7 +26,7 @@ export const getTracksFromQueries = (() => {
             sourceLink,
           });
         }
-        const res = await YouTubeSr.searchOne(query, 'video');
+        const res = await YouTubeSr.searchOne(`${query} Provided to Youtube by`, 'video');
         const youtubeLink = `https://youtube.com/watch?v=${res.id}`;
         const youtubeTitle = res.title;
         const youtubeDuration = res.duration;
