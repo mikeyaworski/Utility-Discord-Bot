@@ -109,7 +109,7 @@ export function getQueryFromSpotifyTrack(track: IntentionalAny): Query {
     track.name
   } ${
     track.artists.map((artist: IntentionalAny) => artist.name).join(' ')
-  } lyrics`;
+  } Provided to Youtube by`;
   const sourceLink: string | undefined = get(track, [
     'external_urls',
     'spotify',
