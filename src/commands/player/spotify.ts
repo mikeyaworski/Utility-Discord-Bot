@@ -105,11 +105,14 @@ export function getQueryFromSpotifyTrack(track: IntentionalAny): Query {
   // TODO: Consider adding "lyrics" or "audio" back to the end of this query.
   // The problem is that for certain tracks, e.g. https://open.spotify.com/track/6j5mgCnmTNqU5h9dzY2aUH,
   // this results in YouTube finding a bad result.
+  // Auto-generated songs by YouTube are the best search results to find since it won't be a music video and it will be high quality.
+  // We search "Provided to YouTube by" since the auto-generated videos seem to all have this at the top of the description.
+  // E.g. https://www.youtube.com/watch?v=BLZWkjBXfN8
   const query = `${
     track.name
   } ${
     track.artists.map((artist: IntentionalAny) => artist.name).join(' ')
-  } lyrics`;
+  } Provided to Youtube by`;
   const sourceLink: string | undefined = get(track, [
     'external_urls',
     'spotify',
