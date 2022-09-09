@@ -153,12 +153,12 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
       owner_id: req.user.id,
       guild_id: channel.isDMBased() ? null : channel.guildId,
     });
+    setReminder(reminder);
     const reminderResponse = getReminderResponse(reminder);
     emit({
       type: SocketEventTypes.REMINDER_CREATED,
       data: reminderResponse,
     }, getManageReminderRooms(reminder));
-    setReminder(reminder);
     return res.status(200).json(reminderResponse);
   } catch (err) {
     error(err);
