@@ -11,6 +11,7 @@ import authRouter from 'src/api/routes/auth';
 import remindersRouter from 'src/api/routes/reminders';
 import guildsRouter from 'src/api/routes/guilds';
 import dmsRouter from 'src/api/routes/dms';
+import chessRouter from 'src/api/routes/chess';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
@@ -57,6 +58,7 @@ export function initApi(): void {
   app.use('/reminders', remindersRouter);
   app.use('/guilds', guildsRouter);
   app.use('/dms', dmsRouter);
+  app.use('/chess', chessRouter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   httpServer.listen(port, () => {
     log('Listening on port', port);

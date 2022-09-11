@@ -22,6 +22,7 @@ import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
 import { Reminder } from 'src/models/reminders';
 import { editLatest } from 'src/discord-utils';
+import { ChessGames } from 'src/models/chess-games';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IntentionalAny = any;
@@ -136,4 +137,9 @@ export type EditReply = (data: Parameters<typeof editLatest>[0]['data']) => Retu
 export interface ReminderResponse {
   model: Reminder,
   nextRun: number | null | undefined,
+}
+
+export interface ChessGameResponse {
+  model: ChessGames,
+  label: string,
 }
