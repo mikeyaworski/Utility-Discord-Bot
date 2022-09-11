@@ -82,7 +82,7 @@ commandBuilder.addSubcommand(subcommand => {
 
 commandBuilder.addSubcommand(subcommand => {
   subcommand
-    .setName('forfeit')
+    .setName('resign')
     .setDescription('Forfeit the game. A select box will appear to choose the game.');
   return subcommand;
 });
@@ -709,7 +709,7 @@ async function handleChallenge(interaction: AnyInteraction) {
   }
 }
 
-export async function forfeitGame({
+export async function resignGame({
   game,
   userId,
 }: {
@@ -722,7 +722,7 @@ export async function forfeitGame({
   await respond({
     gameId: game.id,
     getMessage: async channel => ({
-      content: `<@${userId}> forfeited game with ID: ${game.id}. <@${game.white_user_id}> <@${game.black_user_id}>${
+      content: `<@${userId}> resigned game with ID: ${game.id}. <@${game.white_user_id}> <@${game.black_user_id}>${
         hasMoves ? `\n\`\`\`${await getChessPgnWithHeaders(game, channel.guild)}\`\`\`` : ''
       }`,
       embeds: hasMoves ? [getChessBoardEmbed(game)] : undefined,
@@ -730,8 +730,8 @@ export async function forfeitGame({
   }).catch(throwGameNotFoundError);
   await game.destroy();
   emit({
-    type: SocketEventTypes.CHESS_GAME_FORFEITED,
-    data: { id: game.id, forfeiter: userId },
+    type: SocketEventTypes.CHESS_GAME_RESIGNED,
+    data: { id: game.id, resigner: userId },
   }, getRooms(game));
 }
 
@@ -739,10 +739,10 @@ async function handleForfeit(interaction: AnyInteraction) {
   await handleGameSelection({
     interaction,
     gameStarted: null,
-    noGamesMessage: 'You do not have any games to forfeit.',
+    noGamesMessage: 'You do not have any games to resign.',
     cb: async game => {
       try {
-        await forfeitGame({
+        await resignGame({
           game,
           userId: interaction.user.id,
         });
@@ -807,7 +807,7 @@ export async function undoMove({
     }),
   }).catch(throwGameNotFoundError);
   emit({
-    type: SocketEventTypes.CHESS_MOVE_UNDONE,
+    type: SocketEventTypes.CHESS_GAME_UPDATED,
     data: await getGameResponse(game),
   }, getRooms(game));
 }
@@ -899,7 +899,7 @@ const run: CommandOrModalRunMethod = async interaction => {
       await handleAccept(interaction);
       return;
     }
-    case 'forfeit': {
+    case 'resign': {
       await handleForfeit(interaction);
       return;
     }

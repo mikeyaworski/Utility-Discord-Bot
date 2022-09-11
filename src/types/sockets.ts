@@ -9,8 +9,7 @@ export enum SocketEventTypes {
   CHESS_CHALLENGE_ACCEPTED = 'CHESS_CHALLENGE_ACCEPTED',
   CHESS_CHALLENGE_DECLINED = 'CHESS_CHALLENGE_DECLINED',
   CHESS_GAME_UPDATED = 'CHESS_GAME_UPDATED',
-  CHESS_MOVE_UNDONE = 'CHESS_MOVE_UNDONE',
-  CHESS_GAME_FORFEITED = 'CHESS_GAME_FORFEITED',
+  CHESS_GAME_RESIGNED = 'CHESS_GAME_RESIGNED',
 }
 
 export type SocketEvent =
@@ -50,11 +49,6 @@ export type SocketEvent =
 }
 |
 {
-  type: SocketEventTypes.CHESS_MOVE_UNDONE,
-  data: ChessGameResponse,
-}
-|
-{
-  type: SocketEventTypes.CHESS_GAME_FORFEITED,
-  data: { id: ChessGames['id'], forfeiter: string },
+  type: SocketEventTypes.CHESS_GAME_RESIGNED,
+  data: { id: ChessGames['id'], resigner: string },
 }

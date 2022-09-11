@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
 import { error } from 'src/logging';
 import { ChessGames } from 'src/models/chess-games';
-import { acceptChallenge, challengeUser, declineChallenge, forfeitGame, makeMove, undoMove } from 'src/commands/chess';
+import { acceptChallenge, challengeUser, declineChallenge, resignGame, makeMove, undoMove } from 'src/commands/chess';
 import { client } from 'src/client';
 import { ChessGameResponse } from 'src/types';
 
@@ -83,10 +83,10 @@ router.get('/:id', authMiddleware, gameMiddleware, async (req: GameRequest, res)
 });
 
 // @ts-expect-error
-router.post('/:id/forfeit', authMiddleware, gameMiddleware, async (req: GameRequest, res) => {
+router.post('/:id/resign', authMiddleware, gameMiddleware, async (req: GameRequest, res) => {
   const { game } = req;
   try {
-    await forfeitGame({
+    await resignGame({
       game,
       userId: req.user.id,
     });
