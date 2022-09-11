@@ -25,6 +25,7 @@ interface RoleResponse {
 
 interface MemberResponse {
   id: string,
+  userId: string,
   name: string,
   avatar: string | null,
 }
@@ -90,6 +91,7 @@ router.get('/:guildId/members', authMiddleware, badRequestMiddleware, async (req
   const members: MemberResponse[] = req.guild.members.cache
     .map(member => ({
       id: member.id,
+      userId: member.user.id,
       name: member.displayName,
       avatar: member.displayAvatarURL(),
     }));
