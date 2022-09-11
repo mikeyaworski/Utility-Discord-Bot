@@ -20,7 +20,7 @@ import get from 'lodash.get';
 import { ChessGames } from 'src/models/chess-games';
 import { log } from 'src/logging';
 import { filterOutFalsy, getRandomElement } from 'src/utils';
-import { getSubcommand, isGuildChannel, parseInput, usersHaveChannelPermission } from 'src/discord-utils';
+import { getSubcommand, isGuildChannel, messageChannel, parseInput, usersHaveChannelPermission } from 'src/discord-utils';
 import { emit } from 'src/api/sockets';
 import { SocketEventTypes } from 'src/types/sockets';
 import { client } from 'src/client';
@@ -183,12 +183,16 @@ async function respond({
   const game = await ChessGames.findByPk(gameId);
   if (!game) throw new Error(`Game with ID "${gameId}" does not exist`);
 
-  const channel = await client.channels.fetch(game.channel_id).catch(() => null);
-  if (!channel || !isGuildChannel(channel)) {
+  try {
+    const msg = await messageChannel({
+      channelId: game.channel_id,
+      getMessage,
+    });
+    return msg;
+  } catch {
     await game.destroy();
     throw new Error(`Channel for game ${gameId} was not found. Game was deleted.`);
   }
-  return channel.send(await getMessage(channel));
 }
 
 async function handleGameSelection({
@@ -318,12 +322,17 @@ export async function declineChallenge({
     };
   }
   await game.destroy();
-  await respond({
-    gameId: game.id,
+  await messageChannel({
+    channelId: game.channel_id,
     getMessage: () => ({
       content: `Your challenge was declined <@${userId}>`,
     }),
-  }).catch(throwGameNotFoundError);
+  }).catch(err => {
+    throw {
+      status: 404,
+      message: err.message,
+    };
+  });
   emit({
     type: SocketEventTypes.CHESS_CHALLENGE_DECLINED,
     data: game,
