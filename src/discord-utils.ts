@@ -28,6 +28,7 @@ import {
   Interaction,
   ChatInputCommandInteraction,
   BaseInteraction,
+  MessageOptions,
 } from 'discord.js';
 
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse } from 'src/types';
@@ -933,4 +934,18 @@ export async function canMessageChannel(userId: string, channelId: string): Prom
     users: userId,
     permissions: ['SendMessages', 'ViewChannel'],
   });
+}
+
+export async function messageChannel({
+  channelId,
+  getMessage,
+}: {
+  channelId: string,
+  getMessage: (channel: TextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
+}): Promise<Message | null> {
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (!channel || !isGuildChannel(channel)) {
+    throw new Error('Channel not found.');
+  }
+  return channel.send(await getMessage(channel));
 }
