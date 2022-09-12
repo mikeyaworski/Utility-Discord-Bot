@@ -644,7 +644,6 @@ export async function challengeUser({
     await buttonInteraction.reply('Working...');
     switch (buttonInteraction?.customId) {
       case 'accept': {
-        await buttonInteraction.reply('Accepting...');
         // Refetch the game since the game could have been accepted/declined before this interaction occurs
         const refetchedGame = await ChessGames.findByPk(game.id);
         if (!refetchedGame) {
