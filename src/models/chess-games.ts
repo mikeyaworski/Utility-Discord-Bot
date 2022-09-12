@@ -12,6 +12,7 @@ export class ChessGames extends Model<
   declare id: CreationOptional<number>;
   declare guild_id: string;
   declare channel_id: string;
+  declare thread_id: string | null;
   declare white_user_id: string | null;
   declare black_user_id: string | null;
   declare owner_user_id: string;
@@ -35,6 +36,10 @@ const ChessGamesDefinition: ModelDefinition = sequelize => {
     channel_id: {
       type: Sequelize.STRING,
       allowNull: false,
+    },
+    thread_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
     },
     white_user_id: {
       type: Sequelize.STRING,

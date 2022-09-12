@@ -17,7 +17,6 @@ import {
   SelectMenuComponentOptionData,
   MessagePayload,
   WebhookEditMessageOptions,
-  TextChannel,
   SelectMenuBuilder,
   ActionRowBuilder,
   InteractionType,
@@ -31,7 +30,7 @@ import {
   MessageOptions,
 } from 'discord.js';
 
-import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse } from 'src/types';
+import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse, GuildTextChannel } from 'src/types';
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
@@ -56,14 +55,13 @@ import { Reminder } from './models/reminders';
 export function isText(channel: Channel): channel is TextBasedChannel {
   return channel.isDMBased() || channel.isTextBased() || channel.isThread();
 }
-// TODO: Use a more accurate type guard
-export function isGuildChannel(channel: Channel): channel is TextChannel {
+export function isGuildChannel(channel: Channel): channel is GuildTextChannel {
   return channel.type === ChannelType.GuildText
     || channel.type === ChannelType.GuildVoice
-    || channel.type === ChannelType.GuildPublicThread
-    || channel.type === ChannelType.GuildPrivateThread
-    || channel.type === ChannelType.GuildNews
-    || channel.type === ChannelType.GuildNewsThread
+    || channel.type === ChannelType.PublicThread
+    || channel.type === ChannelType.PrivateThread
+    || channel.type === ChannelType.GuildAnnouncement
+    || channel.type === ChannelType.AnnouncementThread
     || channel.type === ChannelType.GuildStageVoice;
 }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
@@ -172,11 +170,12 @@ export async function getMessagesInRange(
   let stoppedEarly = true;
   const msgs = [start];
   while (msgs.length < MAX_MESSAGES_FETCH) {
-    const fetchedMsgs: (Message)[] = Array.from((await channel.messages.fetch({
+    const msgsRes = await channel.messages.fetch({
       // cannot also provide the "before: end.id" option since multiple options are not supported by the API
       after: start.id,
       limit: BULK_MESSAGES_LIMIT,
-    })).values()).reverse(); // reverse so the messages are ordered chronologically
+    });
+    const fetchedMsgs: (Message)[] = [...msgsRes.values()].reverse(); // reverse so the messages are ordered chronologically
 
     const indexOfEndMsg = fetchedMsgs.findIndex(msg => msg.id === end.id);
 
@@ -937,15 +936,27 @@ export async function canMessageChannel(userId: string, channelId: string): Prom
 }
 
 export async function messageChannel({
+  threadId,
   channelId,
   getMessage,
 }: {
+  threadId?: string | null,
   channelId: string,
-  getMessage: (channel: TextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
+  getMessage: (channel: GuildTextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
 }): Promise<Message | null> {
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel || !isGuildChannel(channel)) {
     throw new Error('Channel not found.');
   }
-  return channel.send(await getMessage(channel));
+
+  // Fetch this separately in case the thread gets deleted, but we will want to fallback to the channel
+  const thread = threadId && !channel.isThread()
+    ? await channel.threads.fetch(threadId).catch(() => null)
+    : null;
+
+  const msgData = await getMessage(channel);
+  const msg = thread
+    ? await thread.send(msgData)
+    : await channel.send(msgData);
+  return msg;
 }

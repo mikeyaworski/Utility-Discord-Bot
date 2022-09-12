@@ -17,6 +17,8 @@ import type {
   PermissionResolvable,
   APIEmbedField,
   ChatInputCommandInteraction,
+  TextChannel,
+  AnyThreadChannel,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
@@ -143,3 +145,5 @@ export interface ChessGameResponse {
   model: ChessGames,
   label: string,
 }
+
+export type GuildTextChannel = TextChannel | AnyThreadChannel;

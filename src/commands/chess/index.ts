@@ -4,21 +4,22 @@ import {
   ButtonStyle,
   GuildMember,
   Message,
-  TextChannel,
   Guild,
   MessageOptions,
   SelectMenuBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
+  ChannelType,
+  AnyThreadChannel,
 } from 'discord.js';
-import type { Command, CommandOrModalRunMethod, AnyInteraction } from 'src/types';
+import type { Command, CommandOrModalRunMethod, AnyInteraction, GuildTextChannel } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
 import { Colors, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 import get from 'lodash.get';
 import { ChessGames } from 'src/models/chess-games';
-import { log } from 'src/logging';
+import { error, log } from 'src/logging';
 import { filterOutFalsy, getRandomElement } from 'src/utils';
 import { getSubcommand, isGuildChannel, messageChannel, parseInput, usersHaveChannelPermission } from 'src/discord-utils';
 import { emit } from 'src/api/sockets';
@@ -179,16 +180,23 @@ async function respond({
   getMessage,
 }: {
   gameId: number,
-  getMessage: (channel: TextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
+  getMessage: (channel: GuildTextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
 }): Promise<Message | null> {
   const game = await ChessGames.findByPk(gameId);
   if (!game) throw new Error(`Game with ID "${gameId}" does not exist`);
 
   try {
-    const msg = await messageChannel({
-      channelId: game.channel_id,
-      getMessage,
-    });
+    const channel = await client.channels.fetch(game.channel_id).catch(() => null);
+    if (!channel || !isGuildChannel(channel)) {
+      throw new Error('Channel not found.');
+    }
+    const thread = game.thread_id && !channel.isThread()
+      ? await channel.threads.fetch(game.thread_id).catch(() => null)
+      : null;
+    const msgOptions = await getMessage(channel);
+    const msg = thread
+      ? await thread.send(msgOptions)
+      : await channel.send(msgOptions);
     return msg;
   } catch {
     await game.destroy();
@@ -325,6 +333,7 @@ export async function declineChallenge({
   }
   await game.destroy();
   await messageChannel({
+    threadId: game.thread_id,
     channelId: game.channel_id,
     getMessage: () => ({
       content: `Your challenge was declined <@${userId}>`,
@@ -561,6 +570,24 @@ export async function challengeUser({
 
   const whiteUserId = authorColor === 'white' ? userId : challengedUserId;
   const blackUserId = authorColor === 'white' ? challengedUserId : userId;
+  const [white, black] = await Promise.all([
+    whiteUserId ? guild.members.fetch(whiteUserId) : null,
+    blackUserId ? guild.members.fetch(blackUserId) : null,
+  ]);
+
+  const canCreateThread = usersHaveChannelPermission({
+    channel,
+    users: filterOutFalsy([client.user?.id]),
+    permissions: ['CreatePublicThreads'],
+  });
+  const thread: AnyThreadChannel | null = canCreateThread ? (
+    await channel.threads.create({
+      name: `Chess Game - ${white?.user.username} vs ${black?.user.username}`,
+      type: ChannelType.PublicThread,
+      invitable: true,
+    })
+  ) : null;
+  const messagingChannel = thread || channel;
 
   const chess = new Chess();
   if (startingPosition) chess.load_pgn(startingPosition);
@@ -568,6 +595,7 @@ export async function challengeUser({
   const game = await ChessGames.create({
     guild_id: guildId,
     channel_id: channelId,
+    thread_id: thread?.id || null,
     white_user_id: whiteUserId,
     black_user_id: blackUserId,
     owner_user_id: userId,
@@ -602,7 +630,7 @@ export async function challengeUser({
   });
   challengeEmbed.setColor(Colors.SUCCESS);
 
-  const challengeMsg = await channel.send({
+  const challengeMsg = await messagingChannel.send({
     content: `<@${userId}> <@${challengedUserId}>`,
     embeds: [challengeEmbed],
     components: [buttonActionRow],
@@ -610,9 +638,10 @@ export async function challengeUser({
 
   if (!challengeMsg) return game;
 
-  channel.awaitMessageComponent({
+  messagingChannel.awaitMessageComponent({
     filter: i => i.message.id === challengeMsg.id && i.user.id === challengedUserId,
   }).then(async buttonInteraction => {
+    await buttonInteraction.reply('Working...');
     switch (buttonInteraction?.customId) {
       case 'accept': {
         await buttonInteraction.reply('Accepting...');
@@ -677,8 +706,9 @@ export async function challengeUser({
         break;
       }
     }
-  }).catch(() => {
-    // Intentionally empty catch
+    await buttonInteraction.deleteReply();
+  }).catch(err => {
+    error(err);
   });
 
   emit({
