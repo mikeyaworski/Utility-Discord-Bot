@@ -15,7 +15,7 @@ import {
 import type { Command, CommandOrModalRunMethod, AnyInteraction } from 'src/types';
 import { Chess, ChessInstance } from 'chess.js';
 
-import { Colors } from 'src/constants';
+import { Colors, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 import get from 'lodash.get';
 import { ChessGames } from 'src/models/chess-games';
 import { log } from 'src/logging';
@@ -280,8 +280,9 @@ async function handleGameSelection({
   try {
     const selectInteraction = await interaction.channel?.awaitMessageComponent({
       filter: i => i.message.id === selectMsg.id && i.user.id === interaction.user.id,
+      time: CONFIRMATION_DEFAULT_TIMEOUT,
     }).catch(() => {
-      // Intentionally empty catch
+      selectMsg.delete();
     });
     if (selectInteraction?.isSelectMenu()) {
       const gameId = Number(selectInteraction.values[0]);
