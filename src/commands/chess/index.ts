@@ -14,7 +14,7 @@ import {
   AnyThreadChannel,
 } from 'discord.js';
 import type { Command, CommandOrModalRunMethod, AnyInteraction, GuildTextChannel } from 'src/types';
-import { Chess, ChessInstance } from 'chess.js';
+import { Chess } from 'chess.js';
 
 import { Colors, CONFIRMATION_DEFAULT_TIMEOUT } from 'src/constants';
 import get from 'lodash.get';
@@ -113,13 +113,13 @@ export function getRooms(game: ChessGames): string[] {
   return filterOutFalsy([game.white_user_id, game.black_user_id]);
 }
 
-function getChessImageUrl(game: ChessInstance): string {
+function getChessImageUrl(game: Chess): string {
   return `https://fen2png.com/api/?fen=${encodeURIComponent(game.fen())}&raw=true`;
 }
 
 export function getChessBoardEmbed(game: ChessGames): EmbedBuilder {
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
   const moves = chess.history();
   const lastMove = moves[moves.length - 1];
   const color = chess.turn() === 'w' ? '#FFFFFF' : '#000000';
@@ -140,7 +140,7 @@ export function getChessBoardEmbed(game: ChessGames): EmbedBuilder {
 
 export async function getChessPgnWithHeaders(game: ChessGames, guild: Guild): Promise<string> {
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
   const [white, black] = await Promise.all([
     game.white_user_id ? guild.members.fetch(game.white_user_id) : null,
     game.black_user_id ? guild.members.fetch(game.black_user_id) : null,
@@ -153,7 +153,7 @@ export async function getChessPgnWithHeaders(game: ChessGames, guild: Guild): Pr
 
 function getTurnInfo(userId: string, game: ChessGames) {
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
   const currentTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
   chess.undo();
   const lastTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
@@ -426,7 +426,7 @@ export async function makeMove({
   }
 
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
 
   const isValidMove = Boolean(chess.move(move, { sloppy: true }));
   if (!isValidMove) {
@@ -443,15 +443,15 @@ export async function makeMove({
     data: await getGameResponse(game),
   }, getRooms(game));
 
-  if (chess.game_over()) {
+  if (chess.isGameOver()) {
     let content = 'Game is over??';
-    if (chess.in_draw()) {
+    if (chess.isDraw()) {
       content = 'Game has ended in a **draw** (50-move rule or insufficient material).';
-    } else if (chess.in_checkmate()) {
+    } else if (chess.isCheckmate()) {
       content = `<@${lastTurnUser}> wins by **checkmate**.`;
-    } else if (chess.in_stalemate()) {
+    } else if (chess.isStalemate()) {
       content = 'Game has ended by **stalemate**.';
-    } else if (chess.in_threefold_repetition()) {
+    } else if (chess.isThreefoldRepetition()) {
       content = 'Game has ended by **threefold repetition**.';
     }
     await respond({
@@ -595,7 +595,7 @@ export async function challengeUser({
   // 1. Nc3 Nc6 2. Ne4 Nb8 3. Ng5 Nc6 4. e3 g6 5. Ke2 Bh6 6. Kf3 Nb8 7. Kf4 Nc6 8. N1f3
   // Move 8 should be Nf3 since the other knight is in an absolute pin.
   // N1f3 is in the generated PGN, but that move will not be loaded unless we specify the sloppy option.
-  if (startingPosition) chess.load_pgn(startingPosition, { sloppy: true });
+  if (startingPosition) chess.loadPgn(startingPosition, { sloppy: true });
 
   const game = await ChessGames.create({
     guild_id: guildId,
@@ -762,7 +762,7 @@ export async function resignGame({
   userId: string,
 }): Promise<void> {
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
   const hasMoves = chess.history().length > 0;
   await respond({
     gameId: game.id,
@@ -833,7 +833,7 @@ export async function undoMove({
   }
 
   const chess = new Chess();
-  chess.load_pgn(game.pgn, { sloppy: true });
+  chess.loadPgn(game.pgn, { sloppy: true });
   const takeback = chess.undo();
 
   if (takeback == null) {

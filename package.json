@@ -54,7 +54,7 @@
     "@vvo/tzdb": "^6.7.0",
     "axios": "^0.21.1",
     "cheerio": "^1.0.0-rc.10",
-    "chess.js": "^0.12.0",
+    "chess.js": "^1.0.0-alpha.0",
     "chrono-node": "^2.3.0",
     "cookie": "^0.5.0",
     "cookie-parser": "^1.4.6",
