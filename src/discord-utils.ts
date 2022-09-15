@@ -950,7 +950,7 @@ export async function messageChannel({
   }
 
   // Fetch this separately in case the thread gets deleted, but we will want to fallback to the channel
-  const thread = threadId && !channel.isThread()
+  const thread = threadId && !channel.isThread() && !channel.isVoiceBased()
     ? await channel.threads.fetch(threadId).catch(() => null)
     : null;
 

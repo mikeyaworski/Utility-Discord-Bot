@@ -190,7 +190,7 @@ async function respond({
     if (!channel || !isGuildChannel(channel)) {
       throw new Error('Channel not found.');
     }
-    const thread = game.thread_id && !channel.isThread()
+    const thread = game.thread_id && !channel.isThread() && !channel.isVoiceBased()
       ? await channel.threads.fetch(game.thread_id).catch(() => null)
       : null;
     const msgOptions = await getMessage(channel);
@@ -578,7 +578,7 @@ export async function challengeUser({
     channel,
     users: filterOutFalsy([client.user?.id]),
     permissions: ['CreatePublicThreads'],
-  });
+  }) && !channel.isVoiceBased();
   const thread: AnyThreadChannel | null = canCreateThread ? (
     await channel.threads.create({
       name: `Chess Game - ${white?.user.username} vs ${black?.user.username}`,

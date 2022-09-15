@@ -19,6 +19,7 @@ import type {
   ChatInputCommandInteraction,
   TextChannel,
   AnyThreadChannel,
+  VoiceChannel,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
@@ -146,4 +147,4 @@ export interface ChessGameResponse {
   label: string,
 }
 
-export type GuildTextChannel = TextChannel | AnyThreadChannel;
+export type GuildTextChannel = TextChannel | VoiceChannel | AnyThreadChannel;
