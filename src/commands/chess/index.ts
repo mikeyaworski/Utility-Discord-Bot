@@ -465,7 +465,6 @@ export async function makeMove({
     });
     await game.destroy();
   } else {
-    await game.update({ pgn: chess.pgn() });
     const { currentTurnUser } = getTurnInfo(userId, game);
     await respond({
       gameId: game.id,
