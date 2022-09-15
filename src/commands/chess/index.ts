@@ -125,7 +125,7 @@ export function getChessBoardEmbed(game: ChessGames): EmbedBuilder {
   const color = chess.turn() === 'w' ? '#FFFFFF' : '#000000';
   const embed = new EmbedBuilder({
     title: ':chess_pawn: Chess Game',
-    url: 'https://utilitydiscordbot.com/chess',
+    url: `${process.env.UI_ROOT}/chess`,
     description: `<@${game.white_user_id}> vs <@${game.black_user_id}>${
       lastMove ? `\nLast move: \`${lastMove}\`` : ''
     }`,

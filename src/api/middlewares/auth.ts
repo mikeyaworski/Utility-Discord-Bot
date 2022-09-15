@@ -38,6 +38,9 @@ export type AuthRequest<T = Request> = T & {
 const discordPromises: {
   [authToken: string]: Promise<IntentionalAny>[],
 } = {};
+const refreshTokenPromises: {
+  [refreshToken: string]: Promise<IntentionalAny>,
+} = {};
 
 export async function getUserFromAuthToken(auth: string): Promise<User> {
   const cacheRes = cache.get<User>(auth);
@@ -83,14 +86,48 @@ export default async function authMiddleware(
   req: Request, res: Response,
   next: NextFunction,
 ): Promise<void> {
-  if (!req.cookies.auth) {
+  // eslint-disable-next-line prefer-const
+  let { auth } = req.cookies;
+  if (!auth && !req.cookies.refresh_token) {
     res.status(401).end();
     return;
   }
+  // TODO: Use the refresh token here, but rate limiting issues need to be addressed
+  // if (!auth && req.cookies.refresh_token) {
+  //   try {
+  //     if (!refreshTokenPromises[auth]) {
+  //       refreshTokenPromises[auth] = axios('https://discord.com/api/oauth2/token', {
+  //         method: 'POST',
+  //         headers: {
+  //           'content-type': 'application/x-www-form-urlencoded',
+  //         },
+  //         data: new URLSearchParams({
+  //           client_id: process.env.DISCORD_BOT_CLIENT_ID!,
+  //           client_secret: process.env.DISCORD_BOT_CLIENT_SECRET!,
+  //           grant_type: 'refresh_token',
+  //           refresh_token: req.cookies.refresh_token,
+  //         }),
+  //       });
+  //     }
+  //     const tokenRes = await refreshTokenPromises[auth];
+  //     auth = `${tokenRes.data.token_type} ${tokenRes.data.access_token}`;
+  //     res.cookie('auth', auth, {
+  //       httpOnly: true,
+  //       secure: process.env.ENVIRONMENT === 'production',
+  //       maxAge: tokenRes.data.expires_in ? tokenRes.data.expires_in * 1000 : undefined,
+  //     });
+  //     res.cookie('refresh_token', tokenRes.data.refresh_token, {
+  //       httpOnly: true,
+  //       secure: process.env.ENVIRONMENT === 'production',
+  //     });
+  //   } catch (err) {
+  //     error(err);
+  //   }
+  // }
   try {
     // @ts-expect-error
     const authReq: AuthRequest = req;
-    authReq.user = await getUserFromAuthToken(req.cookies.auth);
+    authReq.user = await getUserFromAuthToken(auth);
     next();
   } catch (err) {
     error(err);

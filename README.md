@@ -19,7 +19,7 @@ Note: Heroku no longer has a free tier, so hosting on Heroku is no longer recomm
 ## Environment Variables
 Create a `.env` file in the root of your project folder. You can use `.env.example` as a starting point.
 
-Fill in your own `DISCORD_BOT_CLIENT_ID` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
+Fill in your own `DISCORD_BOT_CLIENT_ID`, `DISCORD_BOT_CLIENT_SECRET` and `DISCORD_BOT_TOKEN` for development / your bot deployment.
 
 Optional variables:
 - `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
@@ -36,6 +36,7 @@ PORT=3000
 DATABASE_URL=postgres://user:password@utility-discord-bot-db:5432/utility-discord-bot-db
 
 DISCORD_BOT_CLIENT_ID=...
+DISCORD_BOT_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
 YOUTUBE_API_KEY=...
 SPOTIFY_CLIENT_ID=...
