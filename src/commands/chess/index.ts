@@ -119,7 +119,7 @@ function getChessImageUrl(game: ChessInstance): string {
 
 export function getChessBoardEmbed(game: ChessGames): EmbedBuilder {
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
   const moves = chess.history();
   const lastMove = moves[moves.length - 1];
   const color = chess.turn() === 'w' ? '#FFFFFF' : '#000000';
@@ -140,7 +140,7 @@ export function getChessBoardEmbed(game: ChessGames): EmbedBuilder {
 
 export async function getChessPgnWithHeaders(game: ChessGames, guild: Guild): Promise<string> {
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
   const [white, black] = await Promise.all([
     game.white_user_id ? guild.members.fetch(game.white_user_id) : null,
     game.black_user_id ? guild.members.fetch(game.black_user_id) : null,
@@ -153,7 +153,7 @@ export async function getChessPgnWithHeaders(game: ChessGames, guild: Guild): Pr
 
 function getTurnInfo(userId: string, game: ChessGames) {
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
   const currentTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
   chess.undo();
   const lastTurnUser = chess.turn() === 'w' ? game.white_user_id : game.black_user_id;
@@ -426,7 +426,7 @@ export async function makeMove({
   }
 
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
 
   const isValidMove = Boolean(chess.move(move, { sloppy: true }));
   if (!isValidMove) {
@@ -589,7 +589,13 @@ export async function challengeUser({
   const messagingChannel = thread || channel;
 
   const chess = new Chess();
-  if (startingPosition) chess.load_pgn(startingPosition);
+
+  // Note: We need to load sloppy PGNs to support situations like the following:
+  // chess.js version 0.12.0 creates a PGN that it cannot load (this is a bug).
+  // 1. Nc3 Nc6 2. Ne4 Nb8 3. Ng5 Nc6 4. e3 g6 5. Ke2 Bh6 6. Kf3 Nb8 7. Kf4 Nc6 8. N1f3
+  // Move 8 should be Nf3 since the other knight is in an absolute pin.
+  // N1f3 is in the generated PGN, but that move will not be loaded unless we specify the sloppy option.
+  if (startingPosition) chess.load_pgn(startingPosition, { sloppy: true });
 
   const game = await ChessGames.create({
     guild_id: guildId,
@@ -756,7 +762,7 @@ export async function resignGame({
   userId: string,
 }): Promise<void> {
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
   const hasMoves = chess.history().length > 0;
   await respond({
     gameId: game.id,
@@ -827,7 +833,7 @@ export async function undoMove({
   }
 
   const chess = new Chess();
-  chess.load_pgn(game.pgn);
+  chess.load_pgn(game.pgn, { sloppy: true });
   const takeback = chess.undo();
 
   if (takeback == null) {
