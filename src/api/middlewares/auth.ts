@@ -1,8 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import NodeCache from 'node-cache';
+import get from 'lodash.get';
 import type { IntentionalAny } from 'src/types';
-import { error } from 'src/logging';
+import { log, error } from 'src/logging';
 import { client } from 'src/client';
 
 const cache = new NodeCache({
@@ -87,43 +88,47 @@ export default async function authMiddleware(
   next: NextFunction,
 ): Promise<void> {
   // eslint-disable-next-line prefer-const
-  let { auth } = req.cookies;
-  if (!auth && !req.cookies.refresh_token) {
+  let { auth, refresh_token: refreshToken } = req.cookies;
+  if (!auth && !refreshToken) {
     res.status(401).end();
     return;
   }
-  // TODO: Use the refresh token here, but rate limiting issues need to be addressed
-  // if (!auth && req.cookies.refresh_token) {
-  //   try {
-  //     if (!refreshTokenPromises[auth]) {
-  //       refreshTokenPromises[auth] = axios('https://discord.com/api/oauth2/token', {
-  //         method: 'POST',
-  //         headers: {
-  //           'content-type': 'application/x-www-form-urlencoded',
-  //         },
-  //         data: new URLSearchParams({
-  //           client_id: process.env.DISCORD_BOT_CLIENT_ID!,
-  //           client_secret: process.env.DISCORD_BOT_CLIENT_SECRET!,
-  //           grant_type: 'refresh_token',
-  //           refresh_token: req.cookies.refresh_token,
-  //         }),
-  //       });
-  //     }
-  //     const tokenRes = await refreshTokenPromises[auth];
-  //     auth = `${tokenRes.data.token_type} ${tokenRes.data.access_token}`;
-  //     res.cookie('auth', auth, {
-  //       httpOnly: true,
-  //       secure: process.env.ENVIRONMENT === 'production',
-  //       maxAge: tokenRes.data.expires_in ? tokenRes.data.expires_in * 1000 : undefined,
-  //     });
-  //     res.cookie('refresh_token', tokenRes.data.refresh_token, {
-  //       httpOnly: true,
-  //       secure: process.env.ENVIRONMENT === 'production',
-  //     });
-  //   } catch (err) {
-  //     error(err);
-  //   }
-  // }
+  if (!auth && refreshToken) {
+    try {
+      if (!refreshTokenPromises[refreshToken]) {
+        log('Refreshing authentication token');
+        refreshTokenPromises[refreshToken] = axios('https://discord.com/api/oauth2/token', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+          },
+          data: new URLSearchParams({
+            client_id: process.env.DISCORD_BOT_CLIENT_ID!,
+            client_secret: process.env.DISCORD_BOT_CLIENT_SECRET!,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+          }),
+        });
+      }
+      const tokenRes = await refreshTokenPromises[refreshToken];
+      auth = `${tokenRes.data.token_type} ${tokenRes.data.access_token}`;
+      res.cookie('auth', auth, {
+        httpOnly: true,
+        secure: process.env.ENVIRONMENT === 'production',
+        maxAge: tokenRes.data.expires_in ? tokenRes.data.expires_in * 1000 : undefined,
+      });
+      res.cookie('refresh_token', tokenRes.data.refresh_token, {
+        httpOnly: true,
+        secure: process.env.ENVIRONMENT === 'production',
+      });
+      delete refreshTokenPromises[refreshToken];
+    } catch (err) {
+      if (get(err, 'response.status') === 400) {
+        res.clearCookie('refresh_token');
+      }
+      error(err);
+    }
+  }
   try {
     // @ts-expect-error
     const authReq: AuthRequest = req;
