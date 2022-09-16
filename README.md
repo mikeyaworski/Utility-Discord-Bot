@@ -44,6 +44,8 @@ SPOTIFY_CLIENT_SECRET=...
 
 # Slash Commands in development. Remove this during deployment.
 SLASH_COMMANDS_GUILD_ID=...
+
+UI_ROOT=http://localhost:8080
 ```
 
 If you are creating these environment variables for a cloud VM, make sure to change `ENVIRONMENT` to `production`, and replace `DATABASE_URL` with your production database URL (either the one from Heroku, or another service that you have set up).
