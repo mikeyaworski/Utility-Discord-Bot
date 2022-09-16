@@ -660,7 +660,7 @@ export async function challengeUser({
           try {
             await acceptChallenge({
               game: refetchedGame,
-              userId,
+              userId: buttonInteraction.user.id,
             });
           } catch (err) {
             await buttonInteraction.followUp({
