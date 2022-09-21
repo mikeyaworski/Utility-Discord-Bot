@@ -6,7 +6,7 @@ import authMiddleware, { AuthRequest, clearCache } from 'src/api/middlewares/aut
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
-  const { code } = req.body;
+  const { code, redirectUri } = req.body;
   try {
     const tokenRes = await axios('https://discord.com/api/oauth2/token', {
       method: 'POST',
@@ -18,7 +18,7 @@ router.post('/login', async (req, res) => {
         client_secret: process.env.DISCORD_BOT_CLIENT_SECRET!,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: process.env.UI_ROOT!,
+        redirect_uri: redirectUri,
         scope: 'identify',
       }),
     });
