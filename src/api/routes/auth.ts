@@ -1,7 +1,7 @@
 import axios from 'axios';
 import express from 'express';
 import { error } from 'src/logging';
-import authMiddleware, { AuthRequest, clearCache } from 'src/api/middlewares/auth';
+import authMiddleware, { AuthRequest, clearCache, logIn } from 'src/api/middlewares/auth';
 
 const router = express.Router();
 
@@ -28,15 +28,7 @@ router.post('/login', async (req, res) => {
         authorization,
       },
     });
-    res.cookie('auth', authorization, {
-      httpOnly: true,
-      secure: process.env.ENVIRONMENT === 'production',
-      maxAge: tokenRes.data.expires_in ? tokenRes.data.expires_in * 1000 : undefined,
-    });
-    res.cookie('refresh_token', tokenRes.data.refresh_token, {
-      httpOnly: true,
-      secure: process.env.ENVIRONMENT === 'production',
-    });
+    logIn(res, tokenRes.data);
     res.status(204).end();
   } catch (err) {
     error(err);

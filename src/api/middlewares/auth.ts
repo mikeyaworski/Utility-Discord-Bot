@@ -83,6 +83,30 @@ export async function getUserFromAuthToken(auth: string): Promise<User> {
   return user;
 }
 
+interface TokenRes {
+  access_token: string,
+  expires_in: number,
+  refresh_token: string,
+  scope: string,
+  token_type: string,
+}
+export async function logIn(res: Response, tokenRes: TokenRes): Promise<void> {
+  const auth = `${tokenRes.token_type} ${tokenRes.access_token}`;
+  res.cookie('auth', auth, {
+    httpOnly: true,
+    secure: process.env.ENVIRONMENT === 'production',
+    maxAge: tokenRes.expires_in ? tokenRes.expires_in * 1000 : undefined,
+    // Allow for aliased domains like utilitybot.ca
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  });
+  res.cookie('refresh_token', tokenRes.refresh_token, {
+    httpOnly: true,
+    secure: process.env.ENVIRONMENT === 'production',
+    // Allow for aliased domains like utilitybot.ca
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  });
+}
+
 export default async function authMiddleware(
   req: Request, res: Response,
   next: NextFunction,
@@ -111,16 +135,7 @@ export default async function authMiddleware(
         });
       }
       const tokenRes = await refreshTokenPromises[refreshToken];
-      auth = `${tokenRes.data.token_type} ${tokenRes.data.access_token}`;
-      res.cookie('auth', auth, {
-        httpOnly: true,
-        secure: process.env.ENVIRONMENT === 'production',
-        maxAge: tokenRes.data.expires_in ? tokenRes.data.expires_in * 1000 : undefined,
-      });
-      res.cookie('refresh_token', tokenRes.data.refresh_token, {
-        httpOnly: true,
-        secure: process.env.ENVIRONMENT === 'production',
-      });
+      logIn(res, tokenRes.data);
       delete refreshTokenPromises[refreshToken];
     } catch (err) {
       if (get(err, 'response.status') === 400) {
