@@ -38,6 +38,7 @@ const corsOptions = Object.freeze({
   origin: process.env.ENVIRONMENT === 'production'
     ? [
       /^https:\/\/utilitydiscordbot\.com$/,
+      /^https:\/\/utilitybot\.ca$/,
     ] : [
       /^https?:\/\/localhost(:\d+)?$/,
     ],
