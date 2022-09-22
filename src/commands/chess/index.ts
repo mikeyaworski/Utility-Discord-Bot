@@ -809,7 +809,7 @@ async function handleShow(interaction: AnyInteraction) {
       await respond({
         gameId: game.id,
         getMessage: () => ({
-          content: `Make a move <@${currentTurnUser}>.`,
+          content: `Make a move <@${currentTurnUser}>`,
           embeds: [getChessBoardEmbed(game)],
         }),
       }).catch(err => handleResponseError(err, interaction));
