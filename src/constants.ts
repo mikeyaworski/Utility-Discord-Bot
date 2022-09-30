@@ -6,6 +6,7 @@ export const CONFIRMATION_DEFAULT_TIMEOUT = 30 * 1000;
 export const INTERACTION_MAX_TIMEOUT = ONE_MINUTE_MS * 15;
 export const REWIND_BUTTON_TIME = 15 * 1000;
 export const FAST_FORWARD_BUTTON_TIME = 15 * 1000;
+export const LONG_COOKIE_TIMEOUT = 365 * 24 * 60 * ONE_MINUTE_MS;
 
 export const DIGITS_REGEX = /^\d+$/;
 export const CHANNEL_ARG_REGEX = /^<#\d+>$/;

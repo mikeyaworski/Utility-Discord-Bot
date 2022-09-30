@@ -5,6 +5,7 @@ import get from 'lodash.get';
 import type { IntentionalAny } from 'src/types';
 import { log, error } from 'src/logging';
 import { client } from 'src/client';
+import { LONG_COOKIE_TIMEOUT } from 'src/constants';
 
 const cache = new NodeCache({
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -107,6 +108,7 @@ export async function logIn(res: Response, tokenRes: TokenRes): Promise<void> {
   });
   res.cookie('refresh_token', tokenRes.refresh_token, {
     ...getBaseCookieOptions(),
+    maxAge: LONG_COOKIE_TIMEOUT,
   });
 }
 
