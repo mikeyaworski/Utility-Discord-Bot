@@ -1,7 +1,12 @@
 import axios from 'axios';
 import express from 'express';
 import { error } from 'src/logging';
-import authMiddleware, { AuthRequest, clearCache, logIn } from 'src/api/middlewares/auth';
+import authMiddleware, {
+  AuthRequest,
+  getBaseCookieOptions,
+  clearCache,
+  logIn,
+} from 'src/api/middlewares/auth';
 
 const router = express.Router();
 
@@ -38,8 +43,8 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', async (req, res) => {
   clearCache(req.cookies.auth);
-  res.clearCookie('auth');
-  res.clearCookie('refresh_token');
+  res.clearCookie('auth', getBaseCookieOptions());
+  res.clearCookie('refresh_token', getBaseCookieOptions());
   res.status(204).end();
 });
 

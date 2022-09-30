@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, CookieOptions } from 'express';
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import get from 'lodash.get';
@@ -83,6 +83,15 @@ export async function getUserFromAuthToken(auth: string): Promise<User> {
   return user;
 }
 
+export function getBaseCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: process.env.ENVIRONMENT === 'production',
+    // Allow for aliased domains like utilitybot.ca
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  };
+}
+
 interface TokenRes {
   access_token: string,
   expires_in: number,
@@ -93,17 +102,11 @@ interface TokenRes {
 export async function logIn(res: Response, tokenRes: TokenRes): Promise<void> {
   const auth = `${tokenRes.token_type} ${tokenRes.access_token}`;
   res.cookie('auth', auth, {
-    httpOnly: true,
-    secure: process.env.ENVIRONMENT === 'production',
+    ...getBaseCookieOptions(),
     maxAge: tokenRes.expires_in ? tokenRes.expires_in * 1000 : undefined,
-    // Allow for aliased domains like utilitybot.ca
-    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
   });
   res.cookie('refresh_token', tokenRes.refresh_token, {
-    httpOnly: true,
-    secure: process.env.ENVIRONMENT === 'production',
-    // Allow for aliased domains like utilitybot.ca
-    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+    ...getBaseCookieOptions(),
   });
 }
 
@@ -139,7 +142,7 @@ export default async function authMiddleware(
       delete refreshTokenPromises[refreshToken];
     } catch (err) {
       if (get(err, 'response.status') === 400) {
-        res.clearCookie('refresh_token');
+        res.clearCookie('refresh_token', getBaseCookieOptions());
       }
       error(err);
     }
