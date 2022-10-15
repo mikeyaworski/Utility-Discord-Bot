@@ -100,7 +100,7 @@ interface TokenRes {
   scope: string,
   token_type: string,
 }
-export async function logIn(res: Response, tokenRes: TokenRes): Promise<string> {
+export function logIn(res: Response, tokenRes: TokenRes): string {
   const auth = `${tokenRes.token_type} ${tokenRes.access_token}`;
   res.cookie('auth', auth, {
     ...getBaseCookieOptions(),
