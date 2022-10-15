@@ -100,7 +100,7 @@ interface TokenRes {
   scope: string,
   token_type: string,
 }
-export async function logIn(res: Response, tokenRes: TokenRes): Promise<void> {
+export async function logIn(res: Response, tokenRes: TokenRes): Promise<string> {
   const auth = `${tokenRes.token_type} ${tokenRes.access_token}`;
   res.cookie('auth', auth, {
     ...getBaseCookieOptions(),
@@ -110,6 +110,7 @@ export async function logIn(res: Response, tokenRes: TokenRes): Promise<void> {
     ...getBaseCookieOptions(),
     maxAge: LONG_COOKIE_TIMEOUT,
   });
+  return auth;
 }
 
 export default async function authMiddleware(
@@ -140,7 +141,7 @@ export default async function authMiddleware(
         });
       }
       const tokenRes = await refreshTokenPromises[refreshToken];
-      logIn(res, tokenRes.data);
+      auth = logIn(res, tokenRes.data);
       delete refreshTokenPromises[refreshToken];
     } catch (err) {
       if (get(err, 'response.status') === 400) {
