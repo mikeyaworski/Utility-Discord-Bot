@@ -79,7 +79,13 @@ const RemindersDefinition: ModelDefinition = sequelize => {
       },
     },
     message: {
-      type: Sequelize.STRING,
+      type: Sequelize.TEXT,
+      validate: {
+        len: {
+          msg: 'Reminder message must be 1024 characters or less',
+          args: [0, 1024],
+        },
+      },
     },
   }, {
     sequelize,
