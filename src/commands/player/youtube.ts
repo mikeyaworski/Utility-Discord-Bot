@@ -8,7 +8,7 @@ import { log, error } from 'src/logging';
 import { filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
 import Track, { TrackVariant } from './track';
-import type { Query } from './types';
+import { Query, QueryType } from './types';
 
 type TracksFetchedCallback = (newTracks: Track[]) => void;
 
@@ -17,7 +17,7 @@ export const getTracksFromQueries = (() => {
   return async (queries: Query[], tracksFetchedCb?: TracksFetchedCallback): Promise<Track[]> => {
     // Arbitrary concurrency limit to prevent rate limiting or audio hitching.
     const limit = pLimit(CONCURRENCY_LIMIT);
-    const promises = queries.map(({ query, sourceLink }) => limit(async () => {
+    const promises = queries.map(({ query, sourceLink, type }) => limit(async () => {
       try {
         if (queryCache.has(query)) {
           return new Track({
@@ -26,7 +26,14 @@ export const getTracksFromQueries = (() => {
             sourceLink,
           });
         }
-        const res = await YouTubeSr.searchOne(query, 'video');
+        const [firstResult, secondResult] = await YouTubeSr.search(query, {
+          type: 'video',
+          limit: 2,
+        });
+        const shouldUseSecondResult = secondResult
+          && type === QueryType.SPOTIFY_LINK
+          && firstResult.title?.toLowerCase().includes('music video');
+        const res = shouldUseSecondResult ? secondResult : firstResult;
         const youtubeLink = `https://youtube.com/watch?v=${res.id}`;
         const youtubeTitle = res.title;
         const youtubeDuration = res.duration;

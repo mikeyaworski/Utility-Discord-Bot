@@ -22,7 +22,7 @@ import {
 import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getTrackDurationString, getTrackDurationAndSpeed } from './utils';
 import { getFavorite } from './player-favorites';
-import type { Query } from './types';
+import { Query, QueryType } from './types';
 
 function respondWithEmbed(editReply: EditReply, content: EmbedData) {
   const embed = new EmbedBuilder({
@@ -237,7 +237,10 @@ export async function play({
     return attachPlayerButtons(interaction, session, message);
   }
   if (queryStr) {
-    const tracks = await getTracksFromQueries([{ query: queryStr }]);
+    const tracks = await getTracksFromQueries([{
+      query: queryStr,
+      type: QueryType.DIRECT_QUERY,
+    }]);
     const responseMessage = await enqueue(session, tracks, pushToFront);
     await respondWithEmbed(editReply, responseMessage);
     return attachPlayerButtons(interaction, session, message);

@@ -14,7 +14,7 @@ import {
 } from 'src/constants';
 import chunk from 'lodash.chunk';
 import get from 'lodash.get';
-import type { Query } from './types';
+import { Query, QueryType } from './types';
 
 dotenv.config();
 
@@ -120,6 +120,7 @@ export function getQueryFromSpotifyTrack(track: IntentionalAny): Query {
   return {
     query,
     sourceLink,
+    type: QueryType.SPOTIFY_LINK,
   };
 }
 
