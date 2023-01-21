@@ -11,7 +11,7 @@ const router = express.Router();
 
 // https://discord.com/api/webhooks/{webhookId}/{webhookToken}
 router.post('/', async (req, res) => {
-  const isAuthorized = !webhookSecret || webhookSecret === req.get('X-WEBHOOK-SECRET');
+  const isAuthorized = webhookSecret && webhookSecret === req.get('X-WEBHOOK-SECRET');
   if (!isAuthorized) return res.status(401).end();
 
   const { webhookId, webhookToken, data } = req.body;
