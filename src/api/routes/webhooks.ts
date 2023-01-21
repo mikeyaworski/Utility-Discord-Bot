@@ -14,17 +14,15 @@ router.post('/', async (req, res) => {
   const isAuthorized = !webhookSecret || webhookSecret === req.get('X-WEBHOOK-SECRET');
   if (!isAuthorized) return res.status(401).end();
 
-  const { webhookId, webhookToken, message } = req.body;
-  if (!webhookId || !webhookToken || !message) return res.status(400).send('webhookId, webhookToken and message are required.');
+  const { webhookId, webhookToken, data } = req.body;
+  if (!webhookId || !webhookToken || !data) return res.status(400).send('webhookId, webhookToken and data are required.');
 
-  log('Received webhook request:', message);
+  log('Received webhook request:', data);
 
   try {
     const webhookClient = new WebhookClient({ id: webhookId, token: webhookToken });
-    await webhookClient.send({
-      content: message,
-    });
-    log('Sent message from Webhook:', message);
+    await webhookClient.send(data);
+    log('Sent message from Webhook:', data);
     return res.status(204).end();
   } catch (err) {
     // TODO: Pass the status code and message from the Discord error if available
