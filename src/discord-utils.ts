@@ -17,7 +17,7 @@ import {
   SelectMenuComponentOptionData,
   MessagePayload,
   WebhookEditMessageOptions,
-  SelectMenuBuilder,
+  StringSelectMenuBuilder,
   ActionRowBuilder,
   InteractionType,
   ContextMenuCommandInteraction,
@@ -528,6 +528,7 @@ export async function replyWithSelect({
   isFollowUp,
   onSelect,
   workingMsg,
+  timeoutMsg,
 }: {
   interaction: AnyInteraction,
   options: SelectMenuComponentOptionData[],
@@ -536,8 +537,9 @@ export async function replyWithSelect({
   isFollowUp?: boolean,
   onSelect: (value: string, message: MessageResponse) => Promise<void | WebhookEditMessageOptions>,
   workingMsg?: string,
+  timeoutMsg?: string,
 }): Promise<void> {
-  const menu = new SelectMenuBuilder({
+  const menu = new StringSelectMenuBuilder({
     customId: 'select',
     placeholder,
     options: options.map(o => ({
@@ -545,7 +547,7 @@ export async function replyWithSelect({
       label: o.label.slice(0, 100),
     })).slice(0, 25),
   });
-  const row = new ActionRowBuilder<SelectMenuBuilder>({
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>({
     components: [menu],
   });
 
@@ -584,7 +586,7 @@ export async function replyWithSelect({
     } else {
       // If we get here, then the interaction button was not clicked.
       await interaction.webhook.editMessage(selectMsg.id, {
-        content: 'Favorites selection timed out.',
+        content: timeoutMsg || 'Selection timed out.',
         components: [],
       });
     }

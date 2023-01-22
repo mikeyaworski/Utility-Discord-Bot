@@ -236,6 +236,7 @@ async function handleList(interaction: AnyInteraction) {
       });
     },
     workingMsg: 'Working...',
+    timeoutMsg: 'Favorites selection timed out.',
   });
 }
 
