@@ -48,7 +48,9 @@ router.post('/dm', async (req, res) => {
     log('Sent DM from webhook:', userId, data);
     return res.status(204).end();
   } catch (err) {
-    return res.status(404).send(String(err));
+    // TODO: Pass the status code and message from the Discord error if available
+    error(err);
+    return res.status(500).end();
   }
 });
 
