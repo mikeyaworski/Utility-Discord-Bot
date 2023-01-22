@@ -114,7 +114,8 @@ export function logIn(res: Response, tokenRes: TokenRes): string {
 }
 
 export default async function authMiddleware(
-  req: Request, res: Response,
+  req: Request,
+  res: Response,
   next: NextFunction,
 ): Promise<void> {
   // eslint-disable-next-line prefer-const
@@ -130,6 +131,7 @@ export default async function authMiddleware(
         refreshTokenPromises[refreshToken] = axios('https://discord.com/api/oauth2/token', {
           method: 'POST',
           headers: {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
             'content-type': 'application/x-www-form-urlencoded',
           },
           data: new URLSearchParams({

@@ -91,6 +91,7 @@ const getSpotifyAccessToken = (() => {
     const data = new URLSearchParams({ grant_type: 'client_credentials' });
     const res = await axios.post('https://accounts.spotify.com/api/token', data, {
       headers: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         'content-type': 'application/x-www-form-urlencoded',
         authorization: getSpotifyAuth(),
       },

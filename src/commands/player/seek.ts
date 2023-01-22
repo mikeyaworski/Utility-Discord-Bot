@@ -70,11 +70,13 @@ const SeekCommand: Command = {
   modalLabels: {
     timestamp: 'Time in video',
     rewind: 'Rewind',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'fast-forward': 'Fast Forward',
   },
   modalPlaceholders: {
     timestamp: 'In seconds, or a string of the form xx:xx:xx',
     rewind: 'In seconds, or a string of the form xx:xx:xx',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'fast-forward': 'In seconds, or a string of the form xx:xx:xx',
   },
 };

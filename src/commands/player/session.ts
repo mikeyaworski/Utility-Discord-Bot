@@ -20,6 +20,15 @@ import Track, { AudioResourceOptions } from './track';
 import { getMessageData, listenForPlayerButtons } from './utils';
 import { runNowPlaying } from './now-playing';
 
+interface CurrentTrackPlayTime {
+  // all in MS
+  started: number | null, // timestamp
+  pauseStarted: number | null, // timestamp
+  totalPauseTime: number,
+  seeked: number | null,
+  speed: number,
+}
+
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
   public readonly voiceConnection: VoiceConnection;
@@ -34,14 +43,7 @@ export default class Session {
   private playbackSpeed = 1;
 
   // DiscordJS does not provide this for us, so we manually keep track of an approximate duration in the current track
-  private currentTrackPlayTime: {
-    // all in MS
-    started: number | null, // timestamp
-    pauseStarted: number | null, // timestamp
-    totalPauseTime: number,
-    seeked: number | null,
-    speed: number,
-  } = {
+  private currentTrackPlayTime: CurrentTrackPlayTime = {
     started: null,
     pauseStarted: null,
     totalPauseTime: 0,

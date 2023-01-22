@@ -63,17 +63,15 @@ export default class Track {
     const tryYtdlExec: () => Promise<AudioResource<Track>> = async () => {
       // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/track.ts#L46-L76
       return new Promise((resolve, reject) => {
-        const process = ytdlExec(
-          this.link, {
-            output: '-',
-            quiet: true,
-            format: 'bestaudio',
-          }, {
-            stdio: ['ignore', 'pipe', 'ignore'],
-            maxBuffer: 10_000_000,
-            buffer: false,
-          },
-        );
+        const process = ytdlExec(this.link, {
+          output: '-',
+          quiet: true,
+          format: 'bestaudio',
+        }, {
+          stdio: ['ignore', 'pipe', 'ignore'],
+          maxBuffer: 10_000_000,
+          buffer: false,
+        });
         if (!process.stdout) {
           reject(new Error('No stdout'));
           return;

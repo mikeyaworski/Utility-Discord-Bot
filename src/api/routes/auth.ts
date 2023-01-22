@@ -16,6 +16,7 @@ router.post('/login', async (req, res) => {
     const tokenRes = await axios('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         'content-type': 'application/x-www-form-urlencoded',
       },
       data: new URLSearchParams({
