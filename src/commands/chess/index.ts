@@ -6,7 +6,7 @@ import {
   Message,
   Guild,
   MessageCreateOptions,
-  SelectMenuBuilder,
+  StringSelectMenuBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -164,7 +164,7 @@ function getTurnInfo(userId: string, game: ChessGames) {
 }
 
 function handleResponseError(err: Error, interaction: AnyInteraction) {
-  return interaction.followUp(err.message);
+  return interaction.editReply(err.message);
 }
 
 function throwGameNotFoundError(err: Error) {
@@ -216,6 +216,7 @@ async function handleGameSelection({
 }) {
   await interaction.reply({
     content: 'Working...',
+    ephemeral: true,
   });
 
   let where: WhereOptions = {
@@ -233,13 +234,14 @@ async function handleGameSelection({
   }
   const chessGames = await ChessGames.findAll({
     where,
+    order: [
+      ['id', 'ASC'],
+    ],
   });
 
   if (chessGames.length === 0) {
-    await interaction.deleteReply();
-    await interaction.followUp({
+    await interaction.editReply({
       content: noGamesMessage,
-      ephemeral: true,
     });
     return;
   }
@@ -260,22 +262,20 @@ async function handleGameSelection({
     const gameId = Number(options[0].value);
     const game = await ChessGames.findByPk(gameId);
     if (!game) {
-      await interaction.followUp({
+      await interaction.editReply({
         content: `Game with ID "${gameId}" no longer exists.`,
-        ephemeral: true,
       });
     } else {
       await cb(game);
     }
-    await interaction.deleteReply();
     return;
   }
-  const menu = new SelectMenuBuilder({
+  const menu = new StringSelectMenuBuilder({
     customId: 'game',
     placeholder: 'Select a game...',
     options: options.slice(0, 25),
   });
-  const row = new ActionRowBuilder<SelectMenuBuilder>({
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>({
     components: [menu],
   });
 
@@ -299,14 +299,12 @@ async function handleGameSelection({
       });
       const game = await ChessGames.findByPk(gameId);
       if (!game) {
-        await interaction.followUp({
+        await interaction.editReply({
           content: `Game with ID "${gameId}" no longer exists.`,
-          ephemeral: true,
         });
       } else {
         await cb(game);
       }
-      await interaction.deleteReply();
     }
   } catch (err) {
     await interaction.editReply(`Error: ${get(err, 'message', 'Something went wrong.')}`);
@@ -396,11 +394,11 @@ async function handleAccept(interaction: AnyInteraction) {
           game,
           userId: interaction.user.id,
         });
+        await interaction.deleteReply();
       } catch (err) {
-        await interaction.followUp({
+        await interaction.editReply({
           // @ts-expect-error We know the structure of this exception
           content: err.message,
-          ephemeral: true,
         });
       }
     },
@@ -490,11 +488,11 @@ async function handleMove(interaction: AnyInteraction) {
           game,
           move,
         });
+        await interaction.deleteReply();
       } catch (err) {
-        await interaction.followUp({
+        await interaction.editReply({
           // @ts-expect-error We know the structure of this exception
           content: err.message,
-          ephemeral: true,
         });
       }
     },
@@ -645,15 +643,15 @@ export async function challengeUser({
   messagingChannel.awaitMessageComponent({
     filter: i => i.message.id === challengeMsg.id && i.user.id === challengedUserId,
   }).then(async buttonInteraction => {
-    await buttonInteraction.reply('Working...');
+    await buttonInteraction.reply({ content: 'Working...', ephemeral: true });
     switch (buttonInteraction?.customId) {
       case 'accept': {
+        await challengeMsg.edit({ components: [] });
         // Refetch the game since the game could have been accepted/declined before this interaction occurs
         const refetchedGame = await ChessGames.findByPk(game.id);
         if (!refetchedGame) {
-          await buttonInteraction.followUp({
+          await buttonInteraction.editReply({
             content: 'This game has already been completed or the challenge was declined.',
-            ephemeral: true,
           });
         } else {
           try {
@@ -661,28 +659,24 @@ export async function challengeUser({
               game: refetchedGame,
               userId: buttonInteraction.user.id,
             });
+            await buttonInteraction.deleteReply();
+            await challengeMsg.delete();
           } catch (err) {
-            await buttonInteraction.followUp({
+            await buttonInteraction.editReply({
               // @ts-expect-error We know the structure of this exception
               content: err.message,
-              ephemeral: true,
             });
           }
         }
-        await buttonInteraction.deleteReply();
-        await challengeMsg.delete();
         break;
       }
       case 'decline': {
-        await challengeMsg.edit({
-          components: [],
-        });
+        await challengeMsg.edit({ components: [] });
         // Refetch the game since the game could have been accepted/declined before this interaction occurs
         const refetchedGame = await ChessGames.findByPk(game.id);
         if (!refetchedGame) {
-          await buttonInteraction.reply({
+          await buttonInteraction.editReply({
             content: 'This game has already been completed or the challenge was declined.',
-            ephemeral: true,
           });
         } else {
           try {
@@ -690,11 +684,11 @@ export async function challengeUser({
               game: refetchedGame,
               userId,
             });
+            await buttonInteraction.deleteReply();
           } catch (err) {
-            await buttonInteraction.followUp({
+            await buttonInteraction.editReply({
               // @ts-expect-error We know the structure of this exception
               content: err.message,
-              ephemeral: true,
             });
           }
         }
@@ -706,10 +700,10 @@ export async function challengeUser({
           // Assume the message was already deleted, so do nothing
           log('Chess challenge message already deleted');
         });
+        await buttonInteraction.deleteReply();
         break;
       }
     }
-    await buttonInteraction.deleteReply();
   }).catch(err => {
     error(err);
   });
@@ -734,6 +728,7 @@ async function handleChallenge(interaction: AnyInteraction) {
   try {
     await interaction.reply({
       content: 'Working...',
+      ephemeral: true,
     });
     await challengeUser({
       guildId,
@@ -745,10 +740,9 @@ async function handleChallenge(interaction: AnyInteraction) {
     });
     await interaction.deleteReply();
   } catch (err) {
-    await interaction.followUp({
+    await interaction.editReply({
       // @ts-expect-error We know this is the structure of the exception
       content: err.message,
-      ephemeral: true,
     });
   }
 }
@@ -779,7 +773,7 @@ export async function resignGame({
   }, getRooms(game));
 }
 
-async function handleForfeit(interaction: AnyInteraction) {
+async function handleResign(interaction: AnyInteraction) {
   await handleGameSelection({
     interaction,
     gameStarted: null,
@@ -790,9 +784,10 @@ async function handleForfeit(interaction: AnyInteraction) {
           game,
           userId: interaction.user.id,
         });
+        await interaction.deleteReply();
       } catch (err) {
         // @ts-expect-error We know that this function throws a literal
-        await interaction.followUp(err.message);
+        await interaction.editReply(err.message);
       }
     },
   });
@@ -805,13 +800,19 @@ async function handleShow(interaction: AnyInteraction) {
     noGamesMessage: 'You do not have any games to show.',
     cb: async game => {
       const { currentTurnUser } = getTurnInfo(interaction.user.id, game);
-      await respond({
-        gameId: game.id,
-        getMessage: () => ({
-          content: `Make a move <@${currentTurnUser}>`,
-          embeds: [getChessBoardEmbed(game)],
-        }),
-      }).catch(err => handleResponseError(err, interaction));
+      try {
+        await respond({
+          gameId: game.id,
+          getMessage: () => ({
+            content: `Make a move <@${currentTurnUser}>`,
+            embeds: [getChessBoardEmbed(game)],
+          }),
+        });
+        await interaction.deleteReply();
+      } catch (err) {
+        // @ts-ignore We don't care
+        handleResponseError(err, interaction);
+      }
     },
   });
 }
@@ -867,11 +868,11 @@ async function handleUndo(interaction: AnyInteraction) {
           game,
           userId: interaction.user.id,
         });
+        await interaction.deleteReply();
       } catch (err) {
-        await interaction.followUp({
+        await interaction.editReply({
           // @ts-expect-error We know the structure of this exception
           content: err.message,
-          ephemeral: true,
         });
       }
     },
@@ -944,7 +945,7 @@ const run: CommandOrModalRunMethod = async interaction => {
       return;
     }
     case 'resign': {
-      await handleForfeit(interaction);
+      await handleResign(interaction);
       return;
     }
     case 'undo': {
