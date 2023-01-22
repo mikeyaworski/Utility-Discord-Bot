@@ -30,9 +30,16 @@ export const getTracksFromQueries = (() => {
           type: 'video',
           limit: 2,
         });
+        // For some queries, like "Justin Bieber What Do You Mean", the first result has no indiciation that it's a music video,
+        // but we need to somehow still prefer the second result, so we've decided that if the second result includes "lyrics", that is preferred
+        const firstResultIsMusicVideo = [
+          'music video',
+          'hd video',
+        ].some(match => firstResult?.title?.toLowerCase().includes(match));
+        const secondResultIsLyrics = secondResult?.title?.toLowerCase().includes('lyrics');
         const shouldUseSecondResult = secondResult
           && type === QueryType.SPOTIFY_LINK
-          && firstResult.title?.toLowerCase().includes('music video');
+          && (firstResultIsMusicVideo || secondResultIsLyrics);
         const res = shouldUseSecondResult ? secondResult : firstResult;
         const youtubeLink = `https://youtube.com/watch?v=${res.id}`;
         const youtubeTitle = res.title;
