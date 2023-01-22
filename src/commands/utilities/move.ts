@@ -6,7 +6,7 @@ import {
   SelectMenuBuilder,
   ActionRowBuilder,
   EmbedBuilder,
-  MessageOptions,
+  MessageCreateOptions,
 } from 'discord.js';
 import {
   Command,
@@ -74,7 +74,7 @@ async function moveMessage(channel: TextBasedChannel | TextChannel, msg: Message
     },
     description: msg.content,
   });
-  const newMessageArgs: MessageOptions = {
+  const newMessageArgs: MessageCreateOptions = {
     embeds: [newMessageEmbed, ...msg.embeds],
     files: Array.from(msg.attachments.values()),
   };
@@ -255,7 +255,7 @@ async function handleContextMenu(interaction: ContextMenuCommandInteraction): Pr
     }).catch(() => {
       // Intentionally empty catch
     });
-    if (selectInteraction?.isSelectMenu()) {
+    if (selectInteraction?.isStringSelectMenu()) {
       // Apparently there is no way to defer button interactions in the way we want.
       // The button's loading state cannot stay for more than 3 seconds, regardless of how we choose to defer.
       await interaction.editReply({

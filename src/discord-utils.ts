@@ -27,7 +27,7 @@ import {
   Interaction,
   ChatInputCommandInteraction,
   BaseInteraction,
-  MessageOptions,
+  MessageCreateOptions,
 } from 'discord.js';
 
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse, GuildTextChannel } from 'src/types';
@@ -127,6 +127,7 @@ export async function findMessageInGuild(
   const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel) continue;
     if (!isText(channel) || channel === startingChannel) continue;
     try {
       const foundMsg = await channel.messages.fetch(messageId);
@@ -336,6 +337,7 @@ export async function fetchMessageInGuild(guild: Guild, messageId: string, given
   const channels = Array.from((await guild.channels.fetch()).values());
   for (let i = 0; i < channels.length; i++) {
     const channel = channels[i];
+    if (!channel) continue;
     if (!isText(channel) || channel === givenChannel) continue;
     try {
       const message = await channel.messages.fetch({
@@ -565,7 +567,7 @@ export async function replyWithSelect({
     }).catch(() => {
       // Intentionally empty catch
     });
-    if (selectInteraction?.isSelectMenu()) {
+    if (selectInteraction?.isStringSelectMenu()) {
       await selectInteraction.deferUpdate().catch(() => {
         log('Could not defer update for interaction', selectInteraction.customId);
       });
@@ -942,7 +944,7 @@ export async function messageChannel({
 }: {
   threadId?: string | null,
   channelId: string,
-  getMessage: (channel: GuildTextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
+  getMessage: (channel: GuildTextChannel) => Promise<string | MessageCreateOptions> | string | MessageCreateOptions,
 }): Promise<Message | null> {
   const channel = await client.channels.fetch(channelId).catch(() => null);
   if (!channel || !isGuildChannel(channel)) {

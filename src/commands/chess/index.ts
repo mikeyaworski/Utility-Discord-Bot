@@ -5,13 +5,12 @@ import {
   GuildMember,
   Message,
   Guild,
-  MessageOptions,
+  MessageCreateOptions,
   SelectMenuBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ChannelType,
-  AnyThreadChannel,
 } from 'discord.js';
 import type { Command, CommandOrModalRunMethod, AnyInteraction, GuildTextChannel } from 'src/types';
 import { Chess } from 'chess.js';
@@ -180,7 +179,7 @@ async function respond({
   getMessage,
 }: {
   gameId: number,
-  getMessage: (channel: GuildTextChannel) => Promise<string | MessageOptions> | string | MessageOptions,
+  getMessage: (channel: GuildTextChannel) => Promise<string | MessageCreateOptions> | string | MessageCreateOptions,
 }): Promise<Message | null> {
   const game = await ChessGames.findByPk(gameId);
   if (!game) throw new Error(`Game with ID "${gameId}" does not exist`);
@@ -292,7 +291,7 @@ async function handleGameSelection({
     }).catch(() => {
       selectMsg.delete();
     });
-    if (selectInteraction?.isSelectMenu()) {
+    if (selectInteraction?.isStringSelectMenu()) {
       const gameId = Number(selectInteraction.values[0]);
       await interaction.editReply({
         content: 'Working...',
@@ -578,8 +577,8 @@ export async function challengeUser({
     channel,
     users: filterOutFalsy([client.user?.id]),
     permissions: ['CreatePublicThreads'],
-  }) && !channel.isVoiceBased();
-  const thread: AnyThreadChannel | null = canCreateThread ? (
+  }) && !channel.isVoiceBased() && channel.type === ChannelType.GuildText;
+  const thread = canCreateThread ? (
     await channel.threads.create({
       name: `Chess Game - ${white?.user.username} vs ${black?.user.username}`,
       type: ChannelType.PublicThread,
