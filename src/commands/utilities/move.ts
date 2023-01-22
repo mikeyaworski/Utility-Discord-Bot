@@ -3,7 +3,7 @@ import {
   TextBasedChannel,
   TextChannel,
   ContextMenuCommandInteraction,
-  SelectMenuBuilder,
+  StringSelectMenuBuilder,
   ActionRowBuilder,
   EmbedBuilder,
   MessageCreateOptions,
@@ -235,12 +235,12 @@ async function handleContextMenu(interaction: ContextMenuCommandInteraction): Pr
       };
     });
 
-  const menu = new SelectMenuBuilder({
+  const menu = new StringSelectMenuBuilder({
     customId: 'channel',
     placeholder: 'Select a channel...',
     options,
   });
-  const row = new ActionRowBuilder<SelectMenuBuilder>({
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>({
     components: [menu],
   });
   const msg = await interaction.editReply({
