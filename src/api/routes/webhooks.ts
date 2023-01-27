@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
-import express from 'express';
+import express, { Response } from 'express';
 import { WebhookClient } from 'discord.js';
+import get from 'lodash.get';
 import { log, error } from 'src/logging';
 import { getDmChannel } from './dms';
 
@@ -9,6 +10,15 @@ dotenv.config();
 const webhookSecret = process.env.WEBHOOK_SECRET;
 
 const router = express.Router();
+
+function handleError(err: unknown, res: Response) {
+  error(err);
+  const statusCode = get(err, 'status', 500);
+  const message = get(err, ['rawError', 'message'], null);
+  res.status(statusCode);
+  if (message) return res.send(String(message));
+  return res.end();
+}
 
 // https://discord.com/api/webhooks/{webhookId}/{webhookToken}
 router.post('/', async (req, res) => {
@@ -26,9 +36,7 @@ router.post('/', async (req, res) => {
     log('Sent message from webhook:', webhookId, data);
     return res.status(204).end();
   } catch (err) {
-    // TODO: Pass the status code and message from the Discord error if available
-    error(err);
-    return res.status(500).end();
+    return handleError(err, res);
   }
 });
 
@@ -48,9 +56,7 @@ router.post('/dm', async (req, res) => {
     log('Sent DM from webhook:', userId, data);
     return res.status(204).end();
   } catch (err) {
-    // TODO: Pass the status code and message from the Discord error if available
-    error(err);
-    return res.status(500).end();
+    return handleError(err, res);
   }
 });
 
