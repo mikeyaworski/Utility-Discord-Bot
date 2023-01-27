@@ -808,7 +808,7 @@ async function handleShow(interaction: AnyInteraction) {
             embeds: [getChessBoardEmbed(game)],
           }),
         });
-        await interaction.deleteReply();
+        await interaction.editReply(`Game ${game.id} shown.`);
       } catch (err) {
         // @ts-ignore We don't care
         handleResponseError(err, interaction);
