@@ -150,6 +150,8 @@ export async function play({
     const favorite = await getFavorite(favoriteId, guild.id);
     if (favorite) {
       vodLink = favorite.value;
+    } else {
+      return editReply('Favorite could not be found.');
     }
   }
   const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
@@ -171,7 +173,7 @@ export async function play({
   if (session) session.resume();
 
   if (numArgs === 0 && !session) {
-    return editReply('You must provide at least one argument. If you provided a favorite, then the favorite could not be found.');
+    return editReply('You must provide at least one argument.');
   }
 
   if (!session) session = sessions.create(channel);
