@@ -97,12 +97,9 @@ export async function handleError(
   err: unknown,
   interaction: AnyInteraction,
 ): Promise<IntentionalAny> {
-  // Modal interactions are really broken, so we need to defer and then edit the reply. Replying immediately doesn't work.
   async function sendResponse(msg: string) {
-    if (isModalSubmit(interaction) && !interaction.deferred) {
+    if (!interaction.deferred) {
       await interaction.deferReply({ ephemeral: true });
-      await interaction.editReply(msg);
-      return;
     }
     await interaction.editReply(msg);
   }
