@@ -31,18 +31,22 @@ socketIoServer.on('connection', async socket => {
   const cookies = cookie.parse(socket.handshake.headers.cookie || '');
   const authCookie = cookies.auth;
   if (!authCookie) return;
-  const user = await getUserFromAuthToken(authCookie);
-  socket.join(user.id);
-  getDmChannel(user.id).then(dmChannel => {
-    if (dmChannel) socket.join(dmChannel.id);
-  }).catch(error);
-  client.channels.cache.forEach(async channel => {
-    if (!isGuildChannel(channel)) return;
-    userCanViewChannel({ userId: user.id, channelId: channel.id }).then(canViewChannel => {
-      if (canViewChannel) socket.join(`${channel.guildId}_${channel.id}_VIEW`);
+  try {
+    const user = await getUserFromAuthToken(authCookie);
+    socket.join(user.id);
+    getDmChannel(user.id).then(dmChannel => {
+      if (dmChannel) socket.join(dmChannel.id);
+    }).catch(error);
+    client.channels.cache.forEach(async channel => {
+      if (!isGuildChannel(channel)) return;
+      userCanViewChannel({ userId: user.id, channelId: channel.id }).then(canViewChannel => {
+        if (canViewChannel) socket.join(`${channel.guildId}_${channel.id}_VIEW`);
+      });
+      userCanManageChannel({ userId: user.id, channelId: channel.id }).then(canManageChannel => {
+        if (canManageChannel) socket.join(`${channel.guildId}_${channel.id}_MANAGE`);
+      });
     });
-    userCanManageChannel({ userId: user.id, channelId: channel.id }).then(canManageChannel => {
-      if (canManageChannel) socket.join(`${channel.guildId}_${channel.id}_MANAGE`);
-    });
-  });
+  } catch (err) {
+    error('Error during socket connection', err);
+  }
 });
