@@ -43,6 +43,7 @@ import {
   USER_ARG_REGEX,
   USER_DISCRIMINATOR_REGEX,
   INTERACTION_MAX_TIMEOUT,
+  SUPPRESS_MESSAGE_FLAG,
 } from 'src/constants';
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
@@ -960,4 +961,20 @@ export async function messageChannel({
     ? await thread.send(msgData)
     : await channel.send(msgData);
   return msg;
+}
+
+export async function sendMessage(channel: TextBasedChannel, message: string, options?: Partial<MessageCreateOptions>): Promise<Message<boolean>> {
+  const silentTrigger = '@silent';
+  const isSilent = message.startsWith(silentTrigger);
+  if (isSilent) {
+    message = message.replace(new RegExp(`^${silentTrigger}\\s*`), '');
+  }
+  return channel.send({
+    content: message,
+    // Using custom constant here since the typing for discord-api-types is broken
+    // for this argument even after upgrading, and upgrading causes other problems
+    // everywhere in the codebase for TextBasedChannels
+    flags: isSilent ? SUPPRESS_MESSAGE_FLAG : undefined,
+    ...options,
+  });
 }

@@ -3,7 +3,7 @@ import type { Reminder } from 'src/models/reminders';
 import { CronJob } from 'cron';
 import { Reminders } from 'src/models/reminders';
 import { log } from 'src/logging';
-import { getChannel, isText } from 'src/discord-utils';
+import { getChannel, isText, sendMessage } from 'src/discord-utils';
 import { MIN_REMINDER_INTERVAL } from 'src/constants';
 import { emit, getManageReminderRooms } from 'src/api/sockets';
 import { SocketEventTypes } from 'src/types/sockets';
@@ -42,7 +42,7 @@ async function handleReminder(reminder: Reminder, destroy: boolean) {
     return;
   }
   if (isText(channel)) {
-    await channel.send(reminder.message || 'Timer is up!');
+    await sendMessage(channel, reminder.message || 'Timer is up!');
   }
   if (destroy) {
     await removeReminder(reminder.id);

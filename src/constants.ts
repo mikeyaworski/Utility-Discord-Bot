@@ -38,3 +38,5 @@ export const MAX_SPOTIFY_PAGE_FETCHES = 4;
 export const MAX_QUEUE_LENGTH = 300;
 
 export const CONCURRENCY_LIMIT = 10;
+
+export const SUPPRESS_MESSAGE_FLAG = 4096;

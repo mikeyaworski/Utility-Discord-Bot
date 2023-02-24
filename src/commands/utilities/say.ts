@@ -1,6 +1,6 @@
 import type { Command, IntentionalAny } from 'src/types';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { getInfoFromCommandInteraction, checkMessageErrors, parseInput } from 'src/discord-utils';
+import { getInfoFromCommandInteraction, checkMessageErrors, parseInput, sendMessage } from 'src/discord-utils';
 import { CommandInteraction, ModalSubmitInteraction } from 'discord.js';
 
 const commandBuilder = new SlashCommandBuilder();
@@ -28,7 +28,7 @@ async function run(interaction: CommandInteraction | ModalSubmitInteraction): Pr
     message,
   });
 
-  await channel.send(message);
+  await sendMessage(channel, message);
   await interaction.editReply('Sent.');
 }
 
