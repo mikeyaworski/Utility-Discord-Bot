@@ -132,7 +132,7 @@ export default class Track {
             const audioResource = await tryPlayDl();
             return audioResource;
           } catch (err) {
-            error(err);
+            error('Error playing resource from play-dl', err);
           }
         }
       }
