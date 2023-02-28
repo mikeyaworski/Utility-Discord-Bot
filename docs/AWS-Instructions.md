@@ -1,6 +1,6 @@
 # Hosting it on an AWS EC2 instance
 
-These instructions describe a process for manually hosting the bot on GCE. This will not have automated deployments.
+These instructions describe a process for manually hosting the bot on AWS. This will not have automated deployments.
 
 ## Startup
 
