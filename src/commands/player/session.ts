@@ -127,6 +127,13 @@ export default class Session {
 
     this.audioPlayer.on('error', error);
 
+    // Temporary workaround for Discord voice issue: https://github.com/discordjs/discord.js/issues/9185
+    this.voiceConnection.on('stateChange', (oldState, newState) => {
+      if (oldState.status === VoiceConnectionStatus.Ready && newState.status === VoiceConnectionStatus.Connecting) {
+        voiceConnection.configureNetworking();
+      }
+    });
+
     this.voiceConnection.subscribe(this.audioPlayer);
   }
 
