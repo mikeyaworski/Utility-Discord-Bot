@@ -12,7 +12,7 @@ If you have forked this repository and made changes to the code, and therefore w
 1. Create a repository
 1. Open the desktop Docker app on your computer and sign in
 1. Make sure there are no unstaged changes in your local code. i.e. `git status` shouldn't show any unstaged files. If there are, then these files will be included in the Docker image, which is probably not what you want.
-1. Open `docker-push.sh` and change the content in `imageName` from my repository (`mikeyaworski/utility-discord-bot`) to yours.
+1. Open `scripts/docker-push.sh` and change the content in `imageName` from my repository (`mikeyaworski/utility-discord-bot`) to yours.
 1. Open `package.json` and do the same - update any scripts which contain my repository name (`mikeyaworski/utility-discord-bot`) to yours.
 1. Run the commands:
    ```

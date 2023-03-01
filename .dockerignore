@@ -2,7 +2,7 @@ docs
 README.md
 Procfile
 requirements.txt
-docker-push.sh
+scripts
 docker-compose.yml
 node_modules
 .git
