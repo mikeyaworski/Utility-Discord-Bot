@@ -81,11 +81,14 @@ These instructions describe a process for manually hosting the bot on a Digital 
    1. Type `pwd` and observe the result.
    1. Ensure that in `deploy/renew-ssl.sh`, the `cd` command uses the same path as your output from `pwd`.
    1. Type `crontab -e` and choose whichever option you want to open a text editor.
-   1. Add this to the bottom of the file:
+   1. Add this to the bottom of the file (replace `your_pwd_path`):
       ```
       0 12 * * * /your_pwd_path/deploy/renew-ssl.sh >> /var/log/cron.log 2>&1
       ```
-      This runs the renewal script on a daily basis.
+      This runs the renewal script on a daily basis. If all previous instructions were followed precisely, then this should be the line put at the bottom of the file:
+      ```
+      0 12 * * * /root/utility-discord-bot/deploy/renew-ssl.sh >> /var/log/cron.log 2>&1
+      ```
 
 ## Restarting
 
