@@ -127,7 +127,7 @@ export default class Session {
 
     this.audioPlayer.on('error', error);
 
-    voiceConnection.subscribe(this.audioPlayer);
+    this.voiceConnection.subscribe(this.audioPlayer);
   }
 
   /**
