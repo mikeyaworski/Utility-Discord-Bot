@@ -1,6 +1,7 @@
 import { Command, ContextMenuTypes } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { checkVoiceErrors } from 'src/discord-utils';
 import { attachPlayerButtons } from './utils';
 import sessions from './sessions';
 
@@ -44,6 +45,7 @@ const NowPlayingCommand: Command = {
       });
       return;
     }
+    await checkVoiceErrors(interaction);
 
     const success = session.pause();
     await interaction.editReply({

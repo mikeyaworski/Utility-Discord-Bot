@@ -1,10 +1,10 @@
-import { StageChannel, VoiceChannel } from 'discord.js';
+import { VoiceBasedChannel } from 'discord.js';
 import Session from './session';
 
 export class Sessions {
   private sessions = new Map<string, Session>();
 
-  public create(channel: VoiceChannel | StageChannel): Session {
+  public create(channel: VoiceBasedChannel): Session {
     const session = new Session(channel);
     this.sessions.set(channel.guild.id, session);
     return session;

@@ -7,7 +7,7 @@ import { EmbedBuilder, EmbedData } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
 import { filterOutFalsy, isTwitchVodLink, shuffleArray } from 'src/utils';
-import { editLatest, parseInput } from 'src/discord-utils';
+import { checkVoiceErrors, editLatest, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
 import Session from './session';
@@ -156,18 +156,7 @@ export async function play({
   }
   const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
 
-  const { user } = interaction;
-  if (!user) {
-    return editReply('Could not resolve user invoking command.');
-  }
-  const resolvedMember = await guild.members.fetch(user.id);
-  const { channel } = resolvedMember.voice;
-  if (!channel) {
-    return editReply('You must be connected to a voice channel.');
-  }
-  if (!channel.joinable) {
-    return editReply('I don\'t have permission to connect to your voice channel.');
-  }
+  const channel = await checkVoiceErrors(interaction);
 
   let session = sessions.get(guild.id);
   if (session) session.resume();

@@ -1,7 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { usersHaveChannelPermission } from 'src/discord-utils';
+import { getIsInSameChannelAsBot, usersHaveChannelPermission } from 'src/discord-utils';
 import { client } from 'src/client';
 import sessions from './sessions';
 
@@ -15,21 +15,18 @@ const LeaveCommand: Command = {
 
     // Assert guild since this is a guild-only command
     const guild = interaction.guild!;
-    const invokerMember = await guild.members.fetch(interaction.user.id);
-    const botMember = await guild.members.fetch(client!.user!.id);
-    const botVoiceState = guild.voiceStates.cache.find(vs => vs.member?.id === botMember.id);
-    const invokerVoiceState = guild.voiceStates.cache.find(vs => vs.member?.id === invokerMember.id);
 
-    if (!botVoiceState || !botVoiceState.channel) {
+    const botMember = await guild.members.fetch(client.user!.id);
+    const isInSameChannelAsBot = await getIsInSameChannelAsBot(interaction);
+
+    if (!botMember.voice.channel) {
       await interaction.editReply('Bot is not connected to a voice channel.');
       return;
     }
-    const { channel: botConnectedChannel } = botVoiceState;
-    const invokerConnectedChannel = invokerVoiceState?.channel;
 
-    if (invokerConnectedChannel !== botConnectedChannel
+    if (!isInSameChannelAsBot
       && !usersHaveChannelPermission({
-        channel: botConnectedChannel,
+        channel: botMember.voice.channel,
         users: interaction.user,
         permissions: 'MoveMembers',
       })) {
@@ -38,7 +35,7 @@ const LeaveCommand: Command = {
     }
 
     // Redundant disconnection just in case it's not in our connections list for whatever reason
-    await botVoiceState.disconnect();
+    await botMember.voice.disconnect();
     sessions.destroy(guild.id);
     await interaction.editReply('Disconnected');
   },

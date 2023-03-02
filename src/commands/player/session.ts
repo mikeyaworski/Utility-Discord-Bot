@@ -9,7 +9,7 @@ import {
   getVoiceConnection,
   VoiceConnection,
 } from '@discordjs/voice';
-import type { StageChannel, VoiceChannel } from 'discord.js';
+import type { VoiceBasedChannel } from 'discord.js';
 
 import { promisify } from 'util';
 
@@ -52,7 +52,7 @@ export default class Session {
     speed: 1,
   };
 
-  public constructor(channel: VoiceChannel | StageChannel) {
+  public constructor(channel: VoiceBasedChannel) {
     const voiceConnection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,

@@ -2,7 +2,7 @@ import type { Command, CommandOrModalRunMethod } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { getSecondsFromClockString } from 'src/utils';
-import { parseInput } from 'src/discord-utils';
+import { checkVoiceErrors, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import { attachPlayerButtons } from './utils';
 
@@ -32,6 +32,7 @@ const run: CommandOrModalRunMethod = async interaction => {
     await interaction.editReply('Session does not exist');
     return;
   }
+  await checkVoiceErrors(interaction);
 
   const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
   const timestamp: string | undefined = inputs.timestamp;

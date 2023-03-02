@@ -1,6 +1,7 @@
 import type { Command } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
+import { checkVoiceErrors } from 'src/discord-utils';
 import sessions from './sessions';
 import { attachPlayerButtons } from './utils';
 
@@ -22,8 +23,9 @@ const NowPlayingCommand: Command = {
       });
       return;
     }
-    const success = session.resume();
+    await checkVoiceErrors(interaction);
 
+    const success = session.resume();
     await interaction.editReply({
       content: success ? 'Resumed.' : 'Could not resume.',
     });

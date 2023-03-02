@@ -28,6 +28,7 @@ import {
   ChatInputCommandInteraction,
   BaseInteraction,
   MessageCreateOptions,
+  VoiceBasedChannel,
 } from 'discord.js';
 
 import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse, GuildTextChannel } from 'src/types';
@@ -451,6 +452,55 @@ export async function parseArguments(input: string, options: { parseChannels?: b
     }
     return arg;
   }));
+}
+
+export async function getConnectedVoiceChannels(
+  guild: Guild,
+  userIds: string[],
+): Promise<(VoiceBasedChannel | null | undefined)[]> {
+  const members = await guild.members.fetch({
+    user: userIds,
+  });
+  return userIds.map(userId => members.get(userId)?.voice.channel);
+}
+
+export async function getInteractionConnectedVoiceChannels(
+  interaction: AnyInteraction,
+): Promise<(VoiceBasedChannel | null | undefined)[]> {
+  const { user, guild } = interaction;
+
+  if (!guild) throw new Error('Must be in a guild.');
+  if (!user) throw new Error('Could not resolve user invoking command.');
+  if (!client.user) throw new Error('Could not resolve bot user.');
+
+  return getConnectedVoiceChannels(guild, [user.id, client.user.id]);
+}
+
+export async function getIsInSameChannelAsBot(interaction: AnyInteraction): Promise<boolean> {
+  const [invokerChannel, botChannel] = await getInteractionConnectedVoiceChannels(interaction);
+  return !!invokerChannel && !!botChannel && invokerChannel.id === botChannel.id;
+}
+
+export async function checkVoiceErrors(interaction: AnyInteraction): Promise<VoiceBasedChannel> {
+  const [
+    invokerChannel,
+    botChannel,
+  ] = await getInteractionConnectedVoiceChannels(interaction);
+
+  // TODO: Allow commands to proceed if the bot is currently in another voice channel by itself
+  if (!invokerChannel) {
+    throw new Error('You must be connected to a voice channel.');
+  }
+
+  if (!invokerChannel.joinable) {
+    throw new Error('I don\'t have permission to connect to your voice channel.');
+  }
+
+  if (botChannel && invokerChannel.id !== botChannel.id) {
+    throw new Error('You must be connected to the same voice channel as the bot.');
+  }
+
+  return invokerChannel;
 }
 
 export function checkMessageErrors({

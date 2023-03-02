@@ -1,7 +1,7 @@
 import type { Command, CommandOrModalRunMethod } from 'src/types';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { parseInput } from 'src/discord-utils';
+import { checkVoiceErrors, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import { attachPlayerButtons } from './utils';
 
@@ -23,9 +23,8 @@ const run: CommandOrModalRunMethod = async interaction => {
     ephemeral: true,
   });
   const session = sessions.get(interaction.guild!.id);
-  if (!session) {
-    return interaction.editReply('Session does not exist');
-  }
+  if (!session) return interaction.editReply('Session does not exist');
+  await checkVoiceErrors(interaction);
 
   const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
   const speedStr: string = inputs.multiplier.replace('x', ''); // if they type 1.5x instead of 1.5, let's be nice

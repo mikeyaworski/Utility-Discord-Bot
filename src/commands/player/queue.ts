@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
 import { CONCURRENCY_LIMIT } from 'src/constants';
-import { getSubcommand, parseInput } from 'src/discord-utils';
+import { checkVoiceErrors, getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
 import { replyWithSessionButtons, attachPlayerButtons, getVideoDetailsWithFallback, getTrackDurationAndSpeedFromSession } from './utils';
@@ -216,6 +216,17 @@ const run: CommandOrModalRunMethod = async interaction => {
   }
 
   const subcommand = getSubcommand(interaction);
+  switch (subcommand) {
+    case 'loop':
+    case 'shuffle':
+    case 'remove':
+    case 'move':
+    case 'clear': {
+      await checkVoiceErrors(interaction);
+      break;
+    }
+    default: break;
+  }
   switch (subcommand) {
     case 'list': {
       await handleList(interaction, session);
