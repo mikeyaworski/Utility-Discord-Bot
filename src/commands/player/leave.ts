@@ -39,7 +39,7 @@ const LeaveCommand: Command = {
 
     // Redundant disconnection just in case it's not in our connections list for whatever reason
     await botVoiceState.disconnect();
-    sessions.destroy(guild);
+    sessions.destroy(guild.id);
     await interaction.editReply('Disconnected');
   },
 };

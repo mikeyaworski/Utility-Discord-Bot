@@ -150,7 +150,7 @@ async function handleLoop(interaction: AnyInteraction, session: Session): Promis
   else session.unloop();
   await replyWithSessionButtons({
     interaction,
-    session: sessions.get(interaction.guild!),
+    session: sessions.get(interaction.guild!.id),
     run: async s => {
       return {
         description: `Queue loop: ${s.isLooped() ? 'ON' : 'OFF'}.`,
@@ -209,7 +209,7 @@ const run: CommandOrModalRunMethod = async interaction => {
 
   // This is a guild-only command
   const guild = interaction.guild!;
-  const session = sessions.get(guild);
+  const session = sessions.get(guild.id);
   if (!session) {
     await interaction.editReply('Session does not exist.');
     return;
@@ -261,7 +261,7 @@ const QueueCommand: Command = {
 
     // This is a guild-only command
     const guild = interaction.guild!;
-    const session = sessions.get(guild);
+    const session = sessions.get(guild.id);
     if (!session) {
       await interaction.editReply('Session does not exist.');
       return;

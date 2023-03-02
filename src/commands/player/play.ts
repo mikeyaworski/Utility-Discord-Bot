@@ -169,7 +169,7 @@ export async function play({
     return editReply('I don\'t have permission to connect to your voice channel.');
   }
 
-  let session = sessions.get(guild);
+  let session = sessions.get(guild.id);
   if (session) session.resume();
 
   if (numArgs === 0 && !session) {

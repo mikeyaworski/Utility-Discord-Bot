@@ -18,7 +18,7 @@ const ConnectCommand: Command = {
     // Assert guild since this is a guild-only command
     const guild = interaction.guild!;
 
-    if (sessions.get(guild)) return interaction.editReply('I\'m already connected to a voice channel.');
+    if (sessions.get(guild.id)) return interaction.editReply('I\'m already connected to a voice channel.');
 
     if (!channel) {
       const { user } = interaction;

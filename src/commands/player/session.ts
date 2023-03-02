@@ -1,13 +1,15 @@
 import {
-  VoiceConnection,
   AudioPlayer,
   createAudioPlayer,
   entersState,
   VoiceConnectionStatus,
   VoiceConnectionDisconnectReason,
   AudioPlayerStatus,
+  joinVoiceChannel,
+  getVoiceConnection,
+  VoiceConnection,
 } from '@discordjs/voice';
-import type { Guild } from 'discord.js';
+import type { StageChannel, VoiceChannel } from 'discord.js';
 
 import { promisify } from 'util';
 
@@ -31,13 +33,12 @@ interface CurrentTrackPlayTime {
 
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
-  public readonly voiceConnection: VoiceConnection;
   public readonly audioPlayer: AudioPlayer;
   private currentTrack: Track | undefined;
   public readonly queue: Track[];
   public readonly queueLoop: Track[] = [];
   private shuffled = false;
-  private readonly guild: Guild;
+  private readonly guildId: string;
   private queueLock = false;
   private readyLock = false;
   private playbackSpeed = 1;
@@ -51,13 +52,18 @@ export default class Session {
     speed: 1,
   };
 
-  public constructor(guild: Guild, voiceConnection: VoiceConnection) {
-    this.guild = guild;
-    this.voiceConnection = voiceConnection;
+  public constructor(channel: VoiceChannel | StageChannel) {
+    const voiceConnection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+    });
+
+    this.guildId = channel.guild.id;
     this.audioPlayer = createAudioPlayer();
     this.queue = [];
 
-    this.voiceConnection.on('stateChange', async (oldState, newState) => {
+    voiceConnection.on('stateChange', async (oldState, newState) => {
       if (newState.status === VoiceConnectionStatus.Disconnected) {
         if (newState.reason === VoiceConnectionDisconnectReason.WebSocketClose && newState.closeCode === 4014) {
           // If the WebSocket closed with a 4014 code, this means that we should not manually attempt to reconnect,
@@ -67,18 +73,18 @@ export default class Session {
           // the voice connection.
           try {
             // Probably moved voice channel
-            await entersState(this.voiceConnection, VoiceConnectionStatus.Connecting, 5_000);
+            await entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000);
           } catch {
             // Probably removed from voice channel
-            sessions.destroy(guild);
+            sessions.destroy(this.guildId);
           }
-        } else if (this.voiceConnection.rejoinAttempts < 5) {
+        } else if (voiceConnection.rejoinAttempts < 5) {
           // The disconnect in this case is recoverable, so we will attempt to reconnect up to 5 times.
-          await promisify(setTimeout)((this.voiceConnection.rejoinAttempts + 1) * 5_000);
-          this.voiceConnection.rejoin();
+          await promisify(setTimeout)((voiceConnection.rejoinAttempts + 1) * 5_000);
+          voiceConnection.rejoin();
         } else {
           // The disconnect in this case may be recoverable, but we've exceeded our retry attempts.
-          sessions.destroy(guild);
+          sessions.destroy(this.guildId);
         }
       } else if (newState.status === VoiceConnectionStatus.Destroyed) {
         // Once destroyed, stop the subscription
@@ -91,9 +97,9 @@ export default class Session {
         // This stops the voice connection permanently existing in one of these states.
         this.readyLock = true;
         try {
-          await entersState(this.voiceConnection, VoiceConnectionStatus.Ready, 20_000);
+          await entersState(voiceConnection, VoiceConnectionStatus.Ready, 20_000);
         } catch {
-          sessions.destroy(guild);
+          sessions.destroy(this.guildId);
         }
         this.readyLock = false;
       }
@@ -128,13 +134,13 @@ export default class Session {
     this.audioPlayer.on('error', error);
 
     // Temporary workaround for Discord voice issue: https://github.com/discordjs/discord.js/issues/9185
-    this.voiceConnection.on('stateChange', (oldState, newState) => {
+    voiceConnection.on('stateChange', (oldState, newState) => {
       if (oldState.status === VoiceConnectionStatus.Ready && newState.status === VoiceConnectionStatus.Connecting) {
         voiceConnection.configureNetworking();
       }
     });
 
-    this.voiceConnection.subscribe(this.audioPlayer);
+    voiceConnection.subscribe(this.audioPlayer);
   }
 
   /**
@@ -303,6 +309,10 @@ export default class Session {
     return timePlayed;
   }
 
+  public getVoiceConnection(): VoiceConnection | undefined {
+    return getVoiceConnection(this.guildId);
+  }
+
   private async processQueue(forceSkip = false): Promise<void> {
     if (this.queueLock) {
       log('Queue lock prevented a problem.');
@@ -348,7 +358,7 @@ export default class Session {
       // TODO: Extract this to a helper function
       // Also consider baking this into replyWithSessionButtons, but adding an option
       // to specify that we do not want to update the embeded data when buttons are interacted with
-      const playerUpdateSetting = await PlayerUpdates.findByPk(this.guild.id);
+      const playerUpdateSetting = await PlayerUpdates.findByPk(this.guildId);
       if (playerUpdateSetting) {
         const channel = await getChannel(playerUpdateSetting.channel_id);
         if (channel && isText(channel)) {

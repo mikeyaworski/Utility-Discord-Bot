@@ -1,31 +1,25 @@
-import { joinVoiceChannel } from '@discordjs/voice';
-import { Guild, StageChannel, VoiceChannel } from 'discord.js';
+import { StageChannel, VoiceChannel } from 'discord.js';
 import Session from './session';
 
 export class Sessions {
   private sessions = new Map<string, Session>();
 
   public create(channel: VoiceChannel | StageChannel): Session {
-    const voiceConnection = joinVoiceChannel({
-      channelId: channel.id,
-      guildId: channel.guild.id,
-      // @ts-ignore Probably just broken and useless types. This broke with an upgrade and obviously makes no sense.
-      adapterCreator: channel.guild.voiceAdapterCreator,
-    });
-    const session = new Session(channel.guild, voiceConnection);
+    const session = new Session(channel);
     this.sessions.set(channel.guild.id, session);
     return session;
   }
 
-  public get(guild: Guild): Session | undefined {
-    return this.sessions.get(guild.id);
+  public get(guildId: string): Session | undefined {
+    return this.sessions.get(guildId);
   }
 
-  public destroy(guild: Guild): void {
-    const session = this.get(guild);
+  public destroy(guildId: string): void {
+    const session = this.get(guildId);
     if (!session) return;
-    session.voiceConnection.destroy();
-    this.sessions.delete(guild.id);
+    const voiceConnection = session.getVoiceConnection();
+    if (voiceConnection) voiceConnection.destroy();
+    this.sessions.delete(guildId);
   }
 }
 

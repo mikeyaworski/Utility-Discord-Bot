@@ -33,7 +33,7 @@ const NowPlayingCommand: Command = {
     await interaction.deferReply({ ephemeral: true });
     return replyWithSessionButtons({
       interaction,
-      session: sessions.get(interaction.guild!),
+      session: sessions.get(interaction.guild!.id),
       run: runNowPlaying,
     });
   },

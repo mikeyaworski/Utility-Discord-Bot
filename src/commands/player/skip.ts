@@ -8,7 +8,7 @@ import sessions from './sessions';
 
 async function run(interaction: CommandInteraction | ContextMenuCommandInteraction, shouldAttachButtons: boolean) {
   await interaction.deferReply({ ephemeral: true });
-  const session = sessions.get(interaction.guild!);
+  const session = sessions.get(interaction.guild!.id);
   if (!session) return interaction.editReply('Session does not exist.');
 
   let extraSkips = 0;

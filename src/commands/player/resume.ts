@@ -13,7 +13,7 @@ const NowPlayingCommand: Command = {
   runCommand: async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
-    const session = sessions.get(interaction.guild!);
+    const session = sessions.get(interaction.guild!.id);
     if (!session) {
       await interaction.editReply({
         components: [],
