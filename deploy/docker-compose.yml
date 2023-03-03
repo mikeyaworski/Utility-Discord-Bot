@@ -4,6 +4,8 @@ services:
     image: mikeyaworski/utility-discord-bot:latest
     restart: unless-stopped
     container_name: utility-discord-bot
+    volumes:
+      - ../.data:/code/.data
     environment:
       ENVIRONMENT: ${ENVIRONMENT}
       PORT: ${PORT}
