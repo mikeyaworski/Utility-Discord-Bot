@@ -16,7 +16,7 @@ import {
   GuildMember,
   SelectMenuComponentOptionData,
   MessagePayload,
-  WebhookEditMessageOptions,
+  WebhookMessageEditOptions,
   StringSelectMenuBuilder,
   ActionRowBuilder,
   InteractionType,
@@ -583,7 +583,7 @@ export async function replyWithSelect({
   placeholder?: string,
   label?: string,
   isFollowUp?: boolean,
-  onSelect: (value: string, message: MessageResponse) => Promise<void | WebhookEditMessageOptions>,
+  onSelect: (value: string, message: MessageResponse) => Promise<void | WebhookMessageEditOptions>,
   workingMsg?: string,
   timeoutMsg?: string,
 }): Promise<void> {
@@ -908,7 +908,7 @@ export function editLatest({
 }: {
   interaction: AnyInteraction,
   messageId?: string,
-  data: string | MessagePayload | WebhookEditMessageOptions,
+  data: string | MessagePayload | WebhookMessageEditOptions,
 }): ReturnType<AnyInteraction['editReply']> {
   if (messageId) return interaction.webhook.editMessage(messageId, data);
   return interaction.editReply(data);

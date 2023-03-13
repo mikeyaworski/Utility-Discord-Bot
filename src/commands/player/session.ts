@@ -133,20 +133,6 @@ export default class Session {
 
     this.audioPlayer.on('error', error);
 
-    // Temporary workaround for Discord voice issue: https://github.com/discordjs/discord.js/issues/9185
-    voiceConnection.on('stateChange', (oldState, newState) => {
-      const oldNetworking = Reflect.get(oldState, 'networking');
-      const newNetworking = Reflect.get(newState, 'networking');
-
-      const networkStateChangeHandler = (oldNetworkState: any, newNetworkState: any) => {
-        const newUdp = Reflect.get(newNetworkState, 'udp');
-        clearInterval(newUdp?.keepAliveInterval);
-      };
-
-      oldNetworking?.off('stateChange', networkStateChangeHandler);
-      newNetworking?.on('stateChange', networkStateChangeHandler);
-    });
-
     voiceConnection.subscribe(this.audioPlayer);
   }
 
