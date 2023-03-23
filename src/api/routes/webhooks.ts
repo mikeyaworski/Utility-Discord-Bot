@@ -1,13 +1,9 @@
-import dotenv from 'dotenv';
 import express, { Response } from 'express';
 import { WebhookClient } from 'discord.js';
 import get from 'lodash.get';
+import webhookAuthMiddleware from 'src/api/middlewares/webhooks';
 import { log, error } from 'src/logging';
 import { getDmChannel } from './dms';
-
-dotenv.config();
-
-const webhookSecret = process.env.WEBHOOK_SECRET;
 
 const router = express.Router();
 
@@ -21,10 +17,7 @@ function handleError(err: unknown, res: Response) {
 }
 
 // https://discord.com/api/webhooks/{webhookId}/{webhookToken}
-router.post('/', async (req, res) => {
-  const isAuthorized = webhookSecret && webhookSecret === req.get('X-WEBHOOK-SECRET');
-  if (!isAuthorized) return res.status(401).end();
-
+router.post('/', webhookAuthMiddleware, async (req, res) => {
   const { webhookId, webhookToken, data } = req.body;
   if (!webhookId || !webhookToken || !data) return res.status(400).send('webhookId, webhookToken and data are required.');
 
@@ -40,10 +33,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.post('/dm', async (req, res) => {
-  const isAuthorized = webhookSecret && webhookSecret === req.get('X-WEBHOOK-SECRET');
-  if (!isAuthorized) return res.status(401).end();
-
+router.post('/dm', webhookAuthMiddleware, async (req, res) => {
   const { userId, data } = req.body;
   if (!userId || !data) return res.status(400).send('userId and data are required.');
 
