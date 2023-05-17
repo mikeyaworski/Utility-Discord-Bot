@@ -1,6 +1,6 @@
-# Using a free, managed datbase
+# Using a free, managed database
 
-Prior to Heroku removing their free tier, it was smart to use Heroku's free tier to get a managed Postgres database. The current alternative is [Supbase](https://app.supabase.com/).
+Prior to Heroku removing their free tier, it was smart to use Heroku's free tier to get a managed Postgres database. The current alternative is [Supabase](https://app.supabase.com/).
 
 1. Create an account and a project.
 1. Use a password. Make it *UNIQUE* since this password will be pasted into your environment variables
