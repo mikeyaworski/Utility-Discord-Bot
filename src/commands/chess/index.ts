@@ -144,6 +144,8 @@ export async function getChessPgnWithHeaders(game: ChessGames, guild: Guild): Pr
     game.white_user_id ? guild.members.fetch(game.white_user_id) : null,
     game.black_user_id ? guild.members.fetch(game.black_user_id) : null,
   ]);
+  // TODO: "tag" will be deprecated, so "username" should be used instead
+  // https://discord.com/channels/222078108977594368/1116197683447734292/1116197683447734292
   if (white) chess.header('White', white.user.tag);
   if (black) chess.header('Black', black.user.tag);
   chess.header('Date', new Date().toDateString());
