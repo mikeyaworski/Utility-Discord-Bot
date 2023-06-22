@@ -18,6 +18,7 @@ import ReactionRoles from './utilities/reaction-roles';
 import Reminders from './utilities/reminders';
 import Timers from './utilities/timers';
 import Say from './utilities/say';
+import ChatGPT from './utilities/chatgpt';
 
 import Chess from './chess';
 
@@ -46,6 +47,7 @@ const commands = [
   Reminders,
   Timers,
   Say,
+  ChatGPT,
 
   // Player
   Play,

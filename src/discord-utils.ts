@@ -35,6 +35,8 @@ import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageRespon
 
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+
 import {
   BULK_MESSAGES_LIMIT,
   MAX_MESSAGES_FETCH,
@@ -48,7 +50,7 @@ import {
 } from 'src/constants';
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
-import { array, filterOutFalsy } from 'src/utils';
+import { array, filterOutFalsy, humanizeDuration } from 'src/utils';
 import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption, ChannelType } from 'discord-api-types/v10';
 import { Reminder } from './models/reminders';
@@ -713,6 +715,26 @@ export async function resolveRole(input: string, interaction: AnyInteraction): P
   return role;
 }
 
+function getBooleanFromValue(value: string | boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  let bool: boolean | undefined = false;
+  if (/^(t|true|y|yes|ya|yea|yeah)$/i.test(value)) bool = true;
+  if (/^(f|false|n|no|nope|nah|naw)$/i.test(value)) bool = false;
+  if (bool == null) throw new Error(`Could not parse "${value}" to a boolean.`);
+  return bool;
+}
+
+export function getBooleanArg(interaction: CommandInteraction | ModalSubmitInteraction, key: string): boolean | undefined {
+  if (isModalSubmit(interaction)) {
+    const input = interaction.fields.getTextInputValue(key);
+    return getBooleanFromValue(input);
+  }
+  if (isCommand(interaction)) {
+    return interaction.options.getBoolean(key) ?? false;
+  }
+  return undefined;
+}
+
 /**
  * TODO: Type the response
  */
@@ -799,11 +821,7 @@ export async function parseInput({
       }
       case 5: { // Boolean
         if (input) {
-          let bool: boolean | null = null;
-          if (/^(t|true|y|yes|ya|yea|yeah)$/i.test(input)) bool = true;
-          if (/^(f|false|n|no|nope|nah|naw)$/i.test(input)) bool = false;
-          if (bool == null) throw new Error(`Could not parse "${input}" to a boolean.`);
-          resolvedInputs[option.name] = bool;
+          resolvedInputs[option.name] = getBooleanFromValue(input);
         }
         break;
       }
@@ -1027,4 +1045,38 @@ export async function sendMessage(channel: TextBasedChannel, message: string, op
     flags: isSilent ? SUPPRESS_MESSAGE_FLAG : undefined,
     ...options,
   });
+}
+
+type RateLimitOptions = ConstructorParameters<typeof RateLimiterMemory>[0];
+export function getRateLimiter(options: {
+  userLimit?: RateLimitOptions,
+  guildLimit?: RateLimitOptions,
+}): {
+  // Throws an error with a message description if there was a consumption error
+  attempt: (interaction: CommandInteraction | ModalSubmitInteraction, points?: number) => Promise<void>,
+} {
+  const userRateLimiter = options.userLimit ? new RateLimiterMemory(options.userLimit) : null;
+  const guildRateLimiter = options.guildLimit ? new RateLimiterMemory(options.guildLimit) : null;
+  return {
+    attempt: async (interaction: CommandInteraction | ModalSubmitInteraction, points = 1) => {
+      const userId = interaction.user.id;
+      const guildId = interaction.guildId;
+      if (userRateLimiter) {
+        try {
+          await userRateLimiter.consume(userId, points);
+        } catch (err) {
+          // @ts-ignore We know this is correct
+          throw new Error(`You are being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
+        }
+      }
+      if (guildId && guildRateLimiter) {
+        try {
+          await guildRateLimiter.consume(guildId, points);
+        } catch (err) {
+          // @ts-ignore We know this is correct
+          throw new Error(`This guild is being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
+        }
+      }
+    },
+  };
 }

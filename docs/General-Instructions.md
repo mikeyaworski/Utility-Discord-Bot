@@ -12,4 +12,6 @@
 
 1. [Optional] Go to https://developer.spotify.com/dashboard/applications, create a project and note your client ID & client secret. This is used to fetch Spotify playlist information with the Player commands.
 
+1. [Optional] Go to https://platform.openai.com/account/api-keys and create a secret key. This is used for the `OPENAI_SECRET_KEY` environment variable, and is necessary to use the `/chatgpt` command.
+
 At this point, you should have all of the environment variables needed to deploy the bot, except for the database URL.
