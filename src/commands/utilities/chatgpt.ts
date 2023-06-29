@@ -6,7 +6,6 @@ import NodeCache from 'node-cache';
 
 import {
   getBooleanArg,
-  getInfoFromCommandInteraction,
   getRateLimiter,
   parseInput,
 } from 'src/discord-utils';
@@ -66,10 +65,6 @@ const run: CommandOrModalRunMethod = async interaction => {
 
   const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
   const query: string = inputs.query;
-  const { channel, author } = await getInfoFromCommandInteraction(interaction, { ephemeral });
-
-  if (!channel) throw new Error('Could not find channel.');
-  if (!author) throw new Error('Could not find author.');
 
   // This throws an error if rate limited
   await rateLimiter.attempt(interaction);
