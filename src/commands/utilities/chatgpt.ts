@@ -108,11 +108,11 @@ const run: CommandOrModalRunMethod = async interaction => {
   });
 };
 
-const BaseRolesCommand: Command = {
+const ChatGptCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
   runCommand: run,
   runModal: run,
 };
 
-export default BaseRolesCommand;
+export default ChatGptCommand;
