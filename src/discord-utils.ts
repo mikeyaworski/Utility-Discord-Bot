@@ -1048,35 +1048,37 @@ export async function sendMessage(channel: TextBasedChannel, message: string, op
 }
 
 type RateLimitOptions = ConstructorParameters<typeof RateLimiterMemory>[0];
+type RateLimitAttemptFn = (details: { userId: string, guildId?: string | null }, points?: number) => Promise<void>;
 export function getRateLimiter(options: {
   userLimit?: RateLimitOptions,
   guildLimit?: RateLimitOptions,
 }): {
   // Throws an error with a message description if there was a consumption error
-  attempt: (interaction: CommandInteraction | ModalSubmitInteraction, points?: number) => Promise<void>,
+  attempt: RateLimitAttemptFn,
 } {
   const userRateLimiter = options.userLimit ? new RateLimiterMemory(options.userLimit) : null;
   const guildRateLimiter = options.guildLimit ? new RateLimiterMemory(options.guildLimit) : null;
+
+  const attempt: RateLimitAttemptFn = async ({ userId, guildId }, points = 1) => {
+    if (userRateLimiter) {
+      try {
+        await userRateLimiter.consume(userId, points);
+      } catch (err) {
+        // @ts-ignore We know this is correct
+        throw new Error(`You are being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
+      }
+    }
+    if (guildId && guildRateLimiter) {
+      try {
+        await guildRateLimiter.consume(guildId, points);
+      } catch (err) {
+        // @ts-ignore We know this is correct
+        throw new Error(`This guild is being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
+      }
+    }
+  };
+
   return {
-    attempt: async (interaction: CommandInteraction | ModalSubmitInteraction, points = 1) => {
-      const userId = interaction.user.id;
-      const guildId = interaction.guildId;
-      if (userRateLimiter) {
-        try {
-          await userRateLimiter.consume(userId, points);
-        } catch (err) {
-          // @ts-ignore We know this is correct
-          throw new Error(`You are being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
-        }
-      }
-      if (guildId && guildRateLimiter) {
-        try {
-          await guildRateLimiter.consume(guildId, points);
-        } catch (err) {
-          // @ts-ignore We know this is correct
-          throw new Error(`This guild is being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
-        }
-      }
-    },
+    attempt,
   };
 }

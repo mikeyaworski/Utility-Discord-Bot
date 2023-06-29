@@ -131,6 +131,9 @@ export type EventTrigger = [
 ] | [
   'guildMemberAdd',
   (member: GuildMember) => void
+] | [
+  'messageCreate',
+  (message: Message<boolean>) => void,
 ];
 
 export type ModelDefinition = (sequelize: Sequelize) => void;

@@ -54,23 +54,22 @@ commandBuilder.addBooleanOption(option => {
     .setRequired(false);
 });
 
-const run: CommandOrModalRunMethod = async interaction => {
-  const ephemeral = getBooleanArg(interaction, 'ephemeral');
-  await interaction.deferReply({ ephemeral });
-
+export async function getChatGptResponse({
+  query,
+  userId,
+  guildId,
+}: {
+  query: string,
+  userId: string,
+  guildId?: string | null,
+}): Promise<string> {
   if (!apiKey) {
-    await interaction.editReply('ChatGPT is not configured on the bot.');
-    return;
+    throw new Error('ChatGPT is not configured on the bot.');
   }
 
-  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
-  const query: string = inputs.query;
-
   // This throws an error if rate limited
-  await rateLimiter.attempt(interaction);
+  await rateLimiter.attempt({ userId, guildId });
 
-  const userId = interaction.user.id;
-  const guildId = interaction.guildId || '';
   const conversationKey = userId + guildId;
   const conversation = conversations?.get<ChatCompletionRequestMessage[]>(conversationKey) ?? [];
   const chatCompletion = await openai.createChatCompletion({
@@ -98,8 +97,27 @@ const run: CommandOrModalRunMethod = async interaction => {
     ]);
   }
 
+  return responseMessage?.content || 'Something went wrong. Blame Open AI.';
+}
+
+const run: CommandOrModalRunMethod = async interaction => {
+  const ephemeral = getBooleanArg(interaction, 'ephemeral');
+  await interaction.deferReply({ ephemeral });
+
+  const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
+  const query: string = inputs.query;
+
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId || '';
+
+  const content = await getChatGptResponse({
+    query,
+    userId,
+    guildId,
+  });
+
   await interaction.editReply({
-    content: responseMessage?.content || 'Something went wrong. Blame Open AI.',
+    content,
   });
 };
 
