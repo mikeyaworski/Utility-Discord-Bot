@@ -166,3 +166,12 @@ export function getRandomElement<T>(items: T[]): T {
 export function isTwitchVodLink(url: string): boolean {
   return /^https:\/\/(www\.)?twitch\.tv\/videos\/\d+$/.test(url);
 }
+
+export function chunkString(str: string, size: number): string[] {
+  const chunks = [];
+  for (let i = 0; i * size < str.length; i++) {
+    const start = i * size;
+    chunks.push(str.slice(start, start + size));
+  }
+  return chunks;
+}

@@ -2,7 +2,7 @@ import type { Message } from 'discord.js';
 import type { EventTrigger } from 'src/types';
 
 import { getChatGptResponse } from 'src/commands/utilities/chatgpt';
-import { getErrorMsg } from 'src/discord-utils';
+import { chunkReplies, getErrorMsg } from 'src/discord-utils';
 
 const NewDmEvent: EventTrigger = ['messageCreate', async (message: Message): Promise<void> => {
   if (!message.inGuild() && !message.author.bot) {
@@ -13,7 +13,10 @@ const NewDmEvent: EventTrigger = ['messageCreate', async (message: Message): Pro
         userId: message.author.id,
         guildId: message.guildId,
       });
-      await message.reply(response);
+      await chunkReplies({
+        message,
+        content: response,
+      });
     } catch (err) {
       await message.reply(getErrorMsg(err));
     }

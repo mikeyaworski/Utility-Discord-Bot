@@ -50,7 +50,7 @@ import {
 } from 'src/constants';
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
-import { array, filterOutFalsy, humanizeDuration } from 'src/utils';
+import { array, chunkString, filterOutFalsy, humanizeDuration } from 'src/utils';
 import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption, ChannelType } from 'discord-api-types/v10';
 import { Reminder } from './models/reminders';
@@ -565,6 +565,34 @@ export async function replyWithEmbeds({
       await interaction.editReply({
         ...messageArgs,
         embeds: chunkedEmbeds[i],
+      });
+    }
+  }
+}
+
+export async function chunkReplies(options: Partial<InteractionReplyOptions> & {
+  interaction: AnyInteraction,
+  content: string,
+} | {
+  message: Message,
+  content: string,
+}): Promise<void> {
+  const { content, ...rest } = options;
+  const chunks = chunkString(content, 2000);
+  for (let i = 0; i < chunks.length; i++) {
+    if ('message' in options) {
+      options.message.reply({
+        content: chunks[i],
+      });
+    } else if (i > 0) {
+      await options.interaction.followUp({
+        content: chunks[i],
+        ...rest,
+      });
+    } else {
+      await options.interaction.editReply({
+        content: chunks[i],
+        ...rest,
       });
     }
   }

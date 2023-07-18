@@ -5,6 +5,7 @@ import { Configuration, OpenAIApi, ChatCompletionRequestMessage } from 'openai';
 import NodeCache from 'node-cache';
 
 import {
+  chunkReplies,
   getBooleanArg,
   getRateLimiter,
   parseInput,
@@ -116,8 +117,10 @@ const run: CommandOrModalRunMethod = async interaction => {
     guildId,
   });
 
-  await interaction.editReply({
+  await chunkReplies({
+    interaction,
     content,
+    ephemeral,
   });
 };
 
