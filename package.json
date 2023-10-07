@@ -78,7 +78,7 @@
     "openai": "^3.3.0",
     "p-limit": "^3.1.0",
     "pg": "^8.5.1",
-    "play-dl": "^1.9.6",
+    "play-dl": "^1.9.7",
     "rate-limiter-flexible": "^2.4.1",
     "sequelize": "^6.28.0",
     "socket.io": "^4.5.1",
