@@ -8,6 +8,7 @@ import {
   isTwitchVodLink,
   getClockString,
   getSecondsFromClockString,
+  getUniqueId,
 } from '../utils';
 
 describe('utils', () => {
@@ -209,6 +210,18 @@ describe('utils', () => {
     });
     test('foobar', () => {
       expect(() => getSecondsFromClockString('foobar')).toThrowError();
+    });
+  });
+
+  describe('getUniqueId', () => {
+    test('first call', () => {
+      expect(getUniqueId()).toBe(1);
+    });
+    test('second call', () => {
+      expect(getUniqueId()).toBe(2);
+    });
+    test('third call', () => {
+      expect(getUniqueId()).toBe(3);
     });
   });
 });
