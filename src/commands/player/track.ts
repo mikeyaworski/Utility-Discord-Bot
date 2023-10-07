@@ -5,6 +5,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import play from 'play-dl';
 import ytdl from 'ytdl-core';
 import { error } from 'src/logging';
+import { getUniqueId } from 'src/utils';
 import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
 
 export interface VideoDetails {
@@ -32,12 +33,14 @@ interface TrackConstructorOptions {
 }
 
 export default class Track {
+  public readonly id: string;
   public readonly link: string;
   public readonly variant: TrackVariant;
   public readonly sourceLink: string | undefined;
   private details: VideoDetails | undefined;
 
   public constructor(options: TrackConstructorOptions) {
+    this.id = String(getUniqueId());
     this.link = options.link;
     this.variant = options.variant;
     this.details = options.details;
