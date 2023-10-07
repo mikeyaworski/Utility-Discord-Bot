@@ -1,3 +1,4 @@
+import { PlayerStatus } from 'src/commands/player/types';
 import { ChessGames } from 'src/models/chess-games';
 import { ChessGameResponse, ReminderResponse } from 'src/types';
 
@@ -10,6 +11,8 @@ export enum SocketEventTypes {
   CHESS_CHALLENGE_DECLINED = 'CHESS_CHALLENGE_DECLINED',
   CHESS_GAME_UPDATED = 'CHESS_GAME_UPDATED',
   CHESS_GAME_RESIGNED = 'CHESS_GAME_RESIGNED',
+  PLAYER_STATUS_CHANGED = 'PLAYER_STATUS_CHANGED',
+  PLAYER_DISCONNECTED = 'PLAYER_DISCONNECTED',
 }
 
 export type SocketEvent =
@@ -51,4 +54,21 @@ export type SocketEvent =
 {
   type: SocketEventTypes.CHESS_GAME_RESIGNED,
   data: { id: ChessGames['id'], resigner: string },
+}
+|
+{
+  type: SocketEventTypes.PLAYER_STATUS_CHANGED,
+  data: PlayerStatus & {
+    guildId: string,
+    channel: {
+      name: string,
+    }
+  },
+}|
+{
+  type: SocketEventTypes.PLAYER_DISCONNECTED,
+  data: {
+    guildId: string,
+    channelId?: string,
+  },
 }

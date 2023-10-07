@@ -52,6 +52,12 @@ CHATGPT_GUILD_LIMIT=10,60
 # in seconds
 CHATGPT_CONVERSATION_TIME_LIMIT=10
 
+# Player
+# 1 request every 2 seconds
+PLAYER_USER_LIMIT=1,2
+# 1 request per second
+PLAYER_GUILD_LIMIT=1,1
+
 # Create your own webhook secret if you intend to use the webhook API routes and want them protected
 WEBHOOK_SECRET=...
 

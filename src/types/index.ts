@@ -20,9 +20,11 @@ import type {
   TextChannel,
   AnyThreadChannel,
   VoiceChannel,
+  VoiceState,
 } from 'discord.js';
 import type { SlashCommandBuilder } from '@discordjs/builders';
 import type { Sequelize } from 'sequelize/types';
+import type { RateLimiterMemory } from 'rate-limiter-flexible';
 import { Reminder } from 'src/models/reminders';
 import { editLatest } from 'src/discord-utils';
 import { ChessGames } from 'src/models/chess-games';
@@ -134,6 +136,9 @@ export type EventTrigger = [
 ] | [
   'messageCreate',
   (message: Message<boolean>) => void,
+] | [
+  'voiceStateUpdate',
+  (oldState: VoiceState, newState: VoiceState) => void,
 ];
 
 export type ModelDefinition = (sequelize: Sequelize) => void;
@@ -151,3 +156,10 @@ export interface ChessGameResponse {
 }
 
 export type GuildTextChannel = TextChannel | VoiceChannel | AnyThreadChannel;
+
+export type RateLimitOptions = ConstructorParameters<typeof RateLimiterMemory>[0];
+export type RateLimitAttemptFn = (details: { userId: string, guildId?: string | null }, points?: number) => Promise<void>;
+export type RateLimiter = {
+  // Throws an error with a message description if there was a consumption error
+  attempt: RateLimitAttemptFn,
+};

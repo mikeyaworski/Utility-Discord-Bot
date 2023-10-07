@@ -1,6 +1,6 @@
 import { CommandInteraction, ContextMenuCommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { checkVoiceErrors, isCommand } from 'src/discord-utils';
+import { checkVoiceErrorsByInteraction, isCommand } from 'src/discord-utils';
 import type { Command } from 'src/types';
 import { ContextMenuTypes } from 'src/types';
 import { attachPlayerButtons } from './utils';
@@ -10,7 +10,7 @@ async function run(interaction: CommandInteraction | ContextMenuCommandInteracti
   await interaction.deferReply({ ephemeral: true });
   const session = sessions.get(interaction.guild!.id);
   if (!session) return interaction.editReply('Session does not exist.');
-  await checkVoiceErrors(interaction);
+  await checkVoiceErrorsByInteraction(interaction);
 
   let extraSkips = 0;
   if (isCommand(interaction)) {

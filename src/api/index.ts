@@ -12,6 +12,7 @@ import remindersRouter from 'src/api/routes/reminders';
 import guildsRouter from 'src/api/routes/guilds';
 import dmsRouter from 'src/api/routes/dms';
 import chessRouter from 'src/api/routes/chess';
+import playerRouter from 'src/api/routes/player';
 import webhooksRouter from 'src/api/routes/webhooks';
 
 import { WAKE_INTERVAL } from 'src/constants';
@@ -61,6 +62,7 @@ export function initApi(): void {
   app.use('/guilds', guildsRouter);
   app.use('/dms', dmsRouter);
   app.use('/chess', chessRouter);
+  app.use('/player', playerRouter);
   app.use('/webhooks', webhooksRouter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   httpServer.listen(port, () => {

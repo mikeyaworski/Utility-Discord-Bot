@@ -9,27 +9,22 @@ import {
   getVoiceConnection,
   VoiceConnection,
 } from '@discordjs/voice';
-import type { VoiceBasedChannel } from 'discord.js';
+import type { VoiceBasedChannel, VoiceState } from 'discord.js';
 
 import { promisify } from 'util';
 
+import { client } from 'src/client';
 import { PlayerUpdates } from 'src/models/player-updates';
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
 import { getChannel, isText } from 'src/discord-utils';
+import { emit } from 'src/api/sockets';
+import { SocketEventTypes } from 'src/types/sockets';
 import sessions from './sessions';
-import Track, { AudioResourceOptions } from './track';
+import Track, { AudioResourceOptions, TrackVariant } from './track';
 import { getMessageData, listenForPlayerButtons } from './utils';
 import { runNowPlaying } from './now-playing';
-
-interface CurrentTrackPlayTime {
-  // all in MS
-  started: number | null, // timestamp
-  pauseStarted: number | null, // timestamp
-  totalPauseTime: number,
-  seeked: number | null,
-  speed: number,
-}
+import { PlayerStatus, TrackData, CurrentTrackPlayTime } from './types';
 
 // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/subscription.ts
 export default class Session {
@@ -39,6 +34,7 @@ export default class Session {
   public readonly queueLoop: Track[] = [];
   private shuffled = false;
   private readonly guildId: string;
+  private channelId: string;
   private queueLock = false;
   private readyLock = false;
   private playbackSpeed = 1;
@@ -59,6 +55,7 @@ export default class Session {
       adapterCreator: channel.guild.voiceAdapterCreator,
     });
 
+    this.channelId = channel.id;
     this.guildId = channel.guild.id;
     this.audioPlayer = createAudioPlayer();
     this.queue = [];
@@ -109,10 +106,12 @@ export default class Session {
     this.audioPlayer.on('stateChange', (oldState, newState) => {
       if (newState.status === AudioPlayerStatus.Playing && this.currentTrackPlayTime.started == null) {
         this.currentTrackPlayTime.started = Date.now();
+        this.emitPlayerStatus();
       }
       if (newState.status !== AudioPlayerStatus.Playing && oldState.status === AudioPlayerStatus.Playing) {
         this.currentTrackPlayTime.pauseStarted = Date.now();
         log('Paused at', this.currentTrackPlayTime.pauseStarted);
+        this.emitPlayerStatus();
       } else if (newState.status === AudioPlayerStatus.Playing && oldState.status !== AudioPlayerStatus.Playing) {
         if (this.currentTrackPlayTime.pauseStarted != null) {
           const pausedTime = Date.now() - this.currentTrackPlayTime.pauseStarted;
@@ -120,6 +119,7 @@ export default class Session {
           this.currentTrackPlayTime.totalPauseTime += pausedTime;
           this.currentTrackPlayTime.pauseStarted = null;
           log('New total pause time:', this.currentTrackPlayTime.totalPauseTime, 'millseconds');
+          this.emitPlayerStatus();
         }
       }
     });
@@ -134,6 +134,70 @@ export default class Session {
     this.audioPlayer.on('error', error);
 
     voiceConnection.subscribe(this.audioPlayer);
+
+    // Bind this function to the class context
+    this.handleVoiceStateChange = this.handleVoiceStateChange.bind(this);
+    client.on('voiceStateUpdate', this.handleVoiceStateChange);
+  }
+
+  private handleVoiceStateChange(oldState: VoiceState, newState: VoiceState): void {
+    if (newState.id === client.user?.id && newState.channelId) {
+      this.channelId = newState.channelId;
+    }
+  }
+
+  public destroy(): void {
+    client.removeListener('voiceStateUpdate', this.handleVoiceStateChange);
+    const voiceConnection = this.getVoiceConnection();
+    if (voiceConnection) voiceConnection.destroy();
+    const room = `${this.guildId}_${this.channelId}_CONNECT`;
+    emit({
+      type: SocketEventTypes.PLAYER_DISCONNECTED,
+      data: {
+        guildId: this.guildId,
+        channelId: this.channelId,
+      },
+    }, [room]);
+  }
+
+  public async getPlayerStatus(): Promise<PlayerStatus> {
+    const getTrackData: (track: Track) => Promise<TrackData> = async track => ({
+      id: track.id,
+      link: track.link,
+      sourceLink: track.sourceLink,
+      variant: track.variant,
+      ...await track.getVideoDetails().catch(() => ({
+        title: 'Unknown',
+      })),
+    });
+    const queue = this.isLooped() ? this.queue.concat(this.queueLoop) : this.queue;
+    return {
+      currentTrack: this.currentTrack ? await getTrackData(this.currentTrack) : null,
+      currentTime: this.currentTrackPlayTime,
+      playbackSpeed: this.playbackSpeed,
+      queue: await Promise.all(queue.map(track => getTrackData(track))),
+      totalQueueSize: queue.length,
+      isPaused: this.isPaused(),
+      isLooped: this.isLooped(),
+      isShuffled: this.isShuffled(),
+    };
+  }
+
+  private async emitPlayerStatus(): Promise<void> {
+    const channel = await getChannel(this.channelId);
+    if (channel && !channel.isDMBased()) {
+      const room = `${this.guildId}_${this.channelId}_CONNECT`;
+      emit({
+        type: SocketEventTypes.PLAYER_STATUS_CHANGED,
+        data: {
+          ...await this.getPlayerStatus(),
+          guildId: this.guildId,
+          channel: {
+            name: channel.name,
+          },
+        },
+      }, [room]);
+    }
   }
 
   /**
@@ -157,10 +221,12 @@ export default class Session {
       this.currentTrack ? [this.currentTrack].concat(this.queue) : this.queue,
     );
     this.queueLoop.splice(0, this.queueLoop.length, ...newQueueLoop);
+    this.emitPlayerStatus();
   }
 
   public unloop(): void {
     this.queueLoop.splice(0, this.queueLoop.length);
+    this.emitPlayerStatus();
   }
 
   public isLooped(): boolean {
@@ -175,6 +241,7 @@ export default class Session {
     shuffleArray(this.queue);
     shuffleArray(this.queueLoop);
     this.shuffled = true;
+    this.emitPlayerStatus();
   }
 
   /**
@@ -183,25 +250,36 @@ export default class Session {
    */
   public unshuffle(): void {
     this.shuffled = false;
+    this.emitPlayerStatus();
   }
 
   public reverse(): void {
     this.queue.splice(0, this.queue.length, ...this.queue.reverse());
+    this.emitPlayerStatus();
   }
 
   public clear(): void {
     this.queue.splice(0, this.queue.length);
     this.unshuffle();
     this.unloop();
+    this.emitPlayerStatus();
   }
 
-  public remove(idx: number): Track | undefined {
-    return this.queue.splice(idx, 1)[0];
+  public remove(id: string): Track | undefined
+  public remove(idx: number): Track | undefined
+  public remove(idOrIdx: string | number): Track | undefined {
+    const idx = typeof idOrIdx === 'string'
+      ? this.queue.findIndex(track => track.id === idOrIdx)
+      : idOrIdx;
+    const result = this.queue.splice(idx, 1)[0];
+    this.emitPlayerStatus();
+    return result;
   }
 
   public move(from: number, to: number): Track | undefined {
     const [track] = this.queue.splice(from, 1);
     this.queue.splice(to, 0, track);
+    this.emitPlayerStatus();
     return track;
   }
 
@@ -234,7 +312,7 @@ export default class Session {
     return this.audioPlayer.state.status === AudioPlayerStatus.Paused;
   }
 
-  public stop(): void {
+  private stop(): void {
     this.queueLock = true;
     this.queue.splice(0, this.queue.length);
     this.audioPlayer.stop(true);
@@ -284,6 +362,7 @@ export default class Session {
       totalPauseTime: 0,
       speed: this.playbackSpeed,
     };
+    this.emitPlayerStatus();
   }
 
   /**
@@ -311,7 +390,10 @@ export default class Session {
       log('Queue lock prevented a problem.');
       return;
     }
-    if (!forceSkip && this.audioPlayer.state.status !== AudioPlayerStatus.Idle) return;
+    if (!forceSkip && this.audioPlayer.state.status !== AudioPlayerStatus.Idle) {
+      this.emitPlayerStatus();
+      return;
+    }
 
     this.queueLock = true;
 
@@ -331,6 +413,7 @@ export default class Session {
     if (!this.currentTrack) {
       if (forceSkip) this.audioPlayer.stop(true);
       this.queueLock = false;
+      this.emitPlayerStatus();
       return;
     }
 
@@ -347,6 +430,8 @@ export default class Session {
         seeked: null,
         speed: this.playbackSpeed,
       };
+
+      this.emitPlayerStatus();
 
       // TODO: Extract this to a helper function
       // Also consider baking this into replyWithSessionButtons, but adding an option

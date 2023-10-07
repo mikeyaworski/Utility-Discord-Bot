@@ -7,10 +7,9 @@ import NodeCache from 'node-cache';
 import {
   chunkReplies,
   getBooleanArg,
-  getRateLimiter,
+  getRateLimiterFromEnv,
   parseInput,
 } from 'src/discord-utils';
-import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 
 const apiKey = process.env.OPENAI_SECRET_KEY;
 const configuration = new Configuration({
@@ -25,18 +24,7 @@ const conversations = conversationTimeLimit ? new NodeCache({
   checkperiod: 600,
 }) : null;
 
-const userLimit = process.env.CHATGPT_USER_LIMIT?.split(ENV_LIMITER_SPLIT_REGEX).map(str => Number(str));
-const guildLimit = process.env.CHATGPT_GUILD_LIMIT?.split(ENV_LIMITER_SPLIT_REGEX).map(str => Number(str));
-const rateLimiter = getRateLimiter({
-  userLimit: userLimit ? {
-    points: userLimit[0],
-    duration: userLimit[1],
-  } : undefined,
-  guildLimit: guildLimit ? {
-    points: guildLimit[0],
-    duration: guildLimit[1],
-  } : undefined,
-});
+const rateLimiter = getRateLimiterFromEnv('CHATGPT_USER_LIMIT', 'CHATGPT_GUILD_LIMIT');
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder

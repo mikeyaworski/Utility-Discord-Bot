@@ -17,7 +17,10 @@ const LeaveCommand: Command = {
     const guild = interaction.guild!;
 
     const botMember = await guild.members.fetch(client.user!.id);
-    const isInSameChannelAsBot = await getIsInSameChannelAsBot(interaction);
+    const isInSameChannelAsBot = await getIsInSameChannelAsBot({
+      userId: interaction.user.id,
+      guildId: guild.id,
+    });
 
     if (!botMember.voice.channel) {
       await interaction.editReply('Bot is not connected to a voice channel.');

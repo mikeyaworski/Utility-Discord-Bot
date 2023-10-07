@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
 import { CONCURRENCY_LIMIT } from 'src/constants';
-import { checkVoiceErrors, getSubcommand, parseInput } from 'src/discord-utils';
+import { checkVoiceErrorsByInteraction, getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
 import { replyWithSessionButtons, attachPlayerButtons, getVideoDetailsWithFallback, getTrackDurationAndSpeedFromSession } from './utils';
@@ -222,7 +222,7 @@ const run: CommandOrModalRunMethod = async interaction => {
     case 'remove':
     case 'move':
     case 'clear': {
-      await checkVoiceErrors(interaction);
+      await checkVoiceErrorsByInteraction(interaction);
       break;
     }
     default: break;

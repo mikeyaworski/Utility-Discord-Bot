@@ -31,8 +31,19 @@ import {
   VoiceBasedChannel,
 } from 'discord.js';
 
-import type { IntentionalAny, Command, AnyInteraction, AnyMapping, MessageResponse, GuildTextChannel } from 'src/types';
+import type {
+  IntentionalAny,
+  Command,
+  AnyInteraction,
+  AnyMapping,
+  MessageResponse,
+  GuildTextChannel,
+  RateLimitAttemptFn,
+  RateLimiter,
+  RateLimitOptions,
+} from 'src/types';
 
+import dotenv from 'dotenv';
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
@@ -47,6 +58,7 @@ import {
   USER_DISCRIMINATOR_REGEX,
   INTERACTION_MAX_TIMEOUT,
   SUPPRESS_MESSAGE_FLAG,
+  ENV_LIMITER_SPLIT_REGEX,
 } from 'src/constants';
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
@@ -54,6 +66,8 @@ import { array, chunkString, filterOutFalsy, humanizeDuration } from 'src/utils'
 import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption, ChannelType } from 'discord-api-types/v10';
 import { Reminder } from './models/reminders';
+
+dotenv.config();
 
 // TODO: This type guard is probably not accurate, though is practically fine for now
 export function isText(channel: Channel): channel is TextBasedChannel {
@@ -457,37 +471,59 @@ export async function parseArguments(input: string, options: { parseChannels?: b
 }
 
 export async function getConnectedVoiceChannels(
-  guild: Guild,
+  guildId: string,
   userIds: string[],
 ): Promise<(VoiceBasedChannel | null | undefined)[]> {
+  const guild = await client.guilds.fetch(guildId);
+  if (!guild) throw new Error('Could not resolve guild');
   const members = await guild.members.fetch({
     user: userIds,
   });
   return userIds.map(userId => members.get(userId)?.voice.channel);
 }
 
-export async function getInteractionConnectedVoiceChannels(
-  interaction: AnyInteraction,
-): Promise<(VoiceBasedChannel | null | undefined)[]> {
-  const { user, guild } = interaction;
-
-  if (!guild) throw new Error('Must be in a guild.');
-  if (!user) throw new Error('Could not resolve user invoking command.');
+export async function getInteractionConnectedVoiceChannels({
+  userId,
+  guildId,
+}: {
+  userId: string,
+  guildId: string,
+}): Promise<(VoiceBasedChannel | null | undefined)[]> {
   if (!client.user) throw new Error('Could not resolve bot user.');
-
-  return getConnectedVoiceChannels(guild, [user.id, client.user.id]);
+  return getConnectedVoiceChannels(guildId, [userId, client.user.id]);
 }
 
-export async function getIsInSameChannelAsBot(interaction: AnyInteraction): Promise<boolean> {
-  const [invokerChannel, botChannel] = await getInteractionConnectedVoiceChannels(interaction);
+export async function getBotConnectedChannel(guildId: string): Promise<VoiceBasedChannel | null | undefined> {
+  if (!client.user) throw new Error('Could not resolve bot user.');
+  const channels = await getConnectedVoiceChannels(guildId, [client.user.id]);
+  return channels[0];
+}
+
+export async function getIsInSameChannelAsBot({
+  userId,
+  guildId,
+}: {
+  userId: string,
+  guildId: string,
+}): Promise<boolean> {
+  const [invokerChannel, botChannel] = await getInteractionConnectedVoiceChannels({ userId, guildId });
   return !!invokerChannel && !!botChannel && invokerChannel.id === botChannel.id;
 }
 
-export async function checkVoiceErrors(interaction: AnyInteraction): Promise<VoiceBasedChannel> {
+export async function checkVoiceErrors({
+  userId,
+  guildId,
+} : {
+  userId: string,
+  guildId: string,
+}): Promise<VoiceBasedChannel> {
   const [
     invokerChannel,
     botChannel,
-  ] = await getInteractionConnectedVoiceChannels(interaction);
+  ] = await getInteractionConnectedVoiceChannels({
+    userId,
+    guildId,
+  });
 
   // TODO: Allow commands to proceed if the bot is currently in another voice channel by itself
   if (!invokerChannel) {
@@ -503,6 +539,14 @@ export async function checkVoiceErrors(interaction: AnyInteraction): Promise<Voi
   }
 
   return invokerChannel;
+}
+
+export async function checkVoiceErrorsByInteraction(interaction: AnyInteraction): Promise<VoiceBasedChannel> {
+  if (!interaction.guild) throw new Error('Must be in a guild.');
+  return checkVoiceErrors({
+    userId: interaction.user.id,
+    guildId: interaction.guild.id,
+  });
 }
 
 export function checkMessageErrors({
@@ -960,7 +1004,24 @@ export function editLatest({
   return interaction.editReply(data);
 }
 
-export async function userCanViewChannel({
+export async function checkUserCanConnectToChannel({
+  userId,
+  channelId,
+}: {
+  userId: string,
+  channelId: string,
+}): Promise<boolean> {
+  const channel = await client.channels.fetch(channelId);
+  if (!channel) return false;
+  if (!channel.isVoiceBased()) return false;
+  return usersHaveChannelPermission({
+    channel,
+    users: userId,
+    permissions: ['Connect'],
+  });
+}
+
+export async function checkUserCanViewChannel({
   userId,
   channelId,
 }: {
@@ -977,7 +1038,7 @@ export async function userCanViewChannel({
   });
 }
 
-export async function userCanManageChannel({
+export async function checkUserCanManageChannel({
   userId,
   channelId,
 }: {
@@ -997,7 +1058,7 @@ export async function userCanManageChannel({
 export async function userCanViewReminder(reminder: Reminder, userId: string): Promise<boolean> {
   if (reminder.owner_id === userId) return true;
   if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
-  return userCanViewChannel({
+  return checkUserCanViewChannel({
     userId,
     channelId: reminder.channel_id,
   });
@@ -1006,7 +1067,7 @@ export async function userCanViewReminder(reminder: Reminder, userId: string): P
 export async function userCanManageReminder(reminder: Reminder, userId: string): Promise<boolean> {
   if (reminder.owner_id === userId) return true;
   if (!reminder.guild_id) return false; // This is a DM, but they don't own the reminder
-  return userCanManageChannel({
+  return checkUserCanManageChannel({
     userId,
     channelId: reminder.channel_id,
   });
@@ -1075,15 +1136,10 @@ export async function sendMessage(channel: TextBasedChannel, message: string, op
   });
 }
 
-type RateLimitOptions = ConstructorParameters<typeof RateLimiterMemory>[0];
-type RateLimitAttemptFn = (details: { userId: string, guildId?: string | null }, points?: number) => Promise<void>;
 export function getRateLimiter(options: {
   userLimit?: RateLimitOptions,
   guildLimit?: RateLimitOptions,
-}): {
-  // Throws an error with a message description if there was a consumption error
-  attempt: RateLimitAttemptFn,
-} {
+}): RateLimiter {
   const userRateLimiter = options.userLimit ? new RateLimiterMemory(options.userLimit) : null;
   const guildRateLimiter = options.guildLimit ? new RateLimiterMemory(options.guildLimit) : null;
 
@@ -1093,7 +1149,9 @@ export function getRateLimiter(options: {
         await userRateLimiter.consume(userId, points);
       } catch (err) {
         // @ts-ignore We know this is correct
-        throw new Error(`You are being rate limited by the bot. Please wait ${humanizeDuration(err.msBeforeNext)}.`);
+        const msBeforeNext = err.msBeforeNext;
+        if (msBeforeNext < 1000) throw new Error('You are being rate limited by the bot. Please try again.');
+        throw new Error(`You are being rate limited by the bot. Please wait ${humanizeDuration(msBeforeNext)}.`);
       }
     }
     if (guildId && guildRateLimiter) {
@@ -1109,4 +1167,19 @@ export function getRateLimiter(options: {
   return {
     attempt,
   };
+}
+
+export function getRateLimiterFromEnv(userKey: string, guildKey: string): RateLimiter {
+  const userLimit = process.env[userKey]?.split(ENV_LIMITER_SPLIT_REGEX).map(str => Number(str));
+  const guildLimit = process.env[guildKey]?.split(ENV_LIMITER_SPLIT_REGEX).map(str => Number(str));
+  return getRateLimiter({
+    userLimit: userLimit ? {
+      points: userLimit[0],
+      duration: userLimit[1],
+    } : undefined,
+    guildLimit: guildLimit ? {
+      points: guildLimit[0],
+      duration: guildLimit[1],
+    } : undefined,
+  });
 }

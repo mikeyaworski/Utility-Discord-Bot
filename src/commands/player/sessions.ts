@@ -16,10 +16,10 @@ export class Sessions {
 
   public destroy(guildId: string): void {
     const session = this.get(guildId);
-    if (!session) return;
-    const voiceConnection = session.getVoiceConnection();
-    if (voiceConnection) voiceConnection.destroy();
-    this.sessions.delete(guildId);
+    if (session) {
+      session.destroy();
+      this.sessions.delete(guildId);
+    }
   }
 }
 
