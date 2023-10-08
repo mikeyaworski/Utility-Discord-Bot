@@ -102,18 +102,24 @@ export async function parseYoutubePlaylistFromApi(playlistUrl: string): Promise<
     });
     numPagesFetched += 1;
     nextPageToken = res.data.nextPageToken;
-    const youtubeResults: { link: string, title: string }[] = res.data.items
+    interface Result {
+      link: string,
+      details: VideoDetails,
+    }
+    const youtubeResults: Result[] = res.data.items
       .filter((item: IntentionalAny) => item.snippet?.resourceId?.kind === 'youtube#video')
       .map((item: IntentionalAny) => ({
         link: `https://youtube.com/watch?v=${item.snippet?.resourceId.videoId}`,
-        title: item.snippet?.title,
+        details: {
+          title: item.snippet?.title,
+          duration: undefined, // TODO: The duration is not available in this API endpoint, so we have to get it elsewhere
+        },
       }));
-    tracks.push(...youtubeResults.map(({ link, title }) => new Track({
+    tracks.push(...youtubeResults.map(({ link, details }) => new Track({
       link,
       variant: TrackVariant.YOUTUBE_VOD,
-      details: {
-        title,
-      },
+      // TODO: Temporarily commented out until we write an alternate way to get the video duration
+      // details,
     })));
   } while (nextPageToken && numPagesFetched < MAX_YT_PLAYLIST_PAGE_FETCHES);
 
@@ -134,6 +140,7 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
       variant: TrackVariant.YOUTUBE_VOD,
       details: video.title ? {
         title: video.title,
+        duration: video.duration,
       } : undefined,
     }));
   }
