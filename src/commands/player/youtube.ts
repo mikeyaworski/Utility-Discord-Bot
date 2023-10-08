@@ -7,7 +7,7 @@ import { CONCURRENCY_LIMIT, MAX_YT_PLAYLIST_PAGE_FETCHES, YT_PLAYLIST_PAGE_SIZE 
 import { log, error } from 'src/logging';
 import { filterOutFalsy } from 'src/utils';
 import chunk from 'lodash.chunk';
-import Track, { TrackVariant } from './track';
+import Track, { TrackVariant, VideoDetails } from './track';
 import { Query, QueryType } from './types';
 
 type TracksFetchedCallback = (newTracks: Track[]) => void;
@@ -140,12 +140,8 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
 }
 
 export const getDetailsFromUrl = (() => {
-  interface Details {
-    title: string,
-    duration?: number,
-  }
-  const cache = new Map<string, Details>();
-  return async (url: string): Promise<Details> => {
+  const cache = new Map<string, VideoDetails>();
+  return async (url: string): Promise<VideoDetails> => {
     if (cache.has(url)) return cache.get(url)!;
     log('Fetching YouTube title for video', url);
     const videoRes = await YouTubeSr.getVideo(url);
