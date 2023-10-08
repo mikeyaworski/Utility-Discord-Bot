@@ -46,6 +46,7 @@ import type {
 import dotenv from 'dotenv';
 import emojiRegex from 'emoji-regex/RGI_Emoji';
 import get from 'lodash.get';
+import chunk from 'lodash.chunk';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 import {
@@ -63,7 +64,6 @@ import {
 import { error, log } from 'src/logging';
 import { client } from 'src/client';
 import { array, chunkString, filterOutFalsy, humanizeDuration } from 'src/utils';
-import chunk from 'lodash.chunk';
 import { APIApplicationCommandOption, ChannelType } from 'discord-api-types/v10';
 import { Reminder } from './models/reminders';
 

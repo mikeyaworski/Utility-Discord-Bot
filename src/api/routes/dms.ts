@@ -1,7 +1,7 @@
 import express from 'express';
-import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
-import { client } from 'client';
 import { DMChannel } from 'discord.js';
+import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
+import { client } from 'src/client';
 
 const router = express.Router();
 

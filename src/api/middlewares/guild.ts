@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from 'src/api/middlewares/auth';
-import { client } from 'client';
+import { client } from 'src/client';
 import { IntentionalAny } from 'src/types';
 
 export async function guildMiddleware(req: AuthRequest, res: Response, next: NextFunction): Promise<IntentionalAny> {
