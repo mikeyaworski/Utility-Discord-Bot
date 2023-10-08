@@ -421,12 +421,11 @@ export async function replyWithSessionButtons({
 
 export function getTrackDurationString(
   playedDuration: number,
-  videoDetails: VideoDetails,
+  totalDuration: number,
 ): string | null {
-  if (!videoDetails.duration) return null;
-  const totalDuration = getClockString(videoDetails.duration);
-  const minPortions = (totalDuration.match(/:/g) || []).length + 1;
-  return `${getClockString(playedDuration, minPortions)} / ${totalDuration}`;
+  const totalDurationStr = getClockString(totalDuration, 2);
+  const minPortions = Math.max(2, (totalDurationStr.match(/:/g) || []).length + 1);
+  return `${getClockString(playedDuration, minPortions)} / ${totalDurationStr}`;
 }
 
 export async function getTrackDurationStringFromSession(
@@ -437,7 +436,7 @@ export async function getTrackDurationStringFromSession(
   try {
     const videoDetails = await currentTrack.getVideoDetails();
     const playedDuration = session.getCurrentTrackPlayTime();
-    return getTrackDurationString(playedDuration, videoDetails);
+    return videoDetails.duration ? getTrackDurationString(playedDuration, videoDetails.duration) : null;
   } catch (err) {
     error(err);
     return null;

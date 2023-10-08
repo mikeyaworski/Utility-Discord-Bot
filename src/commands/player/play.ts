@@ -49,7 +49,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
     if (wasPlayingAnything) {
       return { description: `Queued at position #${pushToFront ? 1 : session.queue.length}: ${videoDetails.title}` };
     }
-    const duration = getTrackDurationString(0, videoDetails);
+    const duration = videoDetails.duration != null ? getTrackDurationString(0, videoDetails.duration) : null;
     const speed = session.getPlaybackSpeed();
     const footerText = getTrackDurationAndSpeed(duration, speed);
     return {
