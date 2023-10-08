@@ -208,7 +208,7 @@ export async function play({
       return interaction && attachPlayerButtons(interaction, session, message);
     }
 
-    const { type } = parseSpotifyLink(vodLink);
+    const { type } = await parseSpotifyLink(vodLink);
     const queries: Query[] = [];
     switch (type) {
       case LinkType.PLAYLIST: {

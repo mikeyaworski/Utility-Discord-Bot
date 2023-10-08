@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import axios from 'axios';
+import fetch from 'node-fetch';
 import Spotify from 'spotify-url-info';
 import uniq from 'lodash.uniq';
 
@@ -35,9 +36,29 @@ interface ParsedLink {
 
 // TODO: Type the Spotify API responses
 
-export function parseSpotifyLink(link: string): ParsedLink {
-  const url = new URL(link);
-  if (url.origin !== 'https://open.spotify.com') {
+const resolveSpotifyShortenedLink = (() => {
+  const cache = new Map<string, string>();
+  return async (link: string): Promise<string> => {
+    if (cache.has(link)) return cache.get(link)!;
+    try {
+      // axios does not follow redirects completely
+      const res = await fetch(link, { method: 'HEAD' });
+      return res.url;
+    } catch (err) {
+      error(err);
+      cache.set(link, link);
+      return link;
+    }
+  };
+})();
+
+export async function parseSpotifyLink(link: string): Promise<ParsedLink> {
+  let url = new URL(link);
+  if (url.host === 'spotify.link') {
+    link = await resolveSpotifyShortenedLink(link);
+    url = new URL(link);
+  }
+  if (url.host !== 'open.spotify.com') {
     throw new Error('That is not a Spotify link.');
   }
   const [route, id] = url.pathname.substring(1).split('/');
@@ -172,7 +193,7 @@ async function getSpotifyTracksFallback(link: string): Promise<Query[]> {
 }
 
 export async function parseSpotifyPlaylist(link: string): Promise<Query[]> {
-  const { id: playlistId } = parseSpotifyLink(link);
+  const { id: playlistId } = await parseSpotifyLink(link);
   try {
     const items = await paginateSpotifyApi(`/playlists/${playlistId}/tracks`, [
       ['fields', 'next,items(track(name,artists,external_urls))'],
@@ -185,7 +206,7 @@ export async function parseSpotifyPlaylist(link: string): Promise<Query[]> {
 }
 
 export async function parseSpotifyAlbum(link: string): Promise<Query[]> {
-  const { id: albumId } = parseSpotifyLink(link);
+  const { id: albumId } = await parseSpotifyLink(link);
   try {
     const items = await paginateSpotifyApi(`/albums/${albumId}/tracks`);
     return items.map((item: IntentionalAny) => getQueryFromSpotifyTrack(item));
@@ -206,7 +227,7 @@ async function fetchSpotifyAlbums(albumIds: string[]): Promise<IntentionalAny[]>
 }
 
 export async function parseSpotifyArtist(link: string): Promise<Query[]> {
-  const { id: artistId } = parseSpotifyLink(link);
+  const { id: artistId } = await parseSpotifyLink(link);
   try {
     const topTracks = await fetchSpotify(`/artists/${artistId}/top-tracks`, [
       ['market', 'US'],
@@ -235,7 +256,7 @@ export async function parseSpotifyArtist(link: string): Promise<Query[]> {
 }
 
 export async function parseSpotifyTrack(link: string): Promise<Query> {
-  const { id: trackId } = parseSpotifyLink(link);
+  const { id: trackId } = await parseSpotifyLink(link);
   try {
     const data = await fetchSpotify(`/tracks/${trackId}`);
     return getQueryFromSpotifyTrack(data);
