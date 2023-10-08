@@ -163,11 +163,12 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
 }
 
 export const getDetailsFromUrl = (() => {
+  const limit = pLimit(CONCURRENCY_LIMIT);
   const cache = new Map<string, Promise<VideoDetails>>();
   return async (url: string): Promise<VideoDetails> => {
     if (cache.has(url)) return cache.get(url)!;
     log('Fetching YouTube title for video', url);
-    const promise: Promise<VideoDetails> = YouTubeSr.getVideo(url).then(videoRes => {
+    const promise: Promise<VideoDetails> = limit(() => YouTubeSr.getVideo(url)).then(videoRes => {
       const { title, duration } = videoRes;
       if (!title) throw new Error('Could not fetch title');
       return { title, duration };
