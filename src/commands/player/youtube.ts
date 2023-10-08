@@ -1,8 +1,9 @@
 import axios from 'axios';
 import YouTubeSr from 'youtube-sr';
 import pLimit from 'p-limit';
+import { parse as parseIso8601Duration, toSeconds } from 'iso8601-duration';
 
-import type { IntentionalAny } from 'src/types';
+import type { GenericMapping, IntentionalAny } from 'src/types';
 import { CONCURRENCY_LIMIT, MAX_YT_PLAYLIST_PAGE_FETCHES, YT_PLAYLIST_PAGE_SIZE } from 'src/constants';
 import { log, error } from 'src/logging';
 import { filterOutFalsy } from 'src/utils';
@@ -91,35 +92,50 @@ export async function parseYoutubePlaylistFromApi(playlistUrl: string): Promise<
   const tracks: Track[] = [];
 
   do {
-    const res = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
+    const playlistItemsRes = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
       params: {
         playlistId,
         maxResults: YT_PLAYLIST_PAGE_SIZE,
-        part: 'snippet',
+        part: 'snippet,contentDetails',
         key: process.env.YOUTUBE_API_KEY,
         pageToken: nextPageToken,
       },
     });
     numPagesFetched += 1;
-    nextPageToken = res.data.nextPageToken;
+    nextPageToken = playlistItemsRes.data.nextPageToken;
     interface Result {
       link: string,
       details: VideoDetails,
     }
-    const youtubeResults: Result[] = res.data.items
+    const videoIds = (playlistItemsRes.data.items as IntentionalAny[])
+      .map((item: IntentionalAny) => item.contentDetails?.videoId)
+      .filter(Boolean)
+      .join(',');
+    const videoDetailsRes = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
+      params: {
+        // No pagination required for the list of IDs
+        id: videoIds,
+        part: 'contentDetails',
+        key: process.env.YOUTUBE_API_KEY,
+      },
+    });
+    const durations = (videoDetailsRes.data.items as IntentionalAny[]).reduce((acc, item) => {
+      acc[item.id] = toSeconds(parseIso8601Duration(item.contentDetails.duration)) * 1000;
+      return acc;
+    }, {} as GenericMapping<number>);
+    const youtubeResults: Result[] = playlistItemsRes.data.items
       .filter((item: IntentionalAny) => item.snippet?.resourceId?.kind === 'youtube#video')
       .map((item: IntentionalAny) => ({
         link: `https://youtube.com/watch?v=${item.snippet?.resourceId.videoId}`,
         details: {
           title: item.snippet?.title,
-          duration: undefined, // TODO: The duration is not available in this API endpoint, so we have to get it elsewhere
+          duration: durations[item.contentDetails?.videoId],
         },
       }));
     tracks.push(...youtubeResults.map(({ link, details }) => new Track({
       link,
       variant: TrackVariant.YOUTUBE_VOD,
-      // TODO: Temporarily commented out until we write an alternate way to get the video duration
-      // details,
+      details,
     })));
   } while (nextPageToken && numPagesFetched < MAX_YT_PLAYLIST_PAGE_FETCHES);
 

@@ -68,6 +68,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "humanize-duration": "^3.27.1",
     "ini": "^2.0.0",
+    "iso8601-duration": "^2.1.1",
     "lodash.chunk": "^4.2.0",
     "lodash.debounce": "^4.0.8",
     "lodash.get": "^4.4.2",
