@@ -163,14 +163,16 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
 }
 
 export const getDetailsFromUrl = (() => {
-  const cache = new Map<string, VideoDetails>();
+  const cache = new Map<string, Promise<VideoDetails>>();
   return async (url: string): Promise<VideoDetails> => {
     if (cache.has(url)) return cache.get(url)!;
     log('Fetching YouTube title for video', url);
-    const videoRes = await YouTubeSr.getVideo(url);
-    const { title, duration } = videoRes;
-    if (!title) throw new Error('Could not fetch title');
-    cache.set(url, { title, duration });
-    return { title, duration };
+    const promise: Promise<VideoDetails> = YouTubeSr.getVideo(url).then(videoRes => {
+      const { title, duration } = videoRes;
+      if (!title) throw new Error('Could not fetch title');
+      return { title, duration };
+    });
+    cache.set(url, promise);
+    return promise;
   };
 })();
