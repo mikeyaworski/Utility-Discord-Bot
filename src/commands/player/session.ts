@@ -21,7 +21,7 @@ import { getChannel, isText } from 'src/discord-utils';
 import { emit } from 'src/api/sockets';
 import { SocketEventTypes } from 'src/types/sockets';
 import sessions from './sessions';
-import Track, { AudioResourceOptions, TrackVariant } from './track';
+import Track, { AudioResourceOptions } from './track';
 import { getMessageData, listenForPlayerButtons } from './utils';
 import { runNowPlaying } from './now-playing';
 import { PlayerStatus, TrackData, CurrentTrackPlayTime } from './types';
