@@ -36,6 +36,7 @@ export const SPOTIFY_PAGE_SIZE = 50;
 export const MAX_SPOTIFY_PAGE_FETCHES = 4;
 
 export const MAX_QUEUE_LENGTH = 300;
+export const QUEUE_SNIPPET_LENGTH = 10;
 
 export const CONCURRENCY_LIMIT = 10;
 

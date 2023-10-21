@@ -13,6 +13,7 @@ import type { VoiceBasedChannel, VoiceState } from 'discord.js';
 
 import { promisify } from 'util';
 
+import { QUEUE_SNIPPET_LENGTH } from 'src/constants';
 import { client } from 'src/client';
 import { PlayerUpdates } from 'src/models/player-updates';
 import { log, error } from 'src/logging';
@@ -175,7 +176,7 @@ export default class Session {
       currentTrack: this.currentTrack ? await getTrackData(this.currentTrack) : null,
       currentTime: this.currentTrackPlayTime,
       playbackSpeed: this.playbackSpeed,
-      queue: await Promise.all(queue.map(track => getTrackData(track))),
+      queue: await Promise.all(queue.slice(0, QUEUE_SNIPPET_LENGTH).map(track => getTrackData(track))),
       totalQueueSize: queue.length,
       isPaused: this.isPaused(),
       isLooped: this.isLooped(),

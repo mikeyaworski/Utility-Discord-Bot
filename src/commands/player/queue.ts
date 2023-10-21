@@ -2,7 +2,7 @@ import type { AnyInteraction, Command, CommandOrModalRunMethod, EmbedFields, Int
 import { SlashCommandBuilder } from '@discordjs/builders';
 import pLimit from 'p-limit';
 import { ContextMenuTypes } from 'src/types';
-import { CONCURRENCY_LIMIT } from 'src/constants';
+import { CONCURRENCY_LIMIT, QUEUE_SNIPPET_LENGTH } from 'src/constants';
 import { checkVoiceErrorsByInteraction, getSubcommand, parseInput } from 'src/discord-utils';
 import type Session from './session';
 import sessions from './sessions';
@@ -80,15 +80,15 @@ export async function handleList(interaction: AnyInteraction, session: Session):
         };
       }
       const combinedQueue = s.isLooped() ? s.queue.concat(s.queueLoop) : s.queue;
-      type Next10 = {
+      type QueueSnippet = {
         title: string,
         position: number,
       }[];
       // Concurrency limit can be used if there is audio hitching while making requests.
       // This was an issue in older implementations, but not anymore, which is why the limit is currently at 10.
       const limit = pLimit(CONCURRENCY_LIMIT);
-      const next10 = (await Promise.all(combinedQueue
-        .slice(0, 10)
+      const queueSnippet = (await Promise.all(combinedQueue
+        .slice(0, QUEUE_SNIPPET_LENGTH)
         .map((track, idx) => limit(async () => {
           try {
             const details = await getVideoDetailsWithFallback(track);
@@ -99,7 +99,7 @@ export async function handleList(interaction: AnyInteraction, session: Session):
           } catch {
             return null;
           }
-        })))).filter(Boolean) as Next10;
+        })))).filter(Boolean) as QueueSnippet;
       const nowPlayingTitle = (await getVideoDetailsWithFallback(currentTrack)).title;
       const totalQueued = s.isLooped() ? s.queueLoop.length : s.queue.length;
 
@@ -121,14 +121,14 @@ export async function handleList(interaction: AnyInteraction, session: Session):
         },
       ];
 
-      if (next10.length > 0) {
+      if (queueSnippet.length > 0) {
         fields.push({
           name: 'Length of Queue',
           value: String(totalQueued),
           inline: true,
         }, {
           name: 'Queue (max 10 are shown)',
-          value: next10.map(details => `#${details.position}: ${details.title}`).join('\n'),
+          value: queueSnippet.map(details => `#${details.position}: ${details.title}`).join('\n'),
           inline: false,
         });
       }
