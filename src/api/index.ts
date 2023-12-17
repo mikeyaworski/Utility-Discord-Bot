@@ -14,6 +14,7 @@ import dmsRouter from 'src/api/routes/dms';
 import chessRouter from 'src/api/routes/chess';
 import playerRouter from 'src/api/routes/player';
 import webhooksRouter from 'src/api/routes/webhooks';
+import chatGptRouter from 'src/api/routes/chatgpt';
 
 import { WAKE_INTERVAL } from 'src/constants';
 import { log, error } from 'src/logging';
@@ -64,6 +65,7 @@ export function initApi(): void {
   app.use('/chess', chessRouter);
   app.use('/player', playerRouter);
   app.use('/webhooks', webhooksRouter);
+  app.use('/chatgpt', chatGptRouter);
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   httpServer.listen(port, () => {
     log('Listening on port', port);

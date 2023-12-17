@@ -43,24 +43,23 @@ commandBuilder.addBooleanOption(option => {
     .setRequired(false);
 });
 
-export async function getChatGptResponse({
-  query,
-  userId,
-  guildId,
-}: {
+export async function getChatGptResponse(options: {
   query: string,
   userId: string,
   guildId?: string | null,
+  conversation?: ChatCompletionRequestMessage[],
 }): Promise<string> {
   if (!apiKey) {
     throw new Error('ChatGPT is not configured on the bot.');
   }
 
+  const { userId, guildId, query } = options;
+
   // This throws an error if rate limited
   await rateLimiter.attempt({ userId, guildId });
 
   const conversationKey = userId + guildId;
-  const conversation = conversations?.get<ChatCompletionRequestMessage[]>(conversationKey) ?? [];
+  const conversation = options.conversation ?? conversations?.get<ChatCompletionRequestMessage[]>(conversationKey) ?? [];
   const chatCompletion = await openai.createChatCompletion({
     model: 'gpt-3.5-turbo',
     messages: [
@@ -74,7 +73,7 @@ export async function getChatGptResponse({
   const responseMessage = chatCompletion.data.choices[0].message;
 
   // Update cached conversation
-  if (responseMessage && conversations) {
+  if (responseMessage && conversations && !options.conversation) {
     const conversation = conversations.get<ChatCompletionRequestMessage[]>(userId + guildId) ?? [];
     conversations.set(conversationKey, [
       ...conversation,
