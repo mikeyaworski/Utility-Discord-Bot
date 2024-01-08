@@ -6,7 +6,7 @@ Prior to Heroku removing their free tier, it was smart to use Heroku's free tier
 1. Use a password. Make it *UNIQUE* since this password will be pasted into your environment variables
 1. Go to
    ```
-   https://app.supabase.com/project/<YOUR_PROJECT_ID>/settings/database
+   https://supabase.com/dashboard/project/<YOUR_PROJECT_ID>/settings/database
    ```
 1. At the bottom of the page, you'll find your database connection string. Copy it and replace `[YOUR-PASSWORD]` with your password that you used when creating this Supabase account.
 1. You will use this connection string in your environment variables for your bot deployment. Your environment variables are set depending on where you deploy the app to. For cloud VMs, it'll be in a `.env` file, but for other platforms like Heroku, it'll be in their dashboard.
