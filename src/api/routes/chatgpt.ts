@@ -40,7 +40,9 @@ async function handleMessage({
     });
     return res.status(200).send(chatGptResponse);
   } catch (err) {
-    return res.status(400).send(String(err));
+    const errStr = String(err);
+    const status = errStr.includes('rate limited') ? 429 : 400;
+    return res.status(status).send(errStr);
   }
 }
 
