@@ -62,7 +62,10 @@ export async function getUserFromAuthToken(auth: string): Promise<User> {
       }),
     ];
   }
-  const [userRes, guildsRes] = await Promise.all(discordPromises[auth]);
+  const [userRes, guildsRes] = await Promise.all(discordPromises[auth]).catch(err => {
+    delete discordPromises[auth];
+    throw err;
+  });
 
   const { data: userData } = userRes;
   const { data: guildsData } = guildsRes;
