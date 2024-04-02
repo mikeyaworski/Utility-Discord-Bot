@@ -10,6 +10,7 @@ import {
   getRateLimiterFromEnv,
   parseInput,
 } from 'src/discord-utils';
+import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 
 const apiKey = process.env.OPENAI_SECRET_KEY;
 const configuration = new Configuration({
@@ -24,7 +25,10 @@ const conversations = conversationTimeLimit ? new NodeCache({
   checkperiod: 600,
 }) : null;
 
-const rateLimiter = getRateLimiterFromEnv('CHATGPT_USER_LIMIT', 'CHATGPT_GUILD_LIMIT');
+const regularRateLimiter = getRateLimiterFromEnv('CHATGPT_USER_LIMIT', 'CHATGPT_GUILD_LIMIT');
+const whiteListedRateLimiter = getRateLimiterFromEnv('CHATGPT_WHITELIST_USER_LIMIT', 'CHATGPT_GUILD_LIMIT');
+
+const whiteListedUserIds = new Set<string>(process.env.CHATGPT_WHITELIST_USER_IDS?.split(ENV_LIMITER_SPLIT_REGEX) || []);
 
 const commandBuilder = new SlashCommandBuilder();
 commandBuilder
@@ -56,6 +60,7 @@ export async function getChatGptResponse(options: {
   const { userId, guildId, query } = options;
 
   // This throws an error if rate limited
+  const rateLimiter = whiteListedUserIds.has(userId) ? whiteListedRateLimiter : regularRateLimiter;
   await rateLimiter.attempt({ userId, guildId });
 
   const conversationKey = userId + guildId;

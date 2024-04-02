@@ -26,7 +26,7 @@ Optional variables:
 - `WEBHOOK_SECRET`, which will only be used for the `/webhooks` API route. By default, this route is unused and is generally only useful if you would like a third party (e.g. IFTTT) to send messages via webhooks.
 - `YOUTUBE_API_KEY`, which is used to fetch playlist videos for the player commands.
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
-- `OPENAI_SECRET_KEY`, `CHATGPT_USER_LIMIT`, `CHATGPT_GUILD_LIMIT` and `CHATGPT_CONVERSATION_TIME_LIMIT` are used to fetch queries from ChatGPT.
+- `OPENAI_SECRET_KEY`, `CHATGPT_USER_LIMIT`, `CHATGPT_WHITELIST_USER_LIMIT`, `CHATGPT_WHITELIST_USER_IDS`, `CHATGPT_GUILD_LIMIT` and `CHATGPT_CONVERSATION_TIME_LIMIT` are used to fetch queries from ChatGPT.
 
 ```
 # Use "production" when deploying
@@ -48,6 +48,9 @@ SPOTIFY_CLIENT_SECRET=...
 OPENAI_SECRET_KEY=...
 # 2 requests every 60 seconds
 CHATGPT_USER_LIMIT=2,60
+CHATGPT_WHITELIST_USER_LIMIT=5,30
+# Comma-separated
+CHATGPT_WHITELIST_USER_IDS=
 CHATGPT_GUILD_LIMIT=10,60
 # in seconds
 CHATGPT_CONVERSATION_TIME_LIMIT=10
