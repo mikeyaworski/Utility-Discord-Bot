@@ -1,7 +1,8 @@
 import type { Command, CommandOrModalRunMethod } from 'src/types';
+import type { Attachment } from 'discord.js';
 
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { Configuration, OpenAIApi, ChatCompletionRequestMessage } from 'openai';
+import OpenAI from 'openai';
 import NodeCache from 'node-cache';
 
 import {
@@ -9,14 +10,14 @@ import {
   getBooleanArg,
   getRateLimiterFromEnv,
   parseInput,
+  throwIfNotImageAttachment,
 } from 'src/discord-utils';
 import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 
+export type ChatMessage = OpenAI.ChatCompletionMessageParam;
+
 const apiKey = process.env.OPENAI_SECRET_KEY;
-const configuration = new Configuration({
-  apiKey,
-});
-const openai = new OpenAIApi(configuration);
+const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
 const conversationTimeLimit = process.env.CHATGPT_CONVERSATION_TIME_LIMIT;
 const conversations = conversationTimeLimit ? new NodeCache({
@@ -40,6 +41,12 @@ commandBuilder.addStringOption(option => {
     .setDescription('The query (a question for ChatGPT).')
     .setRequired(true);
 });
+commandBuilder.addAttachmentOption(option => {
+  return option
+    .setName('image')
+    .setDescription('An image to include with your query.')
+    .setRequired(false);
+});
 commandBuilder.addBooleanOption(option => {
   return option
     .setName('ephemeral')
@@ -49,43 +56,57 @@ commandBuilder.addBooleanOption(option => {
 
 export async function getChatGptResponse(options: {
   query: string,
+  queryImage?: string, // URL
   userId: string,
   guildId?: string | null,
-  conversation?: ChatCompletionRequestMessage[],
+  conversation?: ChatMessage[],
 }): Promise<string> {
-  if (!apiKey) {
+  if (!openai) {
     throw new Error('ChatGPT is not configured on the bot.');
   }
 
-  const { userId, guildId, query } = options;
+  const { userId, guildId, query, queryImage } = options;
+
+  if (queryImage && !whiteListedUserIds.has(userId)) {
+    throw new Error('You are not permitted to submit images.');
+  }
 
   // This throws an error if rate limited
   const rateLimiter = whiteListedUserIds.has(userId) ? whiteListedRateLimiter : regularRateLimiter;
   await rateLimiter.attempt({ userId, guildId });
 
   const conversationKey = userId + guildId;
-  const conversation = options.conversation ?? conversations?.get<ChatCompletionRequestMessage[]>(conversationKey) ?? [];
-  const chatCompletion = await openai.createChatCompletion({
-    model: 'gpt-3.5-turbo',
+  const conversation = options.conversation ?? conversations?.get<ChatMessage[]>(conversationKey) ?? [];
+
+  const newMessage: ChatMessage = {
+    role: 'user',
+    content: queryImage ? [
+      { type: 'text', text: query },
+      {
+        type: 'image_url',
+        image_url: {
+          url: queryImage,
+          detail: 'low',
+        },
+      },
+    ] : query,
+  };
+
+  const chatCompletion = await openai.chat.completions.create({
+    model: 'gpt-4o',
     messages: [
       ...conversation,
-      {
-        role: 'user',
-        content: query,
-      },
+      newMessage,
     ],
   });
-  const responseMessage = chatCompletion.data.choices[0].message;
+  const responseMessage = chatCompletion.choices[0].message;
 
   // Update cached conversation
   if (responseMessage && conversations && !options.conversation) {
-    const conversation = conversations.get<ChatCompletionRequestMessage[]>(userId + guildId) ?? [];
+    const conversation = conversations.get<ChatMessage[]>(userId + guildId) ?? [];
     conversations.set(conversationKey, [
       ...conversation,
-      {
-        role: 'user',
-        content: query,
-      },
+      newMessage,
       responseMessage,
     ]);
   }
@@ -99,12 +120,16 @@ const run: CommandOrModalRunMethod = async interaction => {
 
   const inputs = await parseInput({ slashCommandData: commandBuilder, interaction });
   const query: string = inputs.query;
-
+  const attachment: Attachment | undefined = inputs.image;
   const userId = interaction.user.id;
   const guildId = interaction.guildId || '';
 
+  const queryImage = attachment?.url;
+  throwIfNotImageAttachment(attachment);
+
   const content = await getChatGptResponse({
     query,
+    queryImage,
     userId,
     guildId,
   });
@@ -119,6 +144,13 @@ const run: CommandOrModalRunMethod = async interaction => {
 const ChatGptCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
+  modalHiddenArgs: ['image'],
+  modalLabels: {
+    ephemeral: 'Show only to you? (Defaults to "no")',
+  },
+  modalPlaceholders: {
+    ephemeral: 'yes/no',
+  },
   runCommand: run,
   runModal: run,
 };

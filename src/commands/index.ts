@@ -171,7 +171,7 @@ export function listenToCommands(): void {
                 .setStyle(option.name === 'message' ? TextInputStyle.Paragraph : TextInputStyle.Short);
               // Each row can only hold one input
               const row = new ActionRowBuilder<TextInputBuilder>().addComponents(input);
-              modal.addComponents(row);
+              if (!command.modalHiddenArgs?.includes(option.name)) modal.addComponents(row);
             });
           try {
             await interaction.showModal(modal);
