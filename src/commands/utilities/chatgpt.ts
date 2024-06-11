@@ -10,6 +10,7 @@ import {
   getBooleanArg,
   getRateLimiterFromEnv,
   parseInput,
+  throwIfNotImageAttachment,
 } from 'src/discord-utils';
 import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 
@@ -124,6 +125,7 @@ const run: CommandOrModalRunMethod = async interaction => {
   const guildId = interaction.guildId || '';
 
   const queryImage = attachment?.url;
+  throwIfNotImageAttachment(attachment);
 
   const content = await getChatGptResponse({
     query,

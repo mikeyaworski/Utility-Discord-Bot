@@ -1,4 +1,5 @@
 import {
+  Attachment,
   Message,
   User,
   PermissionResolvable,
@@ -1186,4 +1187,10 @@ export function getRateLimiterFromEnv(userKey: string, guildKey: string): RateLi
       duration: guildLimit[1],
     } : undefined,
   });
+}
+
+export function throwIfNotImageAttachment(attachment: Attachment | undefined | null): void {
+  if (attachment && !(attachment.contentType && /^image\//.test(attachment.contentType))) {
+    throw new Error('Attachment must be an image.');
+  }
 }
