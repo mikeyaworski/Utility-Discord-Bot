@@ -142,6 +142,13 @@ const run: CommandOrModalRunMethod = async interaction => {
 const ChatGptCommand: Command = {
   guildOnly: false,
   slashCommandData: commandBuilder,
+  modalHiddenArgs: ['image'],
+  modalLabels: {
+    ephemeral: 'Show only to you? (Defaults to "no")',
+  },
+  modalPlaceholders: {
+    ephemeral: 'yes/no',
+  },
   runCommand: run,
   runModal: run,
 };
