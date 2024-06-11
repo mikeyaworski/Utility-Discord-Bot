@@ -69,6 +69,7 @@ export interface Command {
   runModal?: (interaction: ModalSubmitInteraction) => Promise<IntentionalAny>,
   modalLabels?: StringMapping,
   modalPlaceholders?: StringMapping,
+  modalHiddenArgs?: string[],
   showModalWithNoArgs?: boolean,
   buttonAction?: (interaction: ButtonInteraction) => Promise<IntentionalAny>,
   guildOnly?: boolean,
