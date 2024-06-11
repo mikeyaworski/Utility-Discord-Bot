@@ -15,8 +15,7 @@ import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 export type ChatMessage = OpenAI.ChatCompletionMessageParam;
 
 const apiKey = process.env.OPENAI_SECRET_KEY;
-
-const openai = new OpenAI({ apiKey });
+const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
 const conversationTimeLimit = process.env.CHATGPT_CONVERSATION_TIME_LIMIT;
 const conversations = conversationTimeLimit ? new NodeCache({
@@ -60,7 +59,7 @@ export async function getChatGptResponse(options: {
   guildId?: string | null,
   conversation?: ChatMessage[],
 }): Promise<string> {
-  if (!apiKey) {
+  if (!openai) {
     throw new Error('ChatGPT is not configured on the bot.');
   }
 
