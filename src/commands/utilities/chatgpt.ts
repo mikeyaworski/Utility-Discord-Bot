@@ -1,5 +1,6 @@
 import type { Command, CommandOrModalRunMethod } from 'src/types';
 import type { Attachment } from 'discord.js';
+
 import { SlashCommandBuilder } from '@discordjs/builders';
 import OpenAI from 'openai';
 import NodeCache from 'node-cache';
