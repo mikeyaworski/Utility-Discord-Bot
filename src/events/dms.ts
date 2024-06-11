@@ -10,6 +10,7 @@ const NewDmEvent: EventTrigger = ['messageCreate', async (message: Message): Pro
     try {
       const response = await getChatGptResponse({
         query: message.content,
+        queryImage: message.attachments?.at(0)?.url,
         userId: message.author.id,
         guildId: message.guildId,
       });

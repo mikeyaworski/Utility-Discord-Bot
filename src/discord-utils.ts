@@ -855,6 +855,10 @@ export async function parseInput({
           resolvedInputs[option.name] = options.getUser(option.name);
           break;
         }
+        case ApplicationCommandOptionType.Attachment: {
+          resolvedInputs[option.name] = options.getAttachment(option.name);
+          break;
+        }
         default: {
           resolvedInputs[option.name] = option.value;
         }
@@ -879,52 +883,52 @@ export async function parseInput({
       return;
     }
     switch (option.type) {
-      case 4: { // Integer
+      case ApplicationCommandOptionType.Integer: {
         const int = parseInt(input, 10);
         if (Number.isNaN(int)) throw new Error(`Could not parse "${input}" to an integer.`);
         resolvedInputs[option.name] = int;
         break;
       }
-      case 10: { // Number
+      case ApplicationCommandOptionType.Number: {
         const num = Number(input);
         if (Number.isNaN(num)) throw new Error(`Could not parse "${input}" to a number.`);
         resolvedInputs[option.name] = num;
         break;
       }
-      case 5: { // Boolean
+      case ApplicationCommandOptionType.Boolean: {
         if (input) {
           resolvedInputs[option.name] = getBooleanFromValue(input);
         }
         break;
       }
-      case 6: { // User
+      case ApplicationCommandOptionType.User: {
         if (!interaction.guild || !input) break;
         const member = await resolveMember(input, interaction);
         if (!member) throw new Error(`Could not find member based on: ${input}`);
         resolvedInputs[option.name] = member;
         break;
       }
-      case 9: { // Mentionable
+      case ApplicationCommandOptionType.Mentionable: {
         // TODO
         // We don't currently have a command which uses this, so build this out later.
         resolvedInputs[option.name] = input;
         break;
       }
-      case 7: { // Channel
+      case ApplicationCommandOptionType.Channel: {
         if (!interaction.guild || !input) break;
         const channel = await resolveChannel(input, interaction);
         if (!channel) throw new Error(`Could not find channel based on: ${input}`);
         resolvedInputs[option.name] = channel;
         break;
       }
-      case 8: { // Role
+      case ApplicationCommandOptionType.Role: {
         if (!interaction.guild || !input) break;
         const role = await resolveRole(input, interaction);
         if (!role) throw new Error(`Could not find role based on: ${input}`);
         resolvedInputs[option.name] = role;
         break;
       }
-      case 3: // String
+      case ApplicationCommandOptionType.String:
       default: {
         if (!input) break;
         if (!interaction.guild) {

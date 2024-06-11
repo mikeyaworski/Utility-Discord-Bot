@@ -1,12 +1,11 @@
 import express, { Response } from 'express';
-import { ChatCompletionRequestMessage } from 'openai';
 import { IntentionalAny } from 'src/types';
 import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
-import { getChatGptResponse } from 'src/commands/utilities/chatgpt';
+import { getChatGptResponse, ChatMessage } from 'src/commands/utilities/chatgpt';
 
 const router = express.Router();
 
-function validateConversation(conversation: IntentionalAny[]): conversation is ChatCompletionRequestMessage[] {
+function validateConversation(conversation: IntentionalAny[]): conversation is ChatMessage[] {
   return conversation.every(message => {
     return typeof message === 'object'
       && message
@@ -48,6 +47,7 @@ async function handleMessage({
 
 // @ts-expect-error
 router.post('/message', authMiddleware, (req: AuthRequest, res) => {
+  // TODO: Add queryImage support
   const { query, conversation } = req.body;
   handleMessage({
     query,
