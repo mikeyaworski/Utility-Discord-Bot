@@ -19,9 +19,7 @@ const commandBuilder = new SlashCommandBuilder()
     .setRequired(true));
 
 const run: CommandOrModalRunMethod = async interaction => {
-  await interaction.deferReply({
-    ephemeral: true,
-  });
+  await interaction.deferReply({ ephemeral: true });
   const session = sessions.get(interaction.guild!.id);
   if (!session) return interaction.editReply('Session does not exist');
   await checkVoiceErrorsByInteraction(interaction);

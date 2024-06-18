@@ -1,13 +1,13 @@
 import axios from 'axios';
 import YouTubeSr from 'youtube-sr';
 import pLimit from 'p-limit';
+import chunk from 'lodash.chunk';
 import { parse as parseIso8601Duration, toSeconds } from 'iso8601-duration';
 
 import type { GenericMapping, IntentionalAny } from 'src/types';
 import { CONCURRENCY_LIMIT, MAX_YT_PLAYLIST_PAGE_FETCHES, YT_PLAYLIST_PAGE_SIZE } from 'src/constants';
 import { log, error } from 'src/logging';
 import { filterOutFalsy } from 'src/utils';
-import chunk from 'lodash.chunk';
 import Track, { TrackVariant, VideoDetails } from './track';
 import { Query, QueryType } from './types';
 
