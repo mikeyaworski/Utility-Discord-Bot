@@ -15,7 +15,7 @@ import { promisify } from 'util';
 
 import { QUEUE_SNIPPET_LENGTH } from 'src/constants';
 import { client } from 'src/client';
-import { PlayerUpdates } from 'src/models/player-updates';
+import { PlayerSettings } from 'src/models/player-settings';
 import { log, error } from 'src/logging';
 import { shuffleArray } from 'src/utils';
 import { getChannel, isText } from 'src/discord-utils';
@@ -39,6 +39,8 @@ export default class Session {
   private queueLock = false;
   private readyLock = false;
   private playbackSpeed = 1;
+  // Store this redundantly to avoid the need to fetch it from the database every time a new track starts
+  private shouldNormalizeAudio = false;
 
   // DiscordJS does not provide this for us, so we manually keep track of an approximate duration in the current track
   private currentTrackPlayTime: CurrentTrackPlayTime = {
@@ -49,13 +51,14 @@ export default class Session {
     speed: 1,
   };
 
-  public constructor(channel: VoiceBasedChannel) {
+  public constructor(channel: VoiceBasedChannel, shouldNormalizeAudio: boolean) {
     const voiceConnection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
     });
 
+    this.shouldNormalizeAudio = shouldNormalizeAudio;
     this.channelId = channel.id;
     this.guildId = channel.guild.id;
     this.audioPlayer = createAudioPlayer();
@@ -342,9 +345,18 @@ export default class Session {
     return this.currentTrackPlayTime.speed;
   }
 
+  public setShouldNormalizeAudio(shouldNormalizeAudio: boolean): void {
+    this.shouldNormalizeAudio = shouldNormalizeAudio;
+  }
+
+  public getShouldNormalizeAudio(): boolean {
+    return this.shouldNormalizeAudio;
+  }
+
   private getAudioResourceOptions(): AudioResourceOptions {
     return {
       speed: this.playbackSpeed !== 1 ? this.playbackSpeed : undefined,
+      shouldNormalizeAudio: this.shouldNormalizeAudio,
     };
   }
 
@@ -437,9 +449,10 @@ export default class Session {
       // TODO: Extract this to a helper function
       // Also consider baking this into replyWithSessionButtons, but adding an option
       // to specify that we do not want to update the embeded data when buttons are interacted with
-      const playerUpdateSetting = await PlayerUpdates.findByPk(this.guildId);
-      if (playerUpdateSetting) {
-        const channel = await getChannel(playerUpdateSetting.channel_id);
+      const playerSettings = await PlayerSettings.findByPk(this.guildId);
+      const playerUpdatesChannel = playerSettings?.updates_channel_id;
+      if (playerUpdatesChannel) {
+        const channel = await getChannel(playerUpdatesChannel);
         if (channel && isText(channel)) {
           const nowPlayingData = await runNowPlaying(this);
           const messageData = await getMessageData({

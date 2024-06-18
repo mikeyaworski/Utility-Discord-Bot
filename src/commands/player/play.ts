@@ -187,7 +187,7 @@ export async function play({
     return editReplyOrThrow('You must provide at least one argument.');
   }
 
-  if (!session) session = sessions.create(channel);
+  if (!session) session = await sessions.create(channel);
 
   if (shuffle) session.shuffle();
 

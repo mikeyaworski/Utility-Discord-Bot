@@ -1,11 +1,13 @@
 import { VoiceBasedChannel } from 'discord.js';
+import { PlayerSettings } from 'src/models/player-settings';
 import Session from './session';
 
 export class Sessions {
   private sessions = new Map<string, Session>();
 
-  public create(channel: VoiceBasedChannel): Session {
-    const session = new Session(channel);
+  public async create(channel: VoiceBasedChannel): Promise<Session> {
+    const playerSettings = await PlayerSettings.findByPk(channel.guildId);
+    const session = new Session(channel, playerSettings?.normalize ?? false);
     this.sessions.set(channel.guild.id, session);
     return session;
   }

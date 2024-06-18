@@ -16,6 +16,7 @@ export interface VideoDetails {
 export interface AudioResourceOptions {
   seek?: number, // in seconds
   speed?: number, // multiplier
+  shouldNormalizeAudio?: boolean,
 }
 
 export enum TrackVariant {
@@ -50,7 +51,7 @@ export default class Track {
   }
 
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
-    const { seek, speed } = options;
+    const { seek, speed, shouldNormalizeAudio = true } = options;
 
     // Cookies for play-dl are set in .data/youtube.data
     const tryPlayDl: () => Promise<AudioResource<Track>> = async () => {
@@ -111,6 +112,18 @@ export default class Track {
           }
           if (seek) {
             manipulatedStream.setStartTime(Math.ceil(seek));
+          }
+          if (shouldNormalizeAudio) {
+            // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
+            // https://k.ylo.ph/2016/04/04/loudnorm.html
+            manipulatedStream.audioFilters([{
+              filter: 'loudnorm',
+              options: [
+                'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+                'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
+                'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
+              ],
+            }]);
           }
           // No need to demuxProbe since we have piped the audio through FFmpeg and specified the Opus codec with Ogg container
           // @ts-expect-error This actually works

@@ -33,7 +33,7 @@ import Resume from './player/resume';
 import NowPlaying from './player/now-playing';
 import Queue from './player/queue';
 import Loop from './player/loop';
-import PlayerUpdates from './player/player-updates';
+import PlayerSettings from './player/player-settings';
 import PlayerFavorites from './player/player-favorites';
 
 const commands = [
@@ -61,7 +61,7 @@ const commands = [
   Queue,
   Leave,
   Loop,
-  PlayerUpdates,
+  PlayerSettings,
   PlayerFavorites,
 
   // Chess
