@@ -74,12 +74,10 @@ export default class Track {
           quiet: true,
           format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
           cookies: './.data/cookies.txt',
-          ignoreErrors: true,
-          // @ts-ignore We know this is valid
-          noAbortOnError: true,
         }, {
-          // Pipe only stdout to the parent process
-          stdio: ['ignore', 'pipe', 'ignore'],
+          // Pipe stdout and stderr to the parent process. Ignore stdin.
+          // Obviously stdout is for the audio data, and stderr is for any error output.
+          stdio: ['ignore', 'pipe', 'pipe'],
         });
         if (!process.stdout) {
           reject(new Error('No stdout'));
