@@ -1,6 +1,6 @@
-import { AudioResource, createAudioResource } from '@discordjs/voice';
+import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
 
-import { exec as ytdlExec } from 'youtube-dl-exec';
+import ytdlExec from 'youtube-dl-exec';
 import ffmpeg from 'fluent-ffmpeg';
 import play from 'play-dl';
 import ytdl from 'ytdl-core';
@@ -32,6 +32,8 @@ interface TrackConstructorOptions {
   sourceLink?: string,
 }
 
+const YOUTUBE_COOKIES = process.env.YOUTUBE_COOKIES;
+
 export default class Track {
   public readonly id: string;
   public readonly link: string;
@@ -50,6 +52,7 @@ export default class Track {
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     const { seek, speed } = options;
 
+    // Cookies for play-dl are set in .data/youtube.data
     const tryPlayDl: () => Promise<AudioResource<Track>> = async () => {
       const source = options.seek
         ? await play.stream(this.link, {
@@ -66,14 +69,19 @@ export default class Track {
     const tryYtdlExec: () => Promise<AudioResource<Track>> = async () => {
       // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/track.ts#L46-L76
       return new Promise((resolve, reject) => {
-        const process = ytdlExec(this.link, {
+        const process = ytdlExec.exec(this.link, {
           output: '-',
           quiet: true,
-          format: 'bestaudio',
+          format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
+          cookies: './.data/cookies.txt',
+          // These flags are not verified to reduce any server crashes,
+          // but that is the intention.
+          ignoreErrors: true,
+          // @ts-ignore We know this is valid
+          noAbortOnError: true,
         }, {
+          // Pipe only stdout to the parent process
           stdio: ['ignore', 'pipe', 'ignore'],
-          maxBuffer: 10_000_000,
-          buffer: false,
         });
         if (!process.stdout) {
           reject(new Error('No stdout'));
@@ -92,17 +100,27 @@ export default class Track {
           }
           error(err);
         };
+        process.on('error', onError);
         process.once('spawn', () => {
-          const manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3');
+          // Use Opus format for better performance with Discord.js
+          const manipulatedStream = ffmpeg({ source: stream })
+            .audioCodec('libopus')
+            .toFormat('ogg');
           if (speed) {
-            manipulatedStream.audioFilters(`atempo=${speed}`);
+            manipulatedStream.audioFilters([{ filter: 'atempo', options: String(speed) }]);
           }
           if (seek) {
             manipulatedStream.setStartTime(Math.ceil(seek));
           }
+          // No need to demuxProbe since we have piped the audio through FFmpeg and specified the Opus codec with Ogg container
           // @ts-expect-error This actually works
-          return resolve(createAudioResource(manipulatedStream, { metadata: this }));
-        }).catch(onError);
+          return resolve(createAudioResource(manipulatedStream, { metadata: this, inputType: StreamType.OggOpus }));
+        });
+        process.on('exit', (code, signal) => {
+          if (code || signal) {
+            error('yt-dlp process exited with code', code, 'and signal', signal);
+          }
+        });
       });
     };
 
@@ -112,7 +130,14 @@ export default class Track {
      * This is probably faster than youtube-dl-exec, so it would be nice to use this instead if possible.
      */
     const tryYtdlCore: () => Promise<AudioResource<Track>> = async () => {
-      const stream = ytdl(this.link);
+      const options: ytdl.downloadOptions | undefined = YOUTUBE_COOKIES ? {
+        requestOptions: {
+          headers: {
+            cookie: YOUTUBE_COOKIES,
+          },
+        },
+      } : undefined;
+      const stream = ytdl(this.link, options);
       if (!seek && !speed) {
         return createAudioResource(stream, { metadata: this });
       }
@@ -130,19 +155,21 @@ export default class Track {
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        if (!speed) {
-          try {
-            const audioResource = await tryPlayDl();
-            return audioResource;
-          } catch (err) {
-            error('Error playing resource from play-dl', err);
-          }
-        }
+        // play-dl is currently broken
+        // if (!speed) {
+        //   try {
+        //     const audioResource = await tryPlayDl();
+        //     return audioResource;
+        //   } catch (err) {
+        //     error('Error playing resource from play-dl', err);
+        //   }
+        // }
       }
       // We want to fall through if play-dl doesn't work, or the speed option is provided
       // eslint-disable-next-line no-fallthrough
       default: {
-        return tryYtdlExec();
+        const audioResource = await tryYtdlExec();
+        return audioResource;
       }
     }
   }

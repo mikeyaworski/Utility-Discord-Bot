@@ -25,6 +25,7 @@ Optional variables:
 - `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
 - `WEBHOOK_SECRET`, which will only be used for the `/webhooks` API route. By default, this route is unused and is generally only useful if you would like a third party (e.g. IFTTT) to send messages via webhooks.
 - `YOUTUBE_API_KEY`, which is used to fetch playlist videos for the player commands.
+- `YOUTUBE_COOKIES`, which is used to authenticate yourself when the player tries to play audio from YouTube.
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
 - `OPENAI_SECRET_KEY`, `CHATGPT_USER_LIMIT`, `CHATGPT_WHITELIST_USER_LIMIT`, `CHATGPT_WHITELIST_USER_IDS`, `CHATGPT_GUILD_LIMIT` and `CHATGPT_CONVERSATION_TIME_LIMIT` are used to fetch queries from ChatGPT.
 
@@ -40,7 +41,10 @@ DATABASE_URL=postgres://user:password@utility-discord-bot-db:5432/utility-discor
 DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
+
 YOUTUBE_API_KEY=...
+YOUTUBE_COOKIES="..."
+
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
 
@@ -71,6 +75,32 @@ UI_ROOT=http://localhost:8080
 ```
 
 If you are creating these environment variables for a cloud VM, make sure to change `ENVIRONMENT` to `production`, and replace `DATABASE_URL` with your production database URL (either the one from Heroku, or another service that you have set up).
+
+## Player Cookies
+
+Cookies are messy. Right now, there are three possible libraries used for the player (each can fail, so there are fallbacks):
+- `play-dl`
+- `youtube-dl-exec`
+- `ytdl-core`
+
+As a result, there are 3 different places to insert cookies, depending on which library you want to feed cookies to. It is possible to consolidate this into one place, but since each library accepts cookies in a different format and you may want to use different cookies for each library, it was convenient to just leave it as is (messy).
+
+- play-dl
+  - Create a `.data/youtube.data` file in the root of wherever you run the bot. This `.data` directory is mounted as a volume on the server (if you use the provided `deploy/docker-compose.yaml` file). This file can be created manually or automatically. The format is
+    ```
+    {
+      "cookie": {
+        "name1": "value1",
+        "name2": "value2",
+        ...
+      }
+    }
+    ```
+    where each key-value-pair is a cookie name to its value. This is a bad format, but it's what the library requires. To do this automatically, open your terminal wherever `play-dl` is installed as a dependency (this will be wherever you've run `npm install` for Utility-Discord-Bot), run `node`, and then `require('play-dl').authorization()`. This will prompt you to create the `.data/youtube.data` file, which you can then copy to a server.
+- youtube-dl-exec
+  - Use a browser extension to export cookies from youtube.com, and then create `.data/cookies.txt` file in the root of wherever you run the bot. This file will be passed directly to `yt-dlp` via the `youtube-dl-exec` library. This `.data` directory is mounted as a volume on the server (if you use the provided `deploy/docker-compose.yaml` file).
+- ytdl-core
+  - From the request headers in any network request on youtube.com, copy the value for the "cookie" header. The value should be pasted to the `YOUTUBE_COOKIES` environment variable (in your `.env` file). Wrap the value with quotes since it will contain special characters.
 
 ## Contributing to the code
 

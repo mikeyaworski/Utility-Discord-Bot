@@ -2,7 +2,7 @@
   "name": "utility-discord-bot",
   "version": "1.0.0",
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "description": "https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot",
   "main": "src/index.ts",
@@ -88,9 +88,9 @@
     "socket.io": "^4.5.1",
     "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
-    "youtube-dl-exec": "^2.4.0",
+    "youtube-dl-exec": "^3.0.2",
     "youtube-sr": "^4.1.17",
-    "ytdl-core": "^4.11.2"
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "@types/chess.js": "^0.11.2",
@@ -107,7 +107,7 @@
     "@types/lodash.get": "^4.4.6",
     "@types/lodash.throttle": "^4.1.6",
     "@types/lodash.uniq": "^4.5.6",
-    "@types/node": "^14.14.10",
+    "@types/node": "^18.19.34",
     "@types/node-fetch": "^2.6.6",
     "@types/ws": "^7.4.6",
     "@typescript-eslint/eslint-plugin": "^5.48.2",
