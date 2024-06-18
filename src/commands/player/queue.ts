@@ -70,7 +70,6 @@ commandBuilder.addSubcommand(subcommand => {
 export async function handleList(interaction: AnyInteraction, session: Session): Promise<IntentionalAny> {
   await replyWithSessionButtons({
     interaction,
-    session,
     run: async s => {
       const currentTrack = s.getCurrentTrack();
       if (!currentTrack) {
@@ -150,7 +149,6 @@ async function handleLoop(interaction: AnyInteraction, session: Session): Promis
   else session.unloop();
   await replyWithSessionButtons({
     interaction,
-    session: sessions.get(interaction.guild!.id),
     run: async s => {
       return {
         description: `Queue loop: ${s.isLooped() ? 'ON' : 'OFF'}.`,

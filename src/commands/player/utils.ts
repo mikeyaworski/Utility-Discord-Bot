@@ -5,6 +5,7 @@ import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
 import { editLatest, getErrorMsg, isCommand, isContextMenu } from 'src/discord-utils';
 import Session from './session';
+import sessions from './sessions';
 import Track, { VideoDetails } from './track';
 import { handleList } from './queue';
 
@@ -90,7 +91,6 @@ export function getPlayerButtons(session: Session, interaction?: AnyInteraction)
 }
 
 type ListenForPlayerButtonsOptions = {
-  session: Session,
   cb?: () => Promise<unknown>,
   interaction?: AnyInteraction,
   message?: MessageResponse,
@@ -103,7 +103,6 @@ type ListenForPlayerButtonsOptions = {
 });
 
 export async function listenForPlayerButtons({
-  session,
   interaction,
   message,
   cb,
@@ -111,6 +110,11 @@ export async function listenForPlayerButtons({
   const time = interaction
     ? interaction.createdTimestamp + INTERACTION_MAX_TIMEOUT - Date.now()
     : undefined;
+  const guildId = interaction
+    ? interaction.guildId
+    : message && 'guildId' in message
+      ? message.guildId
+      : null;
   const msgId = message ? message.id : (await interaction?.fetchReply())?.id;
   const channel = interaction
     ? interaction.channel
@@ -151,6 +155,14 @@ export async function listenForPlayerButtons({
       await i.deferUpdate().catch(() => {
         log('Could not defer update for interaction', i.customId);
       });
+      const session = guildId ? sessions.get(guildId) : null;
+      if (!session) {
+        await i.followUp({
+          ephemeral: true,
+          content: 'Session does not exist.',
+        });
+        return;
+      }
       switch (i.customId) {
         case 'shuffle': {
           session.shuffle();
@@ -257,7 +269,6 @@ export function attachPlayerButtons(
   listenForPlayerButtons({
     interaction,
     message,
-    session,
     cb: async () => {
       await populateButtons();
     },
@@ -343,9 +354,9 @@ export async function getMessageData({
 export async function replyWithSessionButtons({
   interaction,
   channel,
-  session,
   run,
 }: ReplyWithSessionButtonsOptions): Promise<IntentionalAny> {
+  const session = interaction?.guildId && sessions.get(interaction.guildId);
   if (!session) {
     await interaction?.editReply({
       components: [],
@@ -407,13 +418,11 @@ export async function replyWithSessionButtons({
     listenForPlayerButtons({
       interaction,
       message: message || undefined,
-      session,
       cb: runAndReply,
     });
   } else if (message) {
     listenForPlayerButtons({
       message,
-      session,
       cb: runAndReply,
     });
   }

@@ -449,7 +449,6 @@ export default class Session {
           const message = await channel.send(messageData).catch(error);
           if (message) {
             listenForPlayerButtons({
-              session: this,
               message,
               cb: async () => {
                 const newMessageData = await getMessageData({
