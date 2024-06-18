@@ -87,22 +87,21 @@ export default class Track {
         }
         const stream = process.stdout;
         const onError = (err: unknown) => {
+          // When there is a null or 0 exit code, it means that the process was terminated intentionally and without error
+          if (typeof err === 'object' && err && 'exitCode' in err && !err.exitCode) {
+            return;
+          }
           if (!process.killed) process.kill();
           stream.resume();
           reject(err);
-          // This ERR_STREAM_PREMATURE_CLOSE error happens when you skip the last song, but there is no issue with that.
-          // TODO: See if there is an alternative way to skip songs which does not run into this error.
-          if (typeof err === 'object' && err && 'code' in err && err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
-            return;
-          }
           error(err);
         };
 
-        // For some reason, this library thinks that force crashing the server by throwing their own (uncatchable) error is good "default" behavior...
-        process.removeAllListeners('error');
-        process.removeAllListeners('exit');
+        // The library has incorrect typing, but this is an extension of a Promise
+        // @ts-ignore
+        process.catch(onError);
+        process.on('error', onError); // This may be redundant, but it doesn't seem to ever get called
 
-        process.on('error', onError);
         process.once('spawn', () => {
           // What we are doing:
           // 1. Using yt-dlp to get a raw stream of data from YouTube
@@ -154,11 +153,6 @@ export default class Track {
             if (!process.killed) process.kill();
           });
           return resolve(resource);
-        });
-        process.on('exit', (code, signal) => {
-          if (code || signal) {
-            error('yt-dlp process exited with code', code, 'and signal', signal);
-          }
         });
       });
     };
