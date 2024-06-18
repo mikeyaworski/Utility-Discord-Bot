@@ -1,11 +1,10 @@
 import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
 
 import ytdlExec from 'youtube-dl-exec';
-import ffmpeg from 'fluent-ffmpeg';
+import prism from 'prism-media';
 import play from 'play-dl';
-import ytdl from 'ytdl-core';
 import { error } from 'src/logging';
-import { getUniqueId } from 'src/utils';
+import { filterOutFalsy, getUniqueId } from 'src/utils';
 import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
 
 export interface VideoDetails {
@@ -75,8 +74,6 @@ export default class Track {
           quiet: true,
           format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
           cookies: './.data/cookies.txt',
-          // These flags are not verified to reduce any server crashes,
-          // but that is the intention.
           ignoreErrors: true,
           // @ts-ignore We know this is valid
           noAbortOnError: true,
@@ -95,39 +92,68 @@ export default class Track {
           reject(err);
           // This ERR_STREAM_PREMATURE_CLOSE error happens when you skip the last song, but there is no issue with that.
           // TODO: See if there is an alternative way to skip songs which does not run into this error.
-          // @ts-ignore This is useless TS
           if (typeof err === 'object' && err && 'code' in err && err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
             return;
           }
           error(err);
         };
+
+        // For some reason, this library thinks that force crashing the server by throwing their own (uncatchable) error is good "default" behavior...
+        process.removeAllListeners('error');
+        process.removeAllListeners('exit');
+
         process.on('error', onError);
         process.once('spawn', () => {
-          // Use Opus format for better performance with Discord.js
-          const manipulatedStream = ffmpeg({ source: stream })
-            .audioCodec('libopus')
-            .toFormat('ogg');
-          if (speed) {
-            manipulatedStream.audioFilters([{ filter: 'atempo', options: String(speed) }]);
-          }
-          if (seek) {
-            manipulatedStream.setStartTime(Math.ceil(seek));
-          }
-          if (shouldNormalizeAudio) {
-            // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
-            // https://k.ylo.ph/2016/04/04/loudnorm.html
-            manipulatedStream.audioFilters([{
-              filter: 'loudnorm',
-              options: [
-                'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
-                'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
-                'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
-              ],
-            }]);
-          }
-          // No need to demuxProbe since we have piped the audio through FFmpeg and specified the Opus codec with Ogg container
-          // @ts-expect-error This actually works
-          return resolve(createAudioResource(manipulatedStream, { metadata: this, inputType: StreamType.OggOpus }));
+          // What we are doing:
+          // 1. Using yt-dlp to get a raw stream of data from YouTube
+          // 2. Feeding the stream into an FFmpeg transcoder (transcoding the YouTube audio stream to a s16le format for the raw audio)
+          // 3. Manipulating the stream in various ways with FFmpeg (e.g. seeking, playback speed, loudness normalization)
+          // 4. Feeding the raw audio data (s16le) into an Opus encoder with the correct settings for Discord's API
+          // 5. Creating an audio resource with that Opus encoder
+
+          // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
+          // https://k.ylo.ph/2016/04/04/loudnorm.html
+          const loudNormOptions = [
+            'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+            'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
+            'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
+          ];
+
+          const audioFilters: [string, string][] = filterOutFalsy([
+            Boolean(speed) && ['atempo', String(speed)],
+            shouldNormalizeAudio && ['loudnorm', `${loudNormOptions.join(':')}`],
+          ]);
+
+          const audioFilterArg: [string, string] | null = audioFilters.length
+            ? ['-filter:a', audioFilters.map(filter => filter.join('=')).join(',')]
+            : null;
+
+          const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
+            Boolean(seek) && ['-ss', String(seek)],
+            ['-analyzeduration', '0'],
+            ['-loglevel', '0'],
+            ['-f', 's16le'],
+            ['-ar', '48000'],
+            ['-ac', '2'],
+            audioFilterArg,
+          ];
+
+          const transcoder = new prism.FFmpeg({
+            args: filterOutFalsy(ffmpegArgs.flat()),
+          });
+          const s16le = stream.pipe(transcoder);
+          // https://discord.com/developers/docs/topics/voice-connections#encrypting-and-sending-voice
+          // Voice data sent to discord should be encoded with Opus, using two channels (stereo) and a sample rate of 48kHz.
+          const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 });
+          const opus = s16le.pipe(encoder);
+
+          const resource = createAudioResource(opus, { metadata: this, inputType: StreamType.Opus });
+          resource.playStream.on('close', () => {
+            // Clean up processes to avoid memory leaks
+            transcoder.destroy();
+            if (!process.killed) process.kill();
+          });
+          return resolve(resource);
         });
         process.on('exit', (code, signal) => {
           if (code || signal) {
@@ -135,34 +161,6 @@ export default class Track {
           }
         });
       });
-    };
-
-    /**
-     * This is currently unused, but may be useful in the future.
-     * For now, it's the least consistent method since some videos do not work for whatever reason.
-     * This is probably faster than youtube-dl-exec, so it would be nice to use this instead if possible.
-     */
-    const tryYtdlCore: () => Promise<AudioResource<Track>> = async () => {
-      const options: ytdl.downloadOptions | undefined = YOUTUBE_COOKIES ? {
-        requestOptions: {
-          headers: {
-            cookie: YOUTUBE_COOKIES,
-          },
-        },
-      } : undefined;
-      const stream = ytdl(this.link, options);
-      if (!seek && !speed) {
-        return createAudioResource(stream, { metadata: this });
-      }
-      const manipulatedStream = ffmpeg({ source: stream }).toFormat('mp3');
-      if (speed) {
-        manipulatedStream.audioFilters(`atempo=${speed}`);
-      }
-      if (seek) {
-        manipulatedStream.setStartTime(Math.ceil(seek));
-      }
-      // @ts-expect-error This actually works
-      return createAudioResource(manipulatedStream, { metadata: this });
     };
 
     switch (this.variant) {
@@ -181,8 +179,7 @@ export default class Track {
       // We want to fall through if play-dl doesn't work, or the speed option is provided
       // eslint-disable-next-line no-fallthrough
       default: {
-        const audioResource = await tryYtdlExec();
-        return audioResource;
+        return tryYtdlExec();
       }
     }
   }

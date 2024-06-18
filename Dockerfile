@@ -2,7 +2,7 @@ FROM node:18.20-alpine
 
 WORKDIR /code
 
-RUN apk add --no-cache python3 ffmpeg alpine-sdk
+RUN apk add --no-cache python3 ffmpeg alpine-sdk autoconf automake g++ libtool
 
 COPY package*.json ./
 
