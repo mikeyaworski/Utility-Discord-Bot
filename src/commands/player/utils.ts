@@ -3,7 +3,7 @@ import { AnyInteraction, EmbedFields, IntentionalAny, MessageResponse } from 'sr
 import { Colors, FAST_FORWARD_BUTTON_TIME, INTERACTION_MAX_TIMEOUT, REWIND_BUTTON_TIME } from 'src/constants';
 import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
-import { editLatest, getErrorMsg, isCommand, isContextMenu } from 'src/discord-utils';
+import { checkVoiceErrorsByInteraction, editLatest, getErrorMsg, isCommand, isContextMenu } from 'src/discord-utils';
 import Session from './session';
 import sessions from './sessions';
 import Track, { VideoDetails } from './track';
@@ -163,81 +163,87 @@ export async function listenForPlayerButtons({
         });
         return;
       }
-      switch (i.customId) {
-        case 'shuffle': {
-          session.shuffle();
-          if (cb) cb();
-          break;
+      try {
+        switch (i.customId) {
+          case 'shuffle':
+          case 'loop':
+          case 'unloop':
+          case 'clear':
+          case 'skip':
+          case 'pause':
+          case 'resume':
+          case 'rewind':
+          case 'fast-forward': {
+            await checkVoiceErrorsByInteraction(i);
+            break;
+          }
+          default: break;
         }
-        case 'loop': {
-          session.loop();
-          if (cb) cb();
-          break;
-        }
-        case 'unloop': {
-          session.unloop();
-          if (cb) cb();
-          break;
-        }
-        case 'clear': {
-          session.clear();
-          if (cb) cb();
-          break;
-        }
-        case 'skip': {
-          await session.skip();
-          if (cb) cb();
-          break;
-        }
-        case 'pause': {
-          session.pause();
-          if (cb) cb();
-          break;
-        }
-        case 'resume': {
-          session.resume();
-          if (cb) cb();
-          break;
-        }
-        case 'refresh': {
-          if (cb) cb();
-          break;
-        }
-        case 'rewind': {
-          try {
+        switch (i.customId) {
+          case 'shuffle': {
+            session.shuffle();
+            if (cb) cb();
+            break;
+          }
+          case 'loop': {
+            session.loop();
+            if (cb) cb();
+            break;
+          }
+          case 'unloop': {
+            session.unloop();
+            if (cb) cb();
+            break;
+          }
+          case 'clear': {
+            session.clear();
+            if (cb) cb();
+            break;
+          }
+          case 'skip': {
+            await session.skip();
+            if (cb) cb();
+            break;
+          }
+          case 'pause': {
+            session.pause();
+            if (cb) cb();
+            break;
+          }
+          case 'resume': {
+            session.resume();
+            if (cb) cb();
+            break;
+          }
+          case 'refresh': {
+            if (cb) cb();
+            break;
+          }
+          case 'rewind': {
             await session.seek(Math.max(0, (session.getCurrentTrackPlayTime() - REWIND_BUTTON_TIME) / 1000));
             if (cb) cb();
-          } catch (err) {
-            error(err);
-            const msg = getErrorMsg(err);
-            await i.followUp({
-              content: msg,
-              ephemeral: true,
-            });
+            break;
           }
-          break;
-        }
-        case 'fast-forward': {
-          try {
+          case 'fast-forward': {
             await session.seek((session.getCurrentTrackPlayTime() + FAST_FORWARD_BUTTON_TIME) / 1000);
             if (cb) cb();
-          } catch (err) {
-            error(err);
-            const msg = getErrorMsg(err);
-            await i.followUp({
-              content: msg,
-              ephemeral: true,
-            });
+            break;
           }
-          break;
+          case SHOW_QUEUE_ID: {
+            await handleList(i, session);
+            break;
+          }
+          default: {
+            break;
+          }
         }
-        case SHOW_QUEUE_ID: {
-          await handleList(i, session);
-          break;
-        }
-        default: {
-          break;
-        }
+      } catch (err) {
+        error(err);
+        const msg = getErrorMsg(err);
+        await i.followUp({
+          content: msg,
+          ephemeral: true,
+        });
       }
     });
     collector?.on('end', (collected, reason) => {
