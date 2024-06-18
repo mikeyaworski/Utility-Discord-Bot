@@ -526,7 +526,8 @@ export async function checkVoiceErrors({
     guildId,
   });
 
-  // TODO: Allow commands to proceed if the bot is currently in another voice channel by itself
+  const isBotConnectedWithOthers = Boolean(botChannel && botChannel?.members.size > 1);
+
   if (!invokerChannel) {
     throw new Error('You must be connected to a voice channel.');
   }
@@ -535,7 +536,7 @@ export async function checkVoiceErrors({
     throw new Error('I don\'t have permission to connect to your voice channel.');
   }
 
-  if (botChannel && invokerChannel.id !== botChannel.id) {
+  if (botChannel && invokerChannel.id !== botChannel.id && isBotConnectedWithOthers) {
     throw new Error('You must be connected to the same voice channel as the bot.');
   }
 
