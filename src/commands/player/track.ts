@@ -1,5 +1,6 @@
 import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
 
+import { kill as killNodeProcess } from 'node:process';
 import ytdlExec from 'youtube-dl-exec';
 import prism from 'prism-media';
 import play from 'play-dl';
@@ -81,18 +82,26 @@ export default class Track {
           // Pipe stdout and stderr to the parent process. Ignore stdin.
           // Obviously stdout is for the audio data, and stderr is for any error output.
           stdio: ['ignore', 'pipe', 'pipe'],
+          // Detached so any child processes created by this yt-dlp process (e.g. FFmpeg for YouTube livestreams)
+          // will go into a process group that we can cleanup.
+          detached: true,
         });
         if (!process.stdout) {
           reject(new Error('No stdout'));
           return;
         }
+        const killProcesses = () => {
+          const childProcessesGroupId = process.pid;
+          if (!process.killed) process.kill();
+          if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId);
+        };
         const stream = process.stdout;
         const onError = (err: unknown) => {
           // When there is a null or 0 exit code, it means that the process was terminated intentionally and without error
           if (typeof err === 'object' && err && 'exitCode' in err && !err.exitCode) {
             return;
           }
-          if (!process.killed) process.kill();
+          killProcesses();
           stream.resume();
           reject(err);
           error(err);
@@ -151,7 +160,7 @@ export default class Track {
           resource.playStream.on('close', () => {
             // Clean up processes to avoid memory leaks
             transcoder.destroy();
-            if (!process.killed) process.kill();
+            killProcesses();
           });
           return resolve(resource);
         });
