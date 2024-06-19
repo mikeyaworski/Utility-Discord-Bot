@@ -6,6 +6,9 @@ import {
   parseDelay,
   isYoutubeLink,
   isTwitchVodLink,
+  isTwitchLivestreamLink,
+  isRedditLink,
+  isTwitterLink,
   getClockString,
   getSecondsFromClockString,
   getUniqueId,
@@ -140,6 +143,48 @@ describe('utils', () => {
     });
     test('invalid link', () => {
       expect(isTwitchVodLink('https://twitch.tv/foobar')).toBe(false);
+    });
+  });
+
+  describe('isTwitchLivestreamLink', () => {
+    test('proper link', () => {
+      expect(isTwitchLivestreamLink('https://twitch.tv/foobar')).toBe(true);
+    });
+    test('www', () => {
+      expect(isTwitchLivestreamLink('https://www.twitch.tv/foobar')).toBe(true);
+    });
+    test('invalid link', () => {
+      expect(isTwitchLivestreamLink('https://twitch.tv/videos/12345')).toBe(false);
+    });
+  });
+
+  describe('isTwitterLink', () => {
+    test('proper link', () => {
+      expect(isTwitterLink('https://twitter.com/foobar/status/12345')).toBe(true);
+      expect(isTwitterLink('https://x.com/foobar/status/12345')).toBe(true);
+    });
+    test('www', () => {
+      expect(isTwitterLink('https://www.twitter.com/foobar/status/12345')).toBe(true);
+      expect(isTwitterLink('https://www.x.com/foobar/status/12345')).toBe(true);
+    });
+    test('invalid link', () => {
+      expect(isTwitterLink('https://twitter.com/foobar')).toBe(false);
+    });
+  });
+
+  describe('isRedditLink', () => {
+    test('proper link', () => {
+      expect(isRedditLink('https://reddit.com')).toBe(true);
+      expect(isRedditLink('https://reddit.com/u/user/comments/abc123')).toBe(true);
+      expect(isRedditLink('https://reddit.com/r/subreddit/comments/abc123')).toBe(true);
+    });
+    test('www', () => {
+      expect(isRedditLink('https://www.reddit.com')).toBe(true);
+      expect(isRedditLink('https://www.reddit.com/u/user/comments/abc123')).toBe(true);
+      expect(isRedditLink('https://www.reddit.com/r/subreddit/comments/abc123')).toBe(true);
+    });
+    test('invalid link', () => {
+      expect(isRedditLink('https://twitter.com')).toBe(false);
     });
   });
 

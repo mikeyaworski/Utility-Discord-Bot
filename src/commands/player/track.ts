@@ -23,6 +23,9 @@ export enum TrackVariant {
   YOUTUBE_LIVESTREAM,
   TWITCH_VOD,
   TWITCH_LIVESTREAM,
+  TWITTER,
+  REDDIT,
+  ARBITRARY,
 }
 
 interface TrackConstructorOptions {
@@ -184,6 +187,7 @@ export default class Track {
         this.details = await getYoutubeDetailsFromUrl(this.link);
         break;
       }
+      case TrackVariant.TWITCH_LIVESTREAM:
       case TrackVariant.TWITCH_VOD: {
         // TODO: Add support for fetching Twitch titles
         this.details = {
@@ -191,9 +195,25 @@ export default class Track {
         };
         break;
       }
-      default: {
+      case TrackVariant.TWITTER: {
+        // TODO: Add support for fetching Twitter titles
         this.details = {
           title: 'TODO',
+        };
+        break;
+      }
+      case TrackVariant.REDDIT: {
+        // TODO: Add support for fetching Reddit titles
+        this.details = {
+          title: 'TODO',
+        };
+        break;
+      }
+      case TrackVariant.ARBITRARY:
+      default: {
+        // TODO: Add support for fetching title from URL of arbitrary website (HTML title tag probably)
+        this.details = {
+          title: 'Unknown',
         };
         break;
       }

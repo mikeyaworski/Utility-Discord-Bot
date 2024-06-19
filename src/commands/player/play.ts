@@ -6,7 +6,7 @@ import { SlashCommandBuilder } from '@discordjs/builders';
 import { EmbedBuilder, EmbedData } from 'discord.js';
 import { Colors } from 'src/constants';
 import { error } from 'src/logging';
-import { filterOutFalsy, isTwitchVodLink, shuffleArray } from 'src/utils';
+import { filterOutFalsy, isRedditLink, isTwitchLivestreamLink, isTwitchVodLink, isTwitterLink, shuffleArray } from 'src/utils';
 import { checkVoiceErrors, editLatest, parseInput } from 'src/discord-utils';
 import sessions from './sessions';
 import Track, { TrackVariant } from './track';
@@ -192,8 +192,18 @@ export async function play({
   if (shuffle) session.shuffle();
 
   if (vodLink) {
-    if (isTwitchVodLink(vodLink)) {
-      const track = new Track({ link: vodLink, variant: TrackVariant.TWITCH_VOD });
+    if (isTwitchVodLink(vodLink)
+      || isTwitchLivestreamLink(vodLink)
+      || isTwitterLink(vodLink)
+      || isRedditLink(vodLink)
+    ) {
+      let variant: TrackVariant = TrackVariant.ARBITRARY;
+      if (isTwitchVodLink(vodLink)) variant = TrackVariant.TWITCH_VOD;
+      else if (isTwitchLivestreamLink(vodLink)) variant = TrackVariant.TWITCH_LIVESTREAM;
+      else if (isTwitterLink(vodLink)) variant = TrackVariant.TWITTER;
+      else if (isRedditLink(vodLink)) variant = TrackVariant.REDDIT;
+
+      const track = new Track({ link: vodLink, variant });
       const responseMessage = await enqueue(session, [track], pushToFront);
       if (editReply) await respondWithEmbed(editReply, responseMessage);
       return interaction && attachPlayerButtons(interaction, session, message);

@@ -167,6 +167,18 @@ export function isTwitchVodLink(url: string): boolean {
   return /^https:\/\/(www\.)?twitch\.tv\/videos\/\d+$/.test(url);
 }
 
+export function isTwitchLivestreamLink(url: string): boolean {
+  return /^https:\/\/(www\.)?twitch\.tv\/[^/]+$/.test(url);
+}
+
+export function isRedditLink(url: string): boolean {
+  return /^https:\/\/(www\.)?reddit\.com/.test(url);
+}
+
+export function isTwitterLink(url: string): boolean {
+  return /^https:\/\/(www\.)?(twitter|x)\.com\/[^/]+\/status\/\d+$/.test(url);
+}
+
 export function chunkString(str: string, size: number): string[] {
   const chunks = [];
   for (let i = 0; i * size < str.length; i++) {
