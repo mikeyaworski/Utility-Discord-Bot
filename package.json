@@ -89,7 +89,7 @@
     "sodium": "^3.0.2",
     "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
-    "youtube-dl-exec": "^3.0.2",
+    "youtube-dl-exec": "^3.0.3",
     "youtube-sr": "^4.1.17"
   },
   "optionalDependencies": {

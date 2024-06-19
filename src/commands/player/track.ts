@@ -107,8 +107,6 @@ export default class Track {
           error(err);
         };
 
-        // The library has incorrect typing, but this is an extension of a Promise
-        // @ts-ignore
         process.catch(onError);
         process.on('error', onError); // This may be redundant, but it doesn't seem to ever get called
 
