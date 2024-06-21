@@ -28,6 +28,7 @@ Optional variables:
 - `YOUTUBE_COOKIES`, which is used to authenticate yourself when the player tries to play audio from YouTube.
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
 - `OPENAI_SECRET_KEY`, `CHATGPT_USER_LIMIT`, `CHATGPT_WHITELIST_USER_LIMIT`, `CHATGPT_WHITELIST_USER_IDS`, `CHATGPT_GUILD_LIMIT` and `CHATGPT_CONVERSATION_TIME_LIMIT` are used to fetch queries from ChatGPT.
+- `TEXT_TO_SPEECH_WHITELIST_USER_IDS`, which is used to permit certain users to use text-to-speech with the player (uses Open AI under the hood).
 
 ```
 # Use "production" when deploying
@@ -58,6 +59,9 @@ CHATGPT_WHITELIST_USER_IDS=
 CHATGPT_GUILD_LIMIT=10,60
 # in seconds
 CHATGPT_CONVERSATION_TIME_LIMIT=10
+
+# Text-To-Speech
+TEXT_TO_SPEECH_WHITELIST_USER_IDS=...
 
 # Player
 # 1 request every 2 seconds

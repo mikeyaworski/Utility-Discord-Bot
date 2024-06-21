@@ -4,7 +4,7 @@ import throttle from 'lodash.throttle';
 import YouTubeSr from 'youtube-sr';
 import { SlashCommandBuilder } from '@discordjs/builders';
 import { EmbedBuilder, EmbedData } from 'discord.js';
-import { Colors } from 'src/constants';
+import { Colors, ENV_LIMITER_SPLIT_REGEX, MAX_TEXT_TO_SPEECH_LENGTH } from 'src/constants';
 import { error } from 'src/logging';
 import { filterOutFalsy, isRedditLink, isTwitchLivestreamLink, isTwitchVodLink, isTwitterLink, shuffleArray } from 'src/utils';
 import { checkVoiceErrors, editLatest, parseInput } from 'src/discord-utils';
@@ -23,6 +23,8 @@ import { parseYoutubePlaylist, getTracksFromQueries } from './youtube';
 import { attachPlayerButtons, getTrackDurationString, getTrackDurationAndSpeed } from './utils';
 import { getFavorite } from './player-favorites';
 import { Query, QueryType } from './types';
+
+const whiteListedTextToSpeecUserIds = new Set<string>(process.env.TEXT_TO_SPEECH_WHITELIST_USER_IDS?.split(ENV_LIMITER_SPLIT_REGEX) || []);
 
 function respondWithEmbed(editReply: EditReply, content: EmbedData) {
   const embed = new EmbedBuilder({
@@ -58,7 +60,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
       },
       description: filterOutFalsy([
         videoDetails.title,
-        tracks[0].link,
+        tracks[0].value,
         tracks[0].sourceLink,
       ]).join('\n'),
       footer: footerText ? {
@@ -66,7 +68,7 @@ async function enqueue(session: Session, tracks: Track[], pushToFront: boolean):
       } : undefined,
     };
   } catch (err) {
-    error(tracks[0].link, tracks[0].variant, err);
+    error(tracks[0].value, tracks[0].variant, err);
     return {
       description: 'Could not fetch video details.'
         + ' This video probably cannot be played for some reason.'
@@ -123,6 +125,7 @@ interface PlayInputs {
   favoriteId?: string | null,
   streamLink?: string | null,
   queryStr?: string | null,
+  text?: string | null,
   pushToFront?: boolean,
   shuffle?: boolean,
 }
@@ -151,6 +154,7 @@ export async function play({
     vodLink,
     streamLink,
     queryStr,
+    text,
     pushToFront = false,
     shuffle = false,
   },
@@ -176,7 +180,7 @@ export async function play({
       return editReplyOrThrow('Favorite could not be found.');
     }
   }
-  const numArgs = [vodLink, streamLink, queryStr].filter(Boolean).length;
+  const numArgs = [vodLink, streamLink, queryStr, text].filter(Boolean).length;
 
   const channel = await checkVoiceErrors({ userId, guildId });
 
@@ -203,7 +207,7 @@ export async function play({
       else if (isTwitterLink(vodLink)) variant = TrackVariant.TWITTER;
       else if (isRedditLink(vodLink)) variant = TrackVariant.REDDIT;
 
-      const track = new Track({ link: vodLink, variant });
+      const track = new Track({ value: vodLink, variant });
       const responseMessage = await enqueue(session, [track], pushToFront);
       if (editReply) await respondWithEmbed(editReply, responseMessage);
       return interaction && attachPlayerButtons(interaction, session, message);
@@ -212,7 +216,7 @@ export async function play({
     if (YouTubeSr.validate(vodLink, 'VIDEO') || YouTubeSr.validate(vodLink, 'PLAYLIST')) {
       const tracks = YouTubeSr.isPlaylist(vodLink)
         ? (await parseYoutubePlaylist(vodLink))
-        : [new Track({ link: vodLink, variant: TrackVariant.YOUTUBE_VOD })];
+        : [new Track({ value: vodLink, variant: TrackVariant.YOUTUBE_VOD })];
       const responseMessage = await enqueue(session, tracks, pushToFront);
       if (editReply) await respondWithEmbed(editReply, responseMessage);
       return interaction && attachPlayerButtons(interaction, session, message);
@@ -254,7 +258,7 @@ export async function play({
     if (!YouTubeSr.validate(streamLink, 'VIDEO')) {
       return editReplyOrThrow('Invalid YouTube link.');
     }
-    const tracks = [new Track({ link: streamLink, variant: TrackVariant.YOUTUBE_LIVESTREAM })];
+    const tracks = [new Track({ value: streamLink, variant: TrackVariant.YOUTUBE_LIVESTREAM })];
     const responseMessage = await enqueue(session, tracks, pushToFront);
     if (editReply) await respondWithEmbed(editReply, responseMessage);
     return interaction && attachPlayerButtons(interaction, session, message);
@@ -268,6 +272,29 @@ export async function play({
     if (editReply) await respondWithEmbed(editReply, responseMessage);
     return interaction && attachPlayerButtons(interaction, session, message);
   }
+  if (text) {
+    if (!whiteListedTextToSpeecUserIds.has(userId)) {
+      return editReplyOrThrow('You are not permitted to use text-to-speech.');
+    }
+    const textToPlay = text.slice(0, MAX_TEXT_TO_SPEECH_LENGTH);
+    const excessText = text.slice(MAX_TEXT_TO_SPEECH_LENGTH);
+    const track = new Track({
+      value: textToPlay,
+      variant: TrackVariant.TEXT,
+    });
+    const responseMessage = await enqueue(session, [track], pushToFront);
+    if (editReply) await respondWithEmbed(editReply, responseMessage);
+    if (interaction) {
+      await attachPlayerButtons(interaction, session, message);
+      if (excessText) {
+        await interaction.followUp({
+          ephemeral: true,
+          content: `Your text was too long, so this part was not played:\n${excessText}`,
+        }).catch(error);
+      }
+    }
+    return null;
+  }
   if (interaction) await interaction.editReply('Resumed.');
   return interaction && attachPlayerButtons(interaction, session, message);
 }
@@ -278,6 +305,7 @@ const commandBuilder = new SlashCommandBuilder()
   .addStringOption(option => option.setName('link').setDescription('YouTube, Spotify, Twitch. No livestreams.').setRequired(false))
   .addStringOption(option => option.setName('query').setDescription('Generic query for YouTube.').setRequired(false))
   .addStringOption(option => option.setName('favorite').setDescription('Favorite ID.').setRequired(false))
+  .addStringOption(option => option.setName('text').setDescription('Text for text-to-speech.').setRequired(false))
   // .addStringOption(option => option.setName('stream').setDescription('YouTube livestream. Twitch is not currently supported.').setRequired(false))
   .addBooleanOption(option => option.setName('front').setDescription('Push song (one) to the front of the queue.').setRequired(false))
   .addBooleanOption(option => option.setName('shuffle').setDescription('Shuffle the queue.').setRequired(false));
@@ -290,10 +318,12 @@ const PlayCommand: Command = {
   modalLabels: {
     stream: 'YouTube livestream. (Not Twitch).',
     favorite: 'Favorite ID.',
+    text: 'Text.',
   },
   modalPlaceholders: {
     link: 'https://...',
     query: 'A song',
+    text: 'Text-To-Speech',
     favorite: '123 or my-custom-id',
     stream: 'https://...',
     front: 'yes/no',
@@ -313,6 +343,7 @@ const PlayCommand: Command = {
         favoriteId: inputs.favorite,
         streamLink: null, // inputs.stream,
         queryStr: inputs.query,
+        text: inputs.text,
         pushToFront: inputs.front,
         shuffle: inputs.shuffle,
       },
@@ -325,6 +356,7 @@ const PlayCommand: Command = {
     const favoriteId = interaction.options.getString('favorite');
     // const streamLink = interaction.options.getString('stream');
     const queryStr = interaction.options.getString('query');
+    const text = interaction.options.getString('text');
     const pushToFront = interaction.options.getBoolean('front') ?? false;
     const shuffle = interaction.options.getBoolean('shuffle') ?? false;
 
@@ -335,6 +367,7 @@ const PlayCommand: Command = {
         favoriteId,
         streamLink: null,
         queryStr,
+        text,
         pushToFront,
         shuffle,
       },

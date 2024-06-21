@@ -167,7 +167,7 @@ export default class Session {
   public async getPlayerStatus(): Promise<PlayerStatus> {
     const getTrackData: (track: Track) => Promise<TrackData> = async track => ({
       id: track.id,
-      link: track.link,
+      value: track.value,
       sourceLink: track.sourceLink,
       variant: track.variant,
       ...await track.getVideoDetails().catch(() => ({
@@ -210,7 +210,7 @@ export default class Session {
    */
   private duplicateTracks(tracks: Track[]): Track[] {
     return tracks.map(track => new Track({
-      link: track.link,
+      value: track.value,
       variant: track.variant,
       sourceLink: track.sourceLink,
     }));
@@ -433,7 +433,7 @@ export default class Session {
     try {
       const resource = await this.currentTrack.getAudioResource(this.getAudioResourceOptions());
       this.audioPlayer.play(resource);
-      log('Playing new track', this.currentTrack.link, this.currentTrack.variant);
+      log('Playing new track', this.currentTrack.value, this.currentTrack.variant);
 
       this.currentTrackPlayTime = {
         // It could buffer before starting, so we don't initialize the start time just yet
@@ -476,7 +476,7 @@ export default class Session {
       }
     } catch (err) {
       error(err);
-      log('Could not play track', this.currentTrack.link, this.currentTrack.variant);
+      log('Could not play track', this.currentTrack.value, this.currentTrack.variant);
       // Skip and try next
       this.queueLock = false;
       await this.processQueue();

@@ -18,7 +18,7 @@ export const runNowPlaying: Parameters<typeof replyWithSessionButtons>[0]['run']
   return {
     title: '🔊 Now Playing',
     description: videoDetails.title,
-    link: filterOutFalsy([currentTrack.link, currentTrack.sourceLink]).join('\n'),
+    link: filterOutFalsy([currentTrack.value, currentTrack.sourceLink]).join('\n'),
     footerText,
   };
 };

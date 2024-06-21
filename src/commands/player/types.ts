@@ -14,7 +14,7 @@ export interface Query {
 
 export interface TrackData extends VideoDetails {
   id: string,
-  link: string,
+  value: string,
   sourceLink: string | undefined,
   variant: TrackVariant,
 }

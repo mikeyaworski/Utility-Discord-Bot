@@ -22,7 +22,7 @@ export const getTracksFromQueries = (() => {
       try {
         if (queryCache.has(query)) {
           return new Track({
-            link: queryCache.get(query)!,
+            value: queryCache.get(query)!,
             variant: TrackVariant.YOUTUBE_VOD,
             sourceLink,
           });
@@ -47,7 +47,7 @@ export const getTracksFromQueries = (() => {
         const youtubeDuration = res.duration;
         queryCache.set(query, youtubeLink);
         const newTrack = new Track({
-          link: youtubeLink,
+          value: youtubeLink,
           variant: TrackVariant.YOUTUBE_VOD,
           details: youtubeTitle ? {
             title: youtubeTitle,
@@ -133,7 +133,7 @@ export async function parseYoutubePlaylistFromApi(playlistUrl: string): Promise<
         },
       }));
     tracks.push(...youtubeResults.map(({ link, details }) => new Track({
-      link,
+      value: link,
       variant: TrackVariant.YOUTUBE_VOD,
       details,
     })));
@@ -152,7 +152,7 @@ export async function parseYoutubePlaylist(playlistUrl: string): Promise<Track[]
     const playlist = await YouTubeSr.getPlaylist(playlistUrl, { limit });
     const allResults = await playlist.fetch(limit);
     return allResults.videos.map(video => new Track({
-      link: video.url,
+      value: video.url,
       variant: TrackVariant.YOUTUBE_VOD,
       details: video.title ? {
         title: video.title,

@@ -1,12 +1,19 @@
-import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
+import 'openai/shims/node';
+
+import type { Readable } from 'node:stream';
 
 import { kill as killNodeProcess } from 'node:process';
+import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
+import OpenAI from 'openai';
 import ytdlExec from 'youtube-dl-exec';
 import prism from 'prism-media';
 import play from 'play-dl';
 import { error } from 'src/logging';
 import { filterOutFalsy, getUniqueId } from 'src/utils';
 import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
+
+const apiKey = process.env.OPENAI_SECRET_KEY;
+const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
 export interface VideoDetails {
   title: string,
@@ -27,10 +34,11 @@ export enum TrackVariant {
   TWITTER,
   REDDIT,
   ARBITRARY,
+  TEXT,
 }
 
 interface TrackConstructorOptions {
-  link: string,
+  value: string,
   variant: TrackVariant,
   details?: VideoDetails,
   sourceLink?: string,
@@ -40,14 +48,14 @@ const YOUTUBE_COOKIES = process.env.YOUTUBE_COOKIES;
 
 export default class Track {
   public readonly id: string;
-  public readonly link: string;
+  public readonly value: string;
   public readonly variant: TrackVariant;
   public readonly sourceLink: string | undefined;
   private details: VideoDetails | undefined;
 
   public constructor(options: TrackConstructorOptions) {
     this.id = String(getUniqueId());
-    this.link = options.link;
+    this.value = options.value;
     this.variant = options.variant;
     this.details = options.details;
     this.sourceLink = options.sourceLink;
@@ -56,13 +64,54 @@ export default class Track {
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     const { seek, speed, shouldNormalizeAudio = true } = options;
 
+    const encodeStream = (stream: Readable | NodeJS.ReadableStream): AudioResource<Track> => {
+      // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
+      // https://k.ylo.ph/2016/04/04/loudnorm.html
+      const loudNormOptions = [
+        'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+        'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
+        'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
+      ];
+
+      const audioFilters: [string, string][] = filterOutFalsy([
+        this.variant !== TrackVariant.TEXT && Boolean(speed) && ['atempo', String(speed)],
+        this.variant !== TrackVariant.TEXT && shouldNormalizeAudio && ['loudnorm', `${loudNormOptions.join(':')}`],
+      ]);
+
+      const audioFilterArg: [string, string] | null = audioFilters.length
+        ? ['-filter:a', audioFilters.map(filter => filter.join('=')).join(',')]
+        : null;
+
+      const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
+        this.variant !== TrackVariant.TEXT && Boolean(seek) && ['-ss', String(seek)],
+        ['-analyzeduration', '0'],
+        ['-loglevel', '0'],
+        ['-f', 's16le'],
+        ['-ar', '48000'],
+        ['-ac', '2'],
+        audioFilterArg,
+      ];
+      const transcoder = new prism.FFmpeg({
+        args: filterOutFalsy(ffmpegArgs.flat()),
+      });
+      const s16le = stream.pipe(transcoder);
+      const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 });
+      const opus = s16le.pipe(encoder);
+      const resource = createAudioResource(opus, { metadata: this, inputType: StreamType.Opus });
+      resource.playStream.on('close', () => {
+        // Clean up processes to avoid memory leaks
+        transcoder.destroy();
+      });
+      return resource;
+    };
+
     // Cookies for play-dl are set in .data/youtube.data
-    const tryPlayDl: () => Promise<AudioResource<Track>> = async () => {
+    const tryPlayDl = async (): Promise<AudioResource<Track>> => {
       const source = options.seek
-        ? await play.stream(this.link, {
+        ? await play.stream(this.value, {
           seek: options.seek,
         })
-        : await play.stream(this.link);
+        : await play.stream(this.value);
       const audioResource = await createAudioResource(source.stream, {
         metadata: this,
         inputType: source.type,
@@ -70,10 +119,10 @@ export default class Track {
       return audioResource;
     };
 
-    const tryYtdlExec: () => Promise<AudioResource<Track>> = async () => {
+    const tryYtdlExec = async (): Promise<AudioResource<Track>> => {
       // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/track.ts#L46-L76
       return new Promise((resolve, reject) => {
-        const process = ytdlExec.exec(this.link, {
+        const process = ytdlExec.exec(this.value, {
           output: '-',
           quiet: true,
           format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
@@ -93,7 +142,11 @@ export default class Track {
         const killProcesses = () => {
           const childProcessesGroupId = process.pid;
           if (!process.killed) process.kill();
-          if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId);
+          try {
+            if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId);
+          } catch (err) {
+            error(err);
+          }
         };
         const stream = process.stdout;
         const onError = (err: unknown) => {
@@ -117,47 +170,9 @@ export default class Track {
           // 3. Manipulating the stream in various ways with FFmpeg (e.g. seeking, playback speed, loudness normalization)
           // 4. Feeding the raw audio data (s16le) into an Opus encoder with the correct settings for Discord's API
           // 5. Creating an audio resource with that Opus encoder
-
-          // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
-          // https://k.ylo.ph/2016/04/04/loudnorm.html
-          const loudNormOptions = [
-            'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
-            'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
-            'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
-          ];
-
-          const audioFilters: [string, string][] = filterOutFalsy([
-            Boolean(speed) && ['atempo', String(speed)],
-            shouldNormalizeAudio && ['loudnorm', `${loudNormOptions.join(':')}`],
-          ]);
-
-          const audioFilterArg: [string, string] | null = audioFilters.length
-            ? ['-filter:a', audioFilters.map(filter => filter.join('=')).join(',')]
-            : null;
-
-          const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
-            Boolean(seek) && ['-ss', String(seek)],
-            ['-analyzeduration', '0'],
-            ['-loglevel', '0'],
-            ['-f', 's16le'],
-            ['-ar', '48000'],
-            ['-ac', '2'],
-            audioFilterArg,
-          ];
-
-          const transcoder = new prism.FFmpeg({
-            args: filterOutFalsy(ffmpegArgs.flat()),
-          });
-          const s16le = stream.pipe(transcoder);
-          // https://discord.com/developers/docs/topics/voice-connections#encrypting-and-sending-voice
-          // Voice data sent to discord should be encoded with Opus, using two channels (stereo) and a sample rate of 48kHz.
-          const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 });
-          const opus = s16le.pipe(encoder);
-
-          const resource = createAudioResource(opus, { metadata: this, inputType: StreamType.Opus });
+          const resource = encodeStream(stream);
           resource.playStream.on('close', () => {
             // Clean up processes to avoid memory leaks
-            transcoder.destroy();
             killProcesses();
           });
           return resolve(resource);
@@ -165,7 +180,28 @@ export default class Track {
       });
     };
 
+    const openAiTextToSpeech: () => Promise<AudioResource<Track>> = async () => {
+      if (!openai) throw new Error('OpenAI not configured');
+      const response = await openai.audio.speech.create({
+        model: 'tts-1',
+        voice: 'alloy',
+        input: this.value,
+        response_format: 'opus',
+        speed: speed || 1.0,
+      });
+      if (!response || !response.body) {
+        throw new Error('Could not get speech');
+      }
+      const stream = response.body;
+      return encodeStream(stream);
+    };
+
+    // We want to fall through if play-dl doesn't work, or the speed option is provided
+    /* eslint-disable no-fallthrough */
     switch (this.variant) {
+      case TrackVariant.TEXT: {
+        return openAiTextToSpeech();
+      }
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
         // play-dl is currently broken
@@ -178,12 +214,11 @@ export default class Track {
         //   }
         // }
       }
-      // We want to fall through if play-dl doesn't work, or the speed option is provided
-      // eslint-disable-next-line no-fallthrough
       default: {
         return tryYtdlExec();
       }
     }
+    /* eslint-enable no-fallthrough */
   }
 
   public async getVideoDetails(): Promise<VideoDetails> {
@@ -191,7 +226,7 @@ export default class Track {
     switch (this.variant) {
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
-        this.details = await getYoutubeDetailsFromUrl(this.link);
+        this.details = await getYoutubeDetailsFromUrl(this.value);
         break;
       }
       case TrackVariant.TWITCH_LIVESTREAM:
@@ -213,6 +248,12 @@ export default class Track {
         // TODO: Add support for fetching Reddit titles
         this.details = {
           title: 'TODO',
+        };
+        break;
+      }
+      case TrackVariant.TEXT: {
+        this.details = {
+          title: 'Text To Speech',
         };
         break;
       }
