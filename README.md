@@ -43,6 +43,8 @@ DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
 
+GOOGLE_APPLICATION_CREDENTIALS=./.data/google-application-service-account.json
+
 YOUTUBE_API_KEY=...
 YOUTUBE_COOKIES="..."
 
@@ -79,6 +81,12 @@ UI_ROOT=http://localhost:8080
 ```
 
 If you are creating these environment variables for a cloud VM, make sure to change `ENVIRONMENT` to `production`, and replace `DATABASE_URL` with your production database URL (either the one from Heroku, or another service that you have set up).
+
+If you are using text-to-speech or otherwise using Google Applications, create a service account and place the JSON file here:
+
+```
+.data/google-application-service-account.json
+```
 
 ## Player Cookies
 

@@ -50,6 +50,11 @@ These instructions describe a process for manually hosting the bot on a Digital 
 
     You can use something like nano instead of vim if you struggle with the instructions above.
 
+1. (Optional) If you are using text-to-speech or otherwise using Google Applications, create a service account and place the JSON file here:
+
+    ```
+    .data/google-application-service-account.json
+    ```
 1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then generate an SSL certificate and run the nginx server:
    1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
    1. `npm run dhparam`

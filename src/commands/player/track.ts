@@ -1,10 +1,10 @@
 import 'openai/shims/node';
 
-import type { Readable } from 'node:stream';
-
+import { Readable, PassThrough } from 'node:stream';
 import { kill as killNodeProcess } from 'node:process';
 import { AudioResource, StreamType, createAudioResource } from '@discordjs/voice';
 import OpenAI from 'openai';
+import { TextToSpeechClient as GoogleTextToSpeechClient } from '@google-cloud/text-to-speech';
 import ytdlExec from 'youtube-dl-exec';
 import prism from 'prism-media';
 import play from 'play-dl';
@@ -196,11 +196,40 @@ export default class Track {
       return encodeStream(stream);
     };
 
+    const googleTextToSpeech: () => Promise<AudioResource<Track>> = async () => {
+      const client = new GoogleTextToSpeechClient();
+      const [response] = await client.synthesizeSpeech({
+        input: {
+          text: this.value,
+        },
+        voice: {
+          languageCode: 'en-US',
+          ssmlGender: 'NEUTRAL',
+        },
+        audioConfig: {
+          audioEncoding: 'OGG_OPUS',
+        },
+      });
+      if (!response.audioContent || typeof response.audioContent === 'string') {
+        error(`Failed to convert text to speech: ${response.audioContent}`);
+        throw new Error('Failed to convert text to speech.');
+      }
+      const stream = new PassThrough();
+      stream.end(Buffer.from(response.audioContent));
+      return encodeStream(stream);
+    };
+
     // We want to fall through if play-dl doesn't work, or the speed option is provided
     /* eslint-disable no-fallthrough */
     switch (this.variant) {
       case TrackVariant.TEXT: {
-        return openAiTextToSpeech();
+        try {
+          const resource = await googleTextToSpeech();
+          return resource;
+        } catch (err) {
+          error(err);
+          return openAiTextToSpeech();
+        }
       }
       case TrackVariant.YOUTUBE_LIVESTREAM:
       case TrackVariant.YOUTUBE_VOD: {
