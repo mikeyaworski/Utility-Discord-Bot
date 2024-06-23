@@ -7,7 +7,7 @@ export class Sessions {
 
   public async create(channel: VoiceBasedChannel): Promise<Session> {
     const playerSettings = await PlayerSettings.findByPk(channel.guildId);
-    const session = new Session(channel, playerSettings?.normalize ?? false);
+    const session = new Session(channel, playerSettings?.normalize ?? true);
     this.sessions.set(channel.guild.id, session);
     return session;
   }
