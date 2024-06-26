@@ -68,10 +68,10 @@ export default class Track {
       // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
       // https://k.ylo.ph/2016/04/04/loudnorm.html
       const loudNormOptions = [
-        'I=-40.0', // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
-        'LRA=7.0', // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
-        'TP=-2.0', // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
-      ];
+        ['I', '-40.0'], // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+        ['LRA', '7.0'], // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
+        ['TP', '-2.0'], // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
+      ].map(([key, value]) => `${key}=${value}`);
 
       const audioFilters: [string, string][] = filterOutFalsy([
         this.variant !== TrackVariant.TEXT && Boolean(speed) && ['atempo', String(speed)],
@@ -79,7 +79,7 @@ export default class Track {
       ]);
 
       const audioFilterArg: [string, string] | null = audioFilters.length
-        ? ['-filter:a', audioFilters.map(filter => filter.join('=')).join(',')]
+        ? ['-filter:a', audioFilters.map(([name, value]) => `${name}=${value}`).join(',')]
         : null;
 
       const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
