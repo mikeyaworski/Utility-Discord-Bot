@@ -68,7 +68,7 @@ export default class Track {
       // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
       // https://k.ylo.ph/2016/04/04/loudnorm.html
       const loudNormOptions = [
-        ['I', '-40.0'], // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+        ['I', '-30.0'], // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
         ['LRA', '7.0'], // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
         ['TP', '-2.0'], // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
       ].map(([key, value]) => `${key}=${value}`);
