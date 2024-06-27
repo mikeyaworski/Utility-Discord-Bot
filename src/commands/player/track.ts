@@ -147,7 +147,6 @@ export default class Track {
         quiet: true,
         format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
         cookies: './.data/cookies.txt',
-        // @ts-expect-error The library has incomplete typing for flags
         forceKeyframesAtCuts: true,
         downloadSections: options.seek ? `*${options.seek}-inf` : '*from-url',
       }, {

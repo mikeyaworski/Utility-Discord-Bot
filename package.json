@@ -89,7 +89,7 @@
     "socket.io": "^4.5.1",
     "spotify-url-info": "^2.2.3",
     "tweetnacl": "^1.0.3",
-    "youtube-dl-exec": "^3.0.3",
+    "youtube-dl-exec": "^3.0.6",
     "youtube-sr": "^4.1.17"
   },
   "optionalDependencies": {
