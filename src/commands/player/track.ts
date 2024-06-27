@@ -9,7 +9,7 @@ import ytdlExec from 'youtube-dl-exec';
 import prism from 'prism-media';
 import play from 'play-dl';
 import { error } from 'src/logging';
-import { filterOutFalsy, getUniqueId } from 'src/utils';
+import { filterOutFalsy, getSecondsFromUrlTimestamp, getUniqueId } from 'src/utils';
 import { getDetailsFromUrl as getYoutubeDetailsFromUrl } from './youtube';
 
 const apiKey = process.env.OPENAI_SECRET_KEY;
@@ -61,6 +61,28 @@ export default class Track {
     this.sourceLink = options.sourceLink;
   }
 
+  public getSeekTimeMs(): number | null {
+    switch (this.variant) {
+      case TrackVariant.TWITCH_LIVESTREAM:
+      case TrackVariant.TWITCH_VOD:
+      case TrackVariant.YOUTUBE_LIVESTREAM:
+      case TrackVariant.YOUTUBE_VOD: {
+        try {
+          const url = new URL(this.value);
+          const timestamp = url.searchParams.get('t');
+          if (!timestamp) return null;
+          return getSecondsFromUrlTimestamp(timestamp) * 1000;
+        } catch (err) {
+          error(err);
+          return null;
+        }
+      }
+      default: {
+        return null;
+      }
+    }
+  }
+
   public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     const { seek, speed, shouldNormalizeAudio = true } = options;
 
@@ -83,7 +105,6 @@ export default class Track {
         : null;
 
       const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
-        this.variant !== TrackVariant.TEXT && Boolean(seek) && ['-ss', String(seek)],
         ['-analyzeduration', '0'],
         ['-loglevel', '0'],
         ['-f', 's16le'],
@@ -127,6 +148,9 @@ export default class Track {
           quiet: true,
           format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
           cookies: './.data/cookies.txt',
+          // @ts-expect-error The library has incomplete typing for flags
+          forceKeyframesAtCuts: true,
+          downloadSections: seek ? `*${seek}-inf` : '*from-url',
         }, {
           // Pipe stdout and stderr to the parent process. Ignore stdin.
           // Obviously stdout is for the audio data, and stderr is for any error output.

@@ -142,6 +142,21 @@ export function getSecondsFromClockString(clockString: string): number {
   }, 0);
 }
 
+export function getSecondsFromUrlTimestamp(urlTimestamp: string): number {
+  // (?![^\d]|$) specifies that the string must have some digits
+  const urlTimestampRegex = /(^\d+$)|(^(?![^\d]|$)(\d+h)?(\d+m)?(\d+s)?$)/;
+  if (!urlTimestampRegex.test(urlTimestamp)) throw new Error('URL timestamp is not formatted properly');
+
+  if (/^\d+$/.test(urlTimestamp)) return Number(urlTimestamp);
+
+  const match = urlTimestamp.match(/((\d+)h)?((\d+)m)?((\d+)s)?/);
+  const hours = match?.[2] || '0';
+  const minutes = match?.[4] || '0';
+  const seconds = match?.[6] || '0';
+
+  return Number(seconds) + Number(minutes) * 60 + Number(hours) * 60 ** 2;
+}
+
 /**
  * Randomize array in-place using Durstenfeld shuffle algorithm.
  * https://stackoverflow.com/a/12646864/2554605

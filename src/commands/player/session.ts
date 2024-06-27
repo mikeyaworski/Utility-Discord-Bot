@@ -46,8 +46,8 @@ export default class Session {
   private currentTrackPlayTime: CurrentTrackPlayTime = {
     started: null,
     pauseStarted: null,
-    totalPauseTime: 0,
-    seeked: null,
+    totalPauseTimeMs: 0,
+    seekedMs: null,
     speed: 1,
   };
 
@@ -120,9 +120,9 @@ export default class Session {
         if (this.currentTrackPlayTime.pauseStarted != null) {
           const pausedTime = Date.now() - this.currentTrackPlayTime.pauseStarted;
           log('Resumed after being paused for', pausedTime, 'milliseconds');
-          this.currentTrackPlayTime.totalPauseTime += pausedTime;
+          this.currentTrackPlayTime.totalPauseTimeMs += pausedTime;
           this.currentTrackPlayTime.pauseStarted = null;
-          log('New total pause time:', this.currentTrackPlayTime.totalPauseTime, 'millseconds');
+          log('New total pause time:', this.currentTrackPlayTime.totalPauseTimeMs, 'millseconds');
           this.emitPlayerStatus();
         }
       }
@@ -177,7 +177,11 @@ export default class Session {
     const queue = this.isLooped() ? this.queue.concat(this.queueLoop) : this.queue;
     return {
       currentTrack: this.currentTrack ? await getTrackData(this.currentTrack) : null,
-      currentTime: this.currentTrackPlayTime,
+      currentTime: {
+        ...this.currentTrackPlayTime,
+        // Even if seeking was not invoked on the session, the track URL may have a seek time in it
+        seekedMs: this.currentTrackPlayTime.seekedMs ?? this.currentTrack?.getSeekTimeMs() ?? null,
+      },
       playbackSpeed: this.playbackSpeed,
       queue: await Promise.all(queue.slice(0, QUEUE_SNIPPET_LENGTH).map(track => getTrackData(track))),
       totalQueueSize: queue.length,
@@ -323,8 +327,8 @@ export default class Session {
     this.currentTrackPlayTime = {
       started: null,
       pauseStarted: null,
-      totalPauseTime: 0,
-      seeked: null,
+      totalPauseTimeMs: 0,
+      seekedMs: null,
       speed: this.playbackSpeed,
     };
   }
@@ -370,9 +374,9 @@ export default class Session {
     this.currentTrackPlayTime = {
       // It could buffer before starting, so we don't initialize the start time just yet
       started: null,
-      seeked: amountSeconds * 1000,
+      seekedMs: amountSeconds * 1000,
       pauseStarted: null,
-      totalPauseTime: 0,
+      totalPauseTimeMs: 0,
       speed: this.playbackSpeed,
     };
     this.emitPlayerStatus();
@@ -383,15 +387,17 @@ export default class Session {
    */
   public getCurrentTrackPlayTime(): number {
     if (!this.currentTrackPlayTime.started) return 0;
+    const trackUrlSeek = this.currentTrack?.getSeekTimeMs() ?? 0;
     const timeSinceStart = Date.now() - this.currentTrackPlayTime.started;
-    const totalPauseTime = this.isPaused() && this.currentTrackPlayTime.pauseStarted != null
-      ? (Date.now() - this.currentTrackPlayTime.pauseStarted) + this.currentTrackPlayTime.totalPauseTime
-      : this.currentTrackPlayTime.totalPauseTime;
-    const timePlayed = (timeSinceStart - totalPauseTime) * this.currentTrackPlayTime.speed;
-    if (this.currentTrackPlayTime.seeked != null) {
-      return timePlayed + this.currentTrackPlayTime.seeked;
+    const totalPauseTimeMs = this.isPaused() && this.currentTrackPlayTime.pauseStarted != null
+      ? (Date.now() - this.currentTrackPlayTime.pauseStarted) + this.currentTrackPlayTime.totalPauseTimeMs
+      : this.currentTrackPlayTime.totalPauseTimeMs;
+    const timePlayed = (timeSinceStart - totalPauseTimeMs) * this.currentTrackPlayTime.speed;
+    if (this.currentTrackPlayTime.seekedMs != null) {
+      return timePlayed + this.currentTrackPlayTime.seekedMs;
     }
-    return timePlayed;
+    // Even if seeking was not invoked on the session, the track URL may have a seek time in it
+    return timePlayed + trackUrlSeek;
   }
 
   public getVoiceConnection(): VoiceConnection | undefined {
@@ -439,8 +445,8 @@ export default class Session {
         // It could buffer before starting, so we don't initialize the start time just yet
         started: null,
         pauseStarted: null,
-        totalPauseTime: 0,
-        seeked: null,
+        totalPauseTimeMs: 0,
+        seekedMs: null,
         speed: this.playbackSpeed,
       };
 

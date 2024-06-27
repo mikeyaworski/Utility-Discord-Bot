@@ -11,6 +11,7 @@ import {
   isTwitterLink,
   getClockString,
   getSecondsFromClockString,
+  getSecondsFromUrlTimestamp,
   getUniqueId,
 } from '../utils';
 
@@ -225,6 +226,36 @@ describe('utils', () => {
       expect(getClockString(60 * 1000, 2)).toBe('01:00');
       expect(getClockString(60 * 1000, 3)).toBe('00:01:00');
       expect(getClockString(60 * 60 * 1000, 3)).toBe('01:00:00');
+    });
+  });
+
+  describe('getSecondsFromUrlTimestamp', () => {
+    test('5', () => {
+      expect(getSecondsFromUrlTimestamp('5')).toBe(5);
+    });
+    test('200', () => {
+      expect(getSecondsFromUrlTimestamp('200')).toBe(200);
+    });
+    test('5s', () => {
+      expect(getSecondsFromUrlTimestamp('5s')).toBe(5);
+    });
+    test('2m', () => {
+      expect(getSecondsFromUrlTimestamp('2m')).toBe(120);
+    });
+    test('2m5s', () => {
+      expect(getSecondsFromUrlTimestamp('2m5s')).toBe(125);
+    });
+    test('1h', () => {
+      expect(getSecondsFromUrlTimestamp('1h')).toBe(3600);
+    });
+    test('1h1m', () => {
+      expect(getSecondsFromUrlTimestamp('1h1m')).toBe(3660);
+    });
+    test('1h1s', () => {
+      expect(getSecondsFromUrlTimestamp('1h1s')).toBe(3601);
+    });
+    test('1h1m1s', () => {
+      expect(getSecondsFromUrlTimestamp('1h1m1s')).toBe(3661);
     });
   });
 
