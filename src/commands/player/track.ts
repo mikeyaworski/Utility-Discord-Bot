@@ -167,7 +167,8 @@ export default class Track {
           const childProcessesGroupId = process.pid;
           if (!process.killed) process.kill();
           try {
-            if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId);
+            // If --download-sections flag is used (seeking), we must use SIGKILL (instead of SIGTERM) to kill it immediately
+            if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId, 'SIGKILL');
           } catch (err) {
             error(err);
           }
