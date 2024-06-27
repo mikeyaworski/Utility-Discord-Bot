@@ -127,7 +127,7 @@ describe('utils', () => {
       expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM')).toBe(true);
     });
     test('extra query parameters', () => {
-      expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM&foo=bar')).toBe(false);
+      expect(isYoutubeLink('https://www.youtube.com/watch?v=QnL5P0tFkwM&foo=bar')).toBe(true);
     });
     test('invalid link', () => {
       expect(isYoutubeLink('https://twitter.com')).toBe(false);
@@ -137,6 +137,9 @@ describe('utils', () => {
   describe('isTwitchVodLink', () => {
     test('proper link', () => {
       expect(isTwitchVodLink('https://twitch.tv/videos/12345')).toBe(true);
+    });
+    test('proper link with timestamp', () => {
+      expect(isTwitchVodLink('https://twitch.tv/videos/12345?t=1h2m3s')).toBe(true);
     });
     test('www', () => {
       expect(isTwitchVodLink('https://www.twitch.tv/videos/12345')).toBe(true);

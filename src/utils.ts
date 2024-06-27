@@ -155,28 +155,60 @@ export function shuffleArray<T = unknown>(array: T[]): void {
   }
 }
 
+function testUrl(href: string, tests: {
+  origin: RegExp,
+  path?: RegExp,
+  search?: RegExp,
+}): boolean {
+  try {
+    const { origin, pathname, search } = new URL(href);
+    return tests.origin.test(origin)
+      && (!tests.path || tests.path.test(pathname))
+      && (!tests.search || tests.search.test(search));
+  } catch {
+    return false;
+  }
+}
+
 export function isYoutubeLink(str: string): boolean {
-  return /^https:\/\/(www.)?youtube.com\/watch\?v=[\da-zA-Z_-]+$/.test(str);
+  return testUrl(str, {
+    origin: /^https:\/\/(www.)?youtube.com$/,
+    path: /^\/watch$/,
+    search: /^\?.*v=[\da-zA-Z_-]+/,
+  });
 }
 
 export function getRandomElement<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-export function isTwitchVodLink(url: string): boolean {
-  return /^https:\/\/(www\.)?twitch\.tv\/videos\/\d+$/.test(url);
+const TWITCH_ORIGIN_REGEX = /^https:\/\/(www\.)?twitch\.tv$/;
+
+export function isTwitchVodLink(str: string): boolean {
+  return testUrl(str, {
+    origin: TWITCH_ORIGIN_REGEX,
+    path: /^\/videos\/\d+$/,
+  });
 }
 
-export function isTwitchLivestreamLink(url: string): boolean {
-  return /^https:\/\/(www\.)?twitch\.tv\/[^/]+$/.test(url);
+export function isTwitchLivestreamLink(str: string): boolean {
+  return testUrl(str, {
+    origin: TWITCH_ORIGIN_REGEX,
+    path: /^\/[^/]+$/,
+  });
 }
 
-export function isRedditLink(url: string): boolean {
-  return /^https:\/\/(www\.)?reddit\.com/.test(url);
+export function isRedditLink(str: string): boolean {
+  return testUrl(str, {
+    origin: /^https:\/\/(www\.)?reddit\.com/,
+  });
 }
 
-export function isTwitterLink(url: string): boolean {
-  return /^https:\/\/(www\.)?(twitter|x)\.com\/[^/]+\/status\/\d+$/.test(url);
+export function isTwitterLink(str: string): boolean {
+  return testUrl(str, {
+    origin: /^https:\/\/(www\.)?(twitter|x)\.com$/,
+    path: /^\/[^/]+\/status\/\d+$/,
+  });
 }
 
 export function chunkString(str: string, size: number): string[] {
