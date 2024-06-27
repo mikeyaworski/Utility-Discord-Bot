@@ -83,177 +83,177 @@ export default class Track {
     }
   }
 
-  public async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
-    const { seek, speed, shouldNormalizeAudio = true } = options;
+  private encodeStream(stream: Readable | NodeJS.ReadableStream, options: AudioResourceOptions): AudioResource<Track> {
+    const { speed, shouldNormalizeAudio = true } = options;
 
-    const encodeStream = (stream: Readable | NodeJS.ReadableStream): AudioResource<Track> => {
-      // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
-      // https://k.ylo.ph/2016/04/04/loudnorm.html
-      const loudNormOptions = [
-        ['I', '-30.0'], // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
-        ['LRA', '7.0'], // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
-        ['TP', '-2.0'], // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
-      ].map(([key, value]) => `${key}=${value}`);
+    // https://ffmpeg.org/ffmpeg-filters.html#loudnorm
+    // https://k.ylo.ph/2016/04/04/loudnorm.html
+    const loudNormOptions = [
+      ['I', '-30.0'], // Set integrated loudness target. Range is -70.0 - -5.0. Default value is -24.0.
+      ['LRA', '7.0'], // Set loudness range target. Range is 1.0 - 50.0. Default value is 7.0.
+      ['TP', '-2.0'], // Set maximum true peak. Range is -9.0 - +0.0. Default value is -2.0.
+    ].map(([key, value]) => `${key}=${value}`);
 
-      const audioFilters: [string, string][] = filterOutFalsy([
-        this.variant !== TrackVariant.TEXT && Boolean(speed) && ['atempo', String(speed)],
-        this.variant !== TrackVariant.TEXT && shouldNormalizeAudio && ['loudnorm', `${loudNormOptions.join(':')}`],
-      ]);
+    const audioFilters: [string, string][] = filterOutFalsy([
+      this.variant !== TrackVariant.TEXT && Boolean(speed) && ['atempo', String(speed)],
+      this.variant !== TrackVariant.TEXT && shouldNormalizeAudio && ['loudnorm', `${loudNormOptions.join(':')}`],
+    ]);
 
-      const audioFilterArg: [string, string] | null = audioFilters.length
-        ? ['-filter:a', audioFilters.map(([name, value]) => `${name}=${value}`).join(',')]
-        : null;
+    const audioFilterArg: [string, string] | null = audioFilters.length
+      ? ['-filter:a', audioFilters.map(([name, value]) => `${name}=${value}`).join(',')]
+      : null;
 
-      const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
-        ['-analyzeduration', '0'],
-        ['-loglevel', '0'],
-        ['-f', 's16le'],
-        ['-ar', '48000'],
-        ['-ac', '2'],
-        audioFilterArg,
-      ];
-      const transcoder = new prism.FFmpeg({
-        args: filterOutFalsy(ffmpegArgs.flat()),
-      });
-      const s16le = stream.pipe(transcoder);
-      const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 });
-      const opus = s16le.pipe(encoder);
-      const resource = createAudioResource(opus, { metadata: this, inputType: StreamType.Opus });
-      resource.playStream.on('close', () => {
-        // Clean up processes to avoid memory leaks
-        transcoder.destroy();
-      });
-      return resource;
-    };
+    const ffmpegArgs: ([string, string] | [string] | false | null)[] = [
+      ['-analyzeduration', '0'],
+      ['-loglevel', '0'],
+      ['-f', 's16le'],
+      ['-ar', '48000'],
+      ['-ac', '2'],
+      audioFilterArg,
+    ];
+    const transcoder = new prism.FFmpeg({
+      args: filterOutFalsy(ffmpegArgs.flat()),
+    });
+    const s16le = stream.pipe(transcoder);
+    const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 });
+    const opus = s16le.pipe(encoder);
+    const resource = createAudioResource(opus, { metadata: this, inputType: StreamType.Opus });
+    resource.playStream.on('close', () => {
+      // Clean up processes to avoid memory leaks
+      transcoder.destroy();
+    });
+    return resource;
+  }
 
+  private async tryPlayDl(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     // Cookies for play-dl are set in .data/youtube.data
-    const tryPlayDl = async (): Promise<AudioResource<Track>> => {
-      const source = options.seek
-        ? await play.stream(this.value, {
-          seek: options.seek,
-        })
-        : await play.stream(this.value);
-      const audioResource = await createAudioResource(source.stream, {
-        metadata: this,
-        inputType: source.type,
-      });
-      return audioResource;
-    };
+    const source = options.seek
+      ? await play.stream(this.value, {
+        seek: options.seek,
+      })
+      : await play.stream(this.value);
+    const audioResource = await createAudioResource(source.stream, {
+      metadata: this,
+      inputType: source.type,
+    });
+    return audioResource;
+  }
 
-    const tryYtdlExec = async (): Promise<AudioResource<Track>> => {
-      // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/track.ts#L46-L76
-      return new Promise((resolve, reject) => {
-        const process = ytdlExec.exec(this.value, {
-          output: '-',
-          quiet: true,
-          format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
-          cookies: './.data/cookies.txt',
-          // @ts-expect-error The library has incomplete typing for flags
-          forceKeyframesAtCuts: true,
-          downloadSections: seek ? `*${seek}-inf` : '*from-url',
-        }, {
-          // Pipe stdout and stderr to the parent process. Ignore stdin.
-          // Obviously stdout is for the audio data, and stderr is for any error output.
-          stdio: ['ignore', 'pipe', 'pipe'],
-          // Detached so any child processes created by this yt-dlp process (e.g. FFmpeg for YouTube livestreams)
-          // will go into a process group that we can cleanup.
-          detached: true,
-        });
-        if (!process.stdout) {
-          reject(new Error('No stdout'));
+  private async tryYtdlExec(options: AudioResourceOptions): Promise<AudioResource<Track>> {
+    // https://github.com/discordjs/voice/blob/f1869a9af5a44ec9a4f52c2dd282352b1521427d/examples/music-bot/src/music/track.ts#L46-L76
+    return new Promise((resolve, reject) => {
+      const process = ytdlExec.exec(this.value, {
+        output: '-',
+        quiet: true,
+        format: 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio',
+        cookies: './.data/cookies.txt',
+        // @ts-expect-error The library has incomplete typing for flags
+        forceKeyframesAtCuts: true,
+        downloadSections: options.seek ? `*${options.seek}-inf` : '*from-url',
+      }, {
+        // Pipe stdout and stderr to the parent process. Ignore stdin.
+        // Obviously stdout is for the audio data, and stderr is for any error output.
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // Detached so any child processes created by this yt-dlp process (e.g. FFmpeg for YouTube livestreams)
+        // will go into a process group that we can cleanup.
+        detached: true,
+      });
+      if (!process.stdout) {
+        reject(new Error('No stdout'));
+        return;
+      }
+      const killProcesses = () => {
+        const childProcessesGroupId = process.pid;
+        if (!process.killed) process.kill();
+        try {
+          // If --download-sections flag is used (seeking), we must use SIGKILL (instead of SIGTERM) to kill it immediately
+          if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId, 'SIGKILL');
+        } catch (err) {
+          error(err);
+        }
+      };
+      const stream = process.stdout;
+      const onError = (err: unknown) => {
+        // When there is a null or 0 exit code, it means that the process was terminated intentionally and without error
+        if (typeof err === 'object' && err && 'exitCode' in err && !err.exitCode) {
           return;
         }
-        const killProcesses = () => {
-          const childProcessesGroupId = process.pid;
-          if (!process.killed) process.kill();
-          try {
-            // If --download-sections flag is used (seeking), we must use SIGKILL (instead of SIGTERM) to kill it immediately
-            if (childProcessesGroupId != null) killNodeProcess(-childProcessesGroupId, 'SIGKILL');
-          } catch (err) {
-            error(err);
-          }
-        };
-        const stream = process.stdout;
-        const onError = (err: unknown) => {
-          // When there is a null or 0 exit code, it means that the process was terminated intentionally and without error
-          if (typeof err === 'object' && err && 'exitCode' in err && !err.exitCode) {
-            return;
-          }
+        killProcesses();
+        stream.resume();
+        reject(err);
+        error(err);
+      };
+
+      process.catch(onError);
+      process.on('error', onError); // This may be redundant, but it doesn't seem to ever get called
+
+      process.once('spawn', () => {
+        // What we are doing:
+        // 1. Using yt-dlp to get a raw stream of data from YouTube
+        // 2. Feeding the stream into an FFmpeg transcoder (transcoding the YouTube audio stream to a s16le format for the raw audio)
+        // 3. Manipulating the stream in various ways with FFmpeg (e.g. seeking, playback speed, loudness normalization)
+        // 4. Feeding the raw audio data (s16le) into an Opus encoder with the correct settings for Discord's API
+        // 5. Creating an audio resource with that Opus encoder
+        const resource = this.encodeStream(stream, options);
+        resource.playStream.on('close', () => {
+          // Clean up processes to avoid memory leaks
           killProcesses();
-          stream.resume();
-          reject(err);
-          error(err);
-        };
-
-        process.catch(onError);
-        process.on('error', onError); // This may be redundant, but it doesn't seem to ever get called
-
-        process.once('spawn', () => {
-          // What we are doing:
-          // 1. Using yt-dlp to get a raw stream of data from YouTube
-          // 2. Feeding the stream into an FFmpeg transcoder (transcoding the YouTube audio stream to a s16le format for the raw audio)
-          // 3. Manipulating the stream in various ways with FFmpeg (e.g. seeking, playback speed, loudness normalization)
-          // 4. Feeding the raw audio data (s16le) into an Opus encoder with the correct settings for Discord's API
-          // 5. Creating an audio resource with that Opus encoder
-          const resource = encodeStream(stream);
-          resource.playStream.on('close', () => {
-            // Clean up processes to avoid memory leaks
-            killProcesses();
-          });
-          return resolve(resource);
         });
+        return resolve(resource);
       });
-    };
+    });
+  }
 
-    const openAiTextToSpeech: () => Promise<AudioResource<Track>> = async () => {
-      if (!openai) throw new Error('OpenAI not configured');
-      const response = await openai.audio.speech.create({
-        model: 'tts-1',
-        voice: 'alloy',
-        input: this.value,
-        response_format: 'opus',
-        speed: speed || 1.0,
-      });
-      if (!response || !response.body) {
-        throw new Error('Could not get speech');
-      }
-      const stream = response.body;
-      return encodeStream(stream);
-    };
+  private async openAiTextToSpeech(options: AudioResourceOptions): Promise<AudioResource<Track>> {
+    if (!openai) throw new Error('OpenAI not configured');
+    const response = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'alloy',
+      input: this.value,
+      response_format: 'opus',
+      speed: options.speed || 1.0,
+    });
+    if (!response || !response.body) {
+      throw new Error('Could not get speech');
+    }
+    const stream = response.body;
+    return this.encodeStream(stream, options);
+  }
 
-    const googleTextToSpeech: () => Promise<AudioResource<Track>> = async () => {
-      const client = new GoogleTextToSpeechClient();
-      const [response] = await client.synthesizeSpeech({
-        input: {
-          text: this.value,
-        },
-        voice: {
-          languageCode: 'en-US',
-          ssmlGender: 'NEUTRAL',
-        },
-        audioConfig: {
-          audioEncoding: 'OGG_OPUS',
-        },
-      });
-      if (!response.audioContent || typeof response.audioContent === 'string') {
-        error(`Failed to convert text to speech: ${response.audioContent}`);
-        throw new Error('Failed to convert text to speech.');
-      }
-      const stream = new PassThrough();
-      stream.end(Buffer.from(response.audioContent));
-      return encodeStream(stream);
-    };
+  private async googleTextToSpeech(options: AudioResourceOptions): Promise<AudioResource<Track>> {
+    const client = new GoogleTextToSpeechClient();
+    const [response] = await client.synthesizeSpeech({
+      input: {
+        text: this.value,
+      },
+      voice: {
+        languageCode: 'en-US',
+        ssmlGender: 'NEUTRAL',
+      },
+      audioConfig: {
+        audioEncoding: 'OGG_OPUS',
+      },
+    });
+    if (!response.audioContent || typeof response.audioContent === 'string') {
+      error(`Failed to convert text to speech: ${response.audioContent}`);
+      throw new Error('Failed to convert text to speech.');
+    }
+    const stream = new PassThrough();
+    stream.end(Buffer.from(response.audioContent));
+    return this.encodeStream(stream, options);
+  }
 
+  private async createAudioResource(options: AudioResourceOptions): Promise<AudioResource<Track>> {
     // We want to fall through if play-dl doesn't work, or the speed option is provided
     /* eslint-disable no-fallthrough */
     switch (this.variant) {
       case TrackVariant.TEXT: {
         try {
-          const resource = await googleTextToSpeech();
+          const resource = await this.googleTextToSpeech(options);
           return resource;
         } catch (err) {
           error(err);
-          return openAiTextToSpeech();
+          return this.openAiTextToSpeech(options);
         }
       }
       case TrackVariant.YOUTUBE_LIVESTREAM:
@@ -261,7 +261,7 @@ export default class Track {
         // play-dl is currently broken
         // if (!speed) {
         //   try {
-        //     const audioResource = await tryPlayDl();
+        //     const audioResource = await this.tryPlayDl(options);
         //     return audioResource;
         //   } catch (err) {
         //     error('Error playing resource from play-dl', err);
@@ -269,7 +269,7 @@ export default class Track {
         // }
       }
       default: {
-        return tryYtdlExec();
+        return this.tryYtdlExec(options);
       }
     }
     /* eslint-enable no-fallthrough */
