@@ -32,6 +32,7 @@
     "restart:docker-compose": "npm run stop:docker-compose && npm run start:docker-compose",
     "remove-volumes": "docker volume rm deploy_webroot deploy_certbot-etc deploy_certbot-var",
     "remove-bot-image": "docker container rm utility-discord-bot && docker image rm utility-discord-bot-utility-discord-bot",
+    "stats:bot": "docker stats utility-discord-bot",
     "logs:bot": "docker logs -f --timestamps utility-discord-bot",
     "logs:cron": "cat /var/log/cron.log",
     "logs:http": "docker logs -f --timestamps http-server",
