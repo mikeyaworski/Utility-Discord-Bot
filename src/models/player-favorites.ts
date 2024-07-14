@@ -3,7 +3,6 @@ import Sequelize, {
   Model,
   InferAttributes,
   InferCreationAttributes,
-  Op,
 } from 'sequelize';
 import type { ModelDefinition } from 'src/types';
 
@@ -87,11 +86,6 @@ const PlayerFavoritesDefinition: ModelDefinition = sequelize => {
       {
         unique: true,
         fields: ['guild_id', 'custom_id'],
-        where: {
-          custom_id: {
-            [Op.ne]: null,
-          },
-        },
       },
     ],
   });
