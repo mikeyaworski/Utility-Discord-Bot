@@ -1,9 +1,9 @@
-import Discord, { TextBasedChannel, ButtonBuilder, ButtonStyle, MessageType } from 'discord.js';
+import Discord, { TextBasedChannel, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { AnyInteraction, EmbedFields, IntentionalAny, MessageResponse } from 'src/types';
 import { Colors, FAST_FORWARD_BUTTON_TIME, INTERACTION_MAX_TIMEOUT, REWIND_BUTTON_TIME } from 'src/constants';
 import { error, log } from 'src/logging';
 import { filterOutFalsy, getClockString } from 'src/utils';
-import { checkVoiceErrorsByInteraction, editLatest, getErrorMsg, isCommand, isContextMenu } from 'src/discord-utils';
+import { checkVoiceErrorsByInteraction, editLatest, getErrorMsg, isCommand, isContextMenu, removeButtons } from 'src/discord-utils';
 import Session from './session';
 import sessions from './sessions';
 import Track, { VideoDetails } from './track';
@@ -125,27 +125,6 @@ export async function listenForPlayerButtons({
     log('Attempted to listen for player buttons, but could not find channel.', interaction, message);
   }
 
-  async function removeButtons() {
-    if (!interaction && message && 'edit' in message && message.editable && message.type === MessageType.Default) {
-      // This is a channel message (outside of an interaction)
-      // Note: Message collectors for non-ephemeral messages like this should probably never stop,
-      // but this code is here in the event that they do, for whatever reason.
-      await message.edit({
-        components: [],
-      });
-    } else if (interaction && message) {
-      // This is a follow-up message to an interaction. We need to use webhook.editMessage to edit the
-      // follow-up message as opposed to the first message in the interaction.
-      await interaction.webhook.editMessage(message.id, {
-        components: [],
-      });
-    } else if (interaction) {
-      await interaction.editReply({
-        components: [],
-      });
-    }
-  }
-
   try {
     const collector = channel?.createMessageComponentCollector({
       filter: i => i.message.id === msgId,
@@ -248,11 +227,11 @@ export async function listenForPlayerButtons({
     });
     collector?.on('end', (collected, reason) => {
       log('Ended collection of message components.', 'Reason:', reason);
-      removeButtons().catch(error);
+      removeButtons({ interaction, message }).catch(error);
     });
   } catch (err) {
     log('Entered catch block for player buttons collector.');
-    removeButtons().catch(error);
+    removeButtons({ interaction, message }).catch(error);
   }
 }
 

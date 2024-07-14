@@ -29,9 +29,24 @@ const sequelize = new Sequelize(process.env.DATABASE_URL!, sequelizeOpts);
 fs
   .readdirSync(__dirname)
   .filter(file => file.endsWith('.ts') && file !== 'index.ts')
+  .sort((a, b) => {
+    // Junction tables go at the end because they reference tables that need to be initialized first
+    if (a.includes('junction')) return 1;
+    if (b.includes('junction')) return -1;
+    return 0;
+  })
   .map(file => {
     // eslint-disable-next-line global-require, import/no-dynamic-require, @typescript-eslint/no-var-requires
-    return require(path.join(__dirname, file)).default(sequelize);
+    return require(path.join(__dirname, file));
+  })
+  .map(modelExports => {
+    modelExports.default(sequelize);
+    return modelExports;
+  })
+  .forEach(modelExports => {
+    if (modelExports.associate) {
+      modelExports.associate();
+    }
   });
 
 export async function syncModels(): Promise<IntentionalAny> {

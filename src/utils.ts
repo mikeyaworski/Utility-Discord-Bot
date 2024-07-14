@@ -242,3 +242,7 @@ export const getUniqueId = (() => {
     return id;
   };
 })();
+
+export function isNumber(input: unknown): input is number {
+  return !Number.isNaN(Number(input));
+}

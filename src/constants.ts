@@ -30,6 +30,8 @@ export const MESSAGE_PREVIEW_LENGTH = 50;
 export const YT_PLAYLIST_PAGE_SIZE = 50;
 export const MAX_YT_PLAYLIST_PAGE_FETCHES = 4;
 
+export const MOVIE_DATABASE_API_ROOT = 'https://www.omdbapi.com';
+
 export const SPOTIFY_API_ROOT = 'https://api.spotify.com/v1';
 export const SPOTIFY_ABLUMS_FETCH_SIZE = 20;
 export const SPOTIFY_PAGE_SIZE = 50;

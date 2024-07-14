@@ -71,6 +71,9 @@ PLAYER_USER_LIMIT=1,2
 # 1 request per second
 PLAYER_GUILD_LIMIT=1,1
 
+# Movie Database API
+OMBD_API_KEY=...
+
 # Create your own webhook secret if you intend to use the webhook API routes and want them protected
 WEBHOOK_SECRET=...
 

@@ -22,6 +22,11 @@ import ChatGPT from './utilities/chatgpt';
 
 import Chess from './chess';
 
+import Movies from './movies';
+import MovieNightConfig from './movies/movie-night-config';
+import MovieNotes from './movies/movie-notes';
+import MovieLists from './movies/movie-lists';
+
 import Play from './player/play';
 import Connect from './player/connect';
 import Seek from './player/seek';
@@ -48,6 +53,12 @@ const commands = [
   Timers,
   Say,
   ChatGPT,
+
+  // Movies
+  Movies,
+  MovieNightConfig,
+  MovieNotes,
+  MovieLists,
 
   // Player
   Play,

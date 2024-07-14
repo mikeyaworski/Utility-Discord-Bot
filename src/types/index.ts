@@ -7,6 +7,7 @@ import type {
   Collection,
   Snowflake,
   GuildMember,
+  Interaction,
   CommandInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
@@ -164,3 +165,5 @@ export type RateLimiter = {
   // Throws an error with a message description if there was a consumption error
   attempt: RateLimitAttemptFn,
 };
+
+export type InteractionCreateArg = Interaction<CacheType>;

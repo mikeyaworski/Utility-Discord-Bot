@@ -20,6 +20,8 @@ import {
   WebhookMessageEditOptions,
   StringSelectMenuBuilder,
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   InteractionType,
   ContextMenuCommandInteraction,
   ButtonInteraction,
@@ -30,6 +32,12 @@ import {
   BaseInteraction,
   MessageCreateOptions,
   VoiceBasedChannel,
+  MessageType,
+  InteractionEditReplyOptions,
+  TextChannel,
+  TextInputStyle,
+  ModalBuilder,
+  TextInputBuilder,
 } from 'discord.js';
 
 import type {
@@ -37,11 +45,14 @@ import type {
   Command,
   AnyInteraction,
   AnyMapping,
+  GenericMapping,
   MessageResponse,
   GuildTextChannel,
   RateLimitAttemptFn,
   RateLimiter,
   RateLimitOptions,
+  StringMapping,
+  InteractionCreateArg,
 } from 'src/types';
 
 import dotenv from 'dotenv';
@@ -82,6 +93,9 @@ export function isGuildChannel(channel: Channel): channel is GuildTextChannel {
     || channel.type === ChannelType.GuildAnnouncement
     || channel.type === ChannelType.AnnouncementThread
     || channel.type === ChannelType.GuildStageVoice;
+}
+export function isGuildRegularTextChannel(channel: Channel): channel is TextChannel {
+  return channel.type === ChannelType.GuildText;
 }
 export function isCommand(interaction: BaseInteraction): interaction is ChatInputCommandInteraction {
   return interaction.type === InteractionType.ApplicationCommand && interaction.isChatInputCommand();
@@ -1194,4 +1208,208 @@ export function throwIfNotImageAttachment(attachment: Attachment | undefined | n
   if (attachment && !(attachment.contentType && /^image\//.test(attachment.contentType))) {
     throw new Error('Attachment must be an image.');
   }
+}
+
+interface RemoveButtonsOptions {
+  interaction?: AnyInteraction,
+  message?: MessageResponse,
+}
+
+export async function removeButtons({ interaction, message }: RemoveButtonsOptions): Promise<void> {
+  if (!interaction && message && 'edit' in message && message.editable && message.type === MessageType.Default) {
+    // This is a channel message (outside of an interaction)
+    // Note: Message collectors for non-ephemeral messages like this should probably never stop,
+    // but this code is here in the event that they do, for whatever reason.
+    await message.edit({
+      components: [],
+    });
+  } else if (interaction && message) {
+    // This is a follow-up message to an interaction. We need to use webhook.editMessage to edit the
+    // follow-up message as opposed to the first message in the interaction.
+    await interaction.webhook.editMessage(message.id, {
+      components: [],
+    });
+  } else if (interaction) {
+    await interaction.editReply({
+      components: [],
+    });
+  }
+}
+
+type Handler = (i: AnyInteraction) => void | Promise<void>;
+type HandlerWithConfig = {
+  handler: Handler,
+  deferResponse?: boolean,
+}
+type Handlers = GenericMapping<Handler | HandlerWithConfig>;
+
+type ListenForButtonsOptions = {
+  handlers: Handlers,
+  cleanupCb?: () => void | Promise<unknown>,
+  interaction?: AnyInteraction,
+  message?: MessageResponse,
+} & ({
+  interaction: AnyInteraction,
+  message?: undefined,
+} | {
+  message: MessageResponse,
+  interaction?: AnyInteraction,
+});
+
+export async function listenForButtons({
+  interaction,
+  message,
+  handlers,
+  cleanupCb,
+}: ListenForButtonsOptions): Promise<void> {
+  const time = interaction
+    ? interaction.createdTimestamp + INTERACTION_MAX_TIMEOUT - Date.now()
+    : undefined;
+  const msgId = message ? message.id : (await interaction?.fetchReply())?.id;
+  const channel = interaction
+    ? interaction.channel
+    : message && 'channel' in message
+      ? message.channel
+      : null;
+  if (!channel) {
+    log('Attempted to listen for buttons, but could not find channel.', interaction, message);
+  }
+
+  try {
+    const collector = channel?.createMessageComponentCollector({
+      filter: i => i.message.id === msgId,
+      time,
+    });
+    collector?.on('collect', async i => {
+      const handler = handlers[i.customId];
+      const deferResponse = typeof handler === 'object'
+        ? handler.deferResponse ?? true
+        : true;
+      if (deferResponse) {
+        await i.deferUpdate().catch(() => {
+          log('Could not defer update for interaction', i.customId);
+        });
+      }
+      if (handler) {
+        if (typeof handler === 'function') handler(i);
+        else handler.handler(i);
+        if (cleanupCb) cleanupCb();
+      }
+    });
+    collector?.on('end', (collected, reason) => {
+      log('Ended collection of message components.', 'Reason:', reason);
+      removeButtons({ interaction, message }).catch(error);
+    });
+  } catch (err) {
+    log('Entered catch block for player buttons collector.');
+    removeButtons({ interaction, message }).catch(error);
+  }
+}
+
+interface ButtonConfig {
+  id: string,
+  label: string,
+  style: ButtonStyle,
+}
+export function getButtonsRow(buttons: ButtonConfig[]): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>({
+    components: buttons.map(({ id, label, style }) => new ButtonBuilder({
+      customId: id,
+      label,
+      style,
+    })),
+  });
+}
+
+interface ButtonConfigWithHandler extends ButtonConfig {
+  cb: Handler,
+  deferResponse?: boolean,
+}
+
+export async function replyWithButtons({
+  interaction,
+  buttons,
+  messageData,
+  cleanupCb,
+}: {
+  interaction: AnyInteraction,
+  buttons: ButtonConfigWithHandler[],
+  messageData: InteractionEditReplyOptions,
+  cleanupCb?: ListenForButtonsOptions['cleanupCb'],
+}): Promise<Message<boolean>> {
+  const message = await interaction.editReply({
+    ...messageData,
+    components: [
+      getButtonsRow(buttons),
+    ],
+  });
+  const handlers = buttons.reduce((acc, button) => {
+    if ('deferResponse' in button) {
+      acc[button.id] = {
+        handler: button.cb,
+        deferResponse: button.deferResponse,
+      };
+    } else {
+      acc[button.id] = button.cb;
+    }
+    return acc;
+  }, {} as ListenForButtonsOptions['handlers']);
+  listenForButtons({
+    interaction,
+    message,
+    handlers,
+    cleanupCb,
+  });
+  return message;
+}
+
+export async function getResponseFromModal({
+  interaction,
+  id,
+  title,
+  inputs,
+}: {
+  interaction: AnyInteraction,
+  id: string,
+  title: string,
+  inputs: GenericMapping<{
+    label: string,
+    placeholder?: string,
+    value?: string,
+    style?: TextInputStyle,
+    required?: boolean,
+  }>,
+}): Promise<[ModalSubmitInteraction, StringMapping]> {
+  if (!('showModal' in interaction)) throw new Error('Can only get modal response from command interaction');
+  return new Promise(resolve => {
+    const modal = new ModalBuilder()
+      .setCustomId(id)
+      .setTitle(title.slice(0, 45));
+    Object.entries(inputs).forEach(([id, input]) => {
+      const inputBuilder = new TextInputBuilder()
+        .setCustomId(id)
+        .setLabel(input.label.slice(0, 45))
+        .setPlaceholder(input.placeholder?.slice(0, 100) || '')
+        .setValue(input.value == null ? '' : String(input.value))
+        .setRequired(input.required ?? false)
+        .setStyle(input.style ?? TextInputStyle.Short);
+      const row = new ActionRowBuilder<TextInputBuilder>().addComponents(inputBuilder);
+      modal.addComponents(row);
+    });
+    interaction.showModal(modal);
+    async function handleInteraction(interaction: InteractionCreateArg) {
+      if (isModalSubmit(interaction) && interaction.customId === id) {
+        const results = Object.keys(inputs).reduce((acc, inputKey) => {
+          return {
+            ...acc,
+            [inputKey]: interaction.fields.getTextInputValue(inputKey),
+          };
+        }, {} as StringMapping);
+        resolve([interaction, results]);
+        // @ts-ignore https://github.com/discordjs/discord.js/issues/10358
+        client.removeListener('interactionCreate', handleInteraction);
+      }
+    }
+    client.on('interactionCreate', handleInteraction);
+  });
 }
