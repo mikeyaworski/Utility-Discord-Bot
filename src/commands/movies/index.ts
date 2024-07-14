@@ -240,6 +240,10 @@ function applyFilterOptions(subcommand: SlashCommandSubcommandBuilder): SlashCom
       .setName('is_favorite')
       .setDescription('Whether the movie is favorited')
       .setRequired(false))
+    .addBooleanOption(option => option
+      .setName('was_watched')
+      .setDescription('Whether the movie has been watched')
+      .setRequired(false))
     .addNumberOption(option => option
       .setName('movie_length_max')
       .setMinValue(0)
@@ -279,6 +283,7 @@ interface FilterInputs {
   metacritic_rating?: number,
   maturity_rating?: string,
   is_favorite?: boolean,
+  was_watched?: boolean,
 }
 
 interface MovieAttributeInputs {
@@ -542,6 +547,9 @@ async function getFilteredMovies(inputs: FilterInputs): Promise<Movie[]> {
   }
   if (inputs.is_favorite != null) {
     where.is_favorite = inputs.is_favorite;
+  }
+  if (inputs.was_watched != null) {
+    where.was_watched = inputs.was_watched;
   }
   if (inputs.imdb_rating) {
     where.imdb_rating = { [Op.gte]: inputs.imdb_rating };
