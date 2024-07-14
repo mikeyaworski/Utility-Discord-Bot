@@ -344,8 +344,9 @@ const MovieNightConfigCommand: Command = {
   guildOnly: true,
   slashCommandData: commandBuilder,
   runCommand: async interaction => {
-    await interaction.deferReply({ ephemeral: true });
     const subcommand = getSubcommand(interaction);
+    const isEphemeral = Boolean(subcommand && !['show'].includes(subcommand));
+    await interaction.deferReply({ ephemeral: isEphemeral });
     switch (subcommand) {
       case 'create': {
         await handleCreate(interaction);
