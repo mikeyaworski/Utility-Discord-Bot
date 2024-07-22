@@ -11,6 +11,7 @@ import Sequelize, {
   BelongsToManyHasAssociationMixin,
   NonAttribute,
 } from 'sequelize';
+import { notUuidValidator } from 'src/utils';
 import { Movies } from './movies';
 
 export class MovieLists extends Model<
@@ -52,6 +53,7 @@ const MovieListsDefinition: ModelDefinition = sequelize => {
       allowNull: true,
       validate: {
         notEmpty: true,
+        notUuidValidator,
       },
     },
   }, {

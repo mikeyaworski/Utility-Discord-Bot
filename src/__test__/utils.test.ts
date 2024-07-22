@@ -13,6 +13,8 @@ import {
   getSecondsFromClockString,
   getSecondsFromUrlTimestamp,
   getUniqueId,
+  isUuid,
+  notUuidValidator,
 } from '../utils';
 
 describe('utils', () => {
@@ -301,6 +303,30 @@ describe('utils', () => {
     });
     test('third call', () => {
       expect(getUniqueId()).toBe(3);
+    });
+  });
+
+  describe('isUuid', () => {
+    test('ac548368-df12-4cf7-b7e5-d078adf92cf7', () => {
+      expect(isUuid('ac548368-df12-4cf7-b7e5-d078adf92cf7')).toBe(true);
+    });
+    test('ffffffff-ffff-ffff-ffff-ffffffffffff', () => {
+      expect(isUuid('ffffffff-ffff-ffff-ffff-ffffffffffff')).toBe(true);
+    });
+    test('foo', () => {
+      expect(isUuid('foo')).toBe(false);
+    });
+  });
+
+  describe('notUuidValidator', () => {
+    test('ac548368-df12-4cf7-b7e5-d078adf92cf7', () => {
+      expect(() => notUuidValidator('ac548368-df12-4cf7-b7e5-d078adf92cf7')).toThrow();
+    });
+    test('ffffffff-ffff-ffff-ffff-ffffffffffff', () => {
+      expect(() => notUuidValidator('ffffffff-ffff-ffff-ffff-ffffffffffff')).toThrow();
+    });
+    test('foo', () => {
+      expect(() => notUuidValidator('foo')).not.toThrow();
     });
   });
 });

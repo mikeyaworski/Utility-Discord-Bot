@@ -246,3 +246,12 @@ export const getUniqueId = (() => {
 export function isNumber(input: unknown): input is number {
   return !Number.isNaN(Number(input));
 }
+
+export function isUuid(input: string): boolean {
+  // This is not strictly correct since invalid UUIDv4s will pass this regex, but it covers the validation we're after
+  return /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(input);
+}
+
+export function notUuidValidator(input: string): void {
+  if (isUuid(input)) throw new Error('Do not use UUIDs for custom IDs');
+}

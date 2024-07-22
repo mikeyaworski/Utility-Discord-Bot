@@ -1,10 +1,12 @@
+import type { ModelDefinition } from 'src/types';
+
 import Sequelize, {
   CreationOptional,
   Model,
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
-import type { ModelDefinition } from 'src/types';
+import { notUuidValidator } from 'src/utils';
 
 export enum FavoriteVariant {
   LINK = 'LINK',
@@ -56,6 +58,7 @@ const PlayerFavoritesDefinition: ModelDefinition = sequelize => {
       allowNull: true,
       validate: {
         notEmpty: true,
+        notUuidValidator,
       },
     },
     variant: {
