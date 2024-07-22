@@ -88,6 +88,9 @@ const MoviesDefinition: ModelDefinition = sequelize => {
     director: {
       type: Sequelize.STRING,
       allowNull: true,
+      validate: {
+        is: COMMA_SEPARATED_VALIDATION_REGEX,
+      },
     },
     genre: {
       type: Sequelize.TEXT,
