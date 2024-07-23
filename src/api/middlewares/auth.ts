@@ -33,6 +33,10 @@ export type AuthRequest<T = Request> = T & {
   user: User,
 }
 
+export type GuildRequest<T = Request> = T & {
+  guild: Guild,
+}
+
 // Storing promises in a global variable lets us avoid rate limiting issues if multiple
 // endpoints are hit simultaneously and there is a cache miss. This ensures the Discord API
 // requests will be made only once since all request handlers will await the same promise

@@ -1,6 +1,6 @@
 import { getTimeZones } from '@vvo/tzdb';
 import humanizeDurationUtil from 'humanize-duration';
-import type { Falsy } from 'src/types';
+import type { Falsy, IntentionalAny } from 'src/types';
 
 export function array<T = unknown>(t: T | T[]): T[] {
   return Array.isArray(t) ? t : [t];
@@ -245,6 +245,14 @@ export const getUniqueId = (() => {
 
 export function isNumber(input: unknown): input is number {
   return !Number.isNaN(Number(input));
+}
+
+export function isValidKey<T extends object>(obj: T, key: keyof IntentionalAny): key is keyof T {
+  return key in obj;
+}
+
+export function camelCaseToSnakeCase(input: string): string {
+  return input.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
 export function isUuid(input: string): boolean {

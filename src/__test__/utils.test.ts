@@ -13,6 +13,7 @@ import {
   getSecondsFromClockString,
   getSecondsFromUrlTimestamp,
   getUniqueId,
+  camelCaseToSnakeCase,
   isUuid,
   notUuidValidator,
 } from '../utils';
@@ -303,6 +304,22 @@ describe('utils', () => {
     });
     test('third call', () => {
       expect(getUniqueId()).toBe(3);
+    });
+  });
+
+  describe('camelCaseToSnakeCase', () => {
+    test('fooBar', () => {
+      expect(camelCaseToSnakeCase('fooBar')).toBe('foo_bar');
+    });
+    test('foo_bar', () => {
+      expect(camelCaseToSnakeCase('foo_bar')).toBe('foo_bar');
+    });
+    test('fooBarFooBar', () => {
+      expect(camelCaseToSnakeCase('fooBarFooBar')).toBe('foo_bar_foo_bar');
+    });
+    test('IMDb', () => {
+      // This is not meant to be supported, so this test verifies that we don't support it.
+      expect(camelCaseToSnakeCase('IMDb')).toBe('_i_m_db');
     });
   });
 
