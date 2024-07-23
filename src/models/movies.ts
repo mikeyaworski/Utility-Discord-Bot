@@ -11,6 +11,10 @@ import Sequelize, {
   HasManyRemoveAssociationsMixin,
   HasManyCountAssociationsMixin,
   NonAttribute,
+  BelongsToManySetAssociationsMixin,
+  BelongsToManyRemoveAssociationsMixin,
+  BelongsToManyRemoveAssociationMixin,
+  BelongsToManyHasAssociationMixin,
 } from 'sequelize';
 import { MovieNotes } from './movie-notes';
 import { MovieLists } from './movie-lists';
@@ -22,11 +26,16 @@ export class Movies extends Model<
 > {
   // https://sequelize.org/docs/v6/other-topics/typescript/
   declare getLists: BelongsToManyGetAssociationsMixin<MovieLists>;
+  declare hasList: BelongsToManyHasAssociationMixin<MovieLists, MovieLists['id']>;
   declare countLists: HasManyCountAssociationsMixin;
+  declare setLists: BelongsToManySetAssociationsMixin<MovieLists, MovieLists['id']>;
+  declare removeList: BelongsToManyRemoveAssociationMixin<MovieLists, MovieLists['id']>;
+  declare removeLists: BelongsToManyRemoveAssociationsMixin<MovieLists, MovieLists['id']>;
   declare getNotes: HasManyGetAssociationsMixin<MovieNotes>;
   declare createNote: HasManyCreateAssociationMixin<MovieNotes, 'movie_id'>;
   declare removeNote: HasManyRemoveAssociationsMixin<MovieNotes, MovieNotePrimaryKeyType>;
   declare notes?: NonAttribute<MovieNotes[]>;
+  declare lists?: NonAttribute<MovieLists[]>;
 
   declare id: CreationOptional<string>;
   declare guild_id: string;

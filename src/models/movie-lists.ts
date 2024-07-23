@@ -8,6 +8,8 @@ import Sequelize, {
   BelongsToManyGetAssociationsMixin,
   BelongsToManyAddAssociationMixin,
   BelongsToManyRemoveAssociationMixin,
+  BelongsToManyRemoveAssociationsMixin,
+  BelongsToManySetAssociationsMixin,
   BelongsToManyHasAssociationMixin,
   NonAttribute,
 } from 'sequelize';
@@ -20,8 +22,10 @@ export class MovieLists extends Model<
   // https://sequelize.org/docs/v6/other-topics/typescript/
   declare getMovies: BelongsToManyGetAssociationsMixin<Movies>;
   declare addMovie: BelongsToManyAddAssociationMixin<Movies, Movies['id']>;
-  declare removeMovie: BelongsToManyRemoveAssociationMixin<Movies, 'id'>;
-  declare hasMovie: BelongsToManyHasAssociationMixin<Movies, 'id'>;
+  declare removeMovie: BelongsToManyRemoveAssociationMixin<Movies, Movies['id']>;
+  declare removeMovies: BelongsToManyRemoveAssociationsMixin<Movies, Movies['id']>;
+  declare setMovies: BelongsToManySetAssociationsMixin<Movies, Movies['id']>;
+  declare hasMovie: BelongsToManyHasAssociationMixin<Movies, Movies['id']>;
   declare movies?: NonAttribute<Movies[]>;
 
   declare id: CreationOptional<string>;
