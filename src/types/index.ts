@@ -35,6 +35,8 @@ export type IntentionalAny = any;
 
 export type Falsy = | undefined | '' | false | null | 0;
 
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
+
 // https://stackoverflow.com/a/43001581/2554605
 export type Mutable<T> = { -readonly [P in keyof T]: T[P] };
 export type DeepMutable<T> = { -readonly [P in keyof T]: DeepMutable<T[P]> };
