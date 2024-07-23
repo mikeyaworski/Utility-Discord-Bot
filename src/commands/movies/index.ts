@@ -374,12 +374,14 @@ export async function createMovie({
   title,
   imdbId,
   isFavorite = false,
+  wasWatched = false,
 }: {
   userId: string,
   guildId: string,
   imdbId?: string,
   title?: string,
   isFavorite?: boolean,
+  wasWatched?: boolean,
 }): Promise<Movie> {
   if (!imdbId && !title) {
     throw new Error('You must provide IMDb code or title');
@@ -404,7 +406,7 @@ export async function createMovie({
         guild_id: guildId,
         title: res.data.Title,
         is_favorite: isFavorite,
-        was_watched: false,
+        was_watched: wasWatched,
         actors: res.data.Actors,
         director: res.data.Director,
         genre: res.data.Genre,
