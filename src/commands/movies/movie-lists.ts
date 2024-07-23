@@ -223,6 +223,7 @@ async function handleAddMovie(interaction: AnyInteraction) {
     return interaction.editReply(`Movie was added to list "${list.name}"`);
   }
   const newMovie = await createMovie({
+    userId: interaction.user.id,
     guildId,
     title,
     imdbId,

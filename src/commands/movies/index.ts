@@ -18,12 +18,15 @@ import {
   getChannel,
   isGuildRegularTextChannel,
   getResponseFromModal,
+  getRateLimiterFromEnv,
 } from 'src/discord-utils';
 import { log } from 'src/logging';
 import { getRandomElement, isNumber } from 'src/utils';
 import { MovieNightConfig } from 'src/models/movie-night-config';
 
 dotenv.config();
+
+const rateLimiter = getRateLimiterFromEnv('MOVIES_USER_CREATE_LIMIT', 'MOVIES_GUILD_CREATE_LIMIT');
 
 const movieApiKey = process.env.OMBD_API_KEY;
 
@@ -366,11 +369,13 @@ export async function getMovie({
 }
 
 export async function createMovie({
+  userId,
   guildId,
   title,
   imdbId,
   isFavorite = false,
 }: {
+  userId: string,
   guildId: string,
   imdbId?: string,
   title?: string,
@@ -381,6 +386,7 @@ export async function createMovie({
   }
 
   if (movieApiKey) {
+    await rateLimiter.attempt({ userId, guildId });
     const url = new URL(MOVIE_DATABASE_API_ROOT);
     url.searchParams.append('apiKey', movieApiKey);
     url.searchParams.append('type', 'movie');
@@ -445,6 +451,7 @@ async function handleCreate(interaction: AnyInteraction): Promise<IntentionalAny
   }) as MovieAttributeInputs;
 
   const movie = await createMovie({
+    userId: interaction.user.id,
     guildId: interaction.guildId!,
     title: inputs.title,
     imdbId: inputs.imdb_id,

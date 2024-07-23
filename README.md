@@ -73,6 +73,9 @@ PLAYER_GUILD_LIMIT=1,1
 
 # Movie Database API
 OMBD_API_KEY=...
+MOVIES_USER_CREATE_LIMIT=100,14400
+# 150 requests every 4 hours (under 1000 requests per day)
+MOVIES_GUILD_CREATE_LIMIT=150,14400
 
 # Create your own webhook secret if you intend to use the webhook API routes and want them protected
 WEBHOOK_SECRET=...
