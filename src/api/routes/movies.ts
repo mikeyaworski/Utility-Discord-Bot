@@ -55,7 +55,7 @@ interface MovieRequest extends AuthRequest<GuildRequest> {
 async function movieMiddleware(req: Optional<MovieRequest, 'movie'>, res: Response, next: NextFunction): Promise<void> {
   const movie = await Movies.findOne({
     where: {
-      imdb_id: req.params.movieId,
+      id: req.params.movieId,
       guild_id: req.params.guildId,
     },
     include: {
@@ -65,7 +65,7 @@ async function movieMiddleware(req: Optional<MovieRequest, 'movie'>, res: Respon
         attributes: [],
       },
     },
-  });
+  }).catch(() => null);
   if (movie) {
     req.movie = movie;
     next();
