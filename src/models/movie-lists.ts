@@ -15,6 +15,7 @@ import Sequelize, {
 } from 'sequelize';
 import { notUuidValidator } from 'src/utils';
 import { Movies } from './movies';
+import { MovieListsJunction } from './movie-lists-junction';
 
 export class MovieLists extends Model<
   InferAttributes<MovieLists>, InferCreationAttributes<MovieLists>
@@ -27,6 +28,7 @@ export class MovieLists extends Model<
   declare setMovies: BelongsToManySetAssociationsMixin<Movies, Movies['id']>;
   declare hasMovie: BelongsToManyHasAssociationMixin<Movies, Movies['id']>;
   declare movies?: NonAttribute<Movies[]>;
+  declare junction?: NonAttribute<MovieListsJunction>;
 
   declare id: CreationOptional<string>;
   declare guild_id: string;

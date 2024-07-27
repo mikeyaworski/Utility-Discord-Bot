@@ -18,6 +18,7 @@ import Sequelize, {
 } from 'sequelize';
 import { MovieNotes } from './movie-notes';
 import { MovieLists } from './movie-lists';
+import { MovieListsJunction } from './movie-lists-junction';
 
 type MovieNotePrimaryKeyType = MovieNotes['id'];
 
@@ -36,6 +37,7 @@ export class Movies extends Model<
   declare removeNote: HasManyRemoveAssociationsMixin<MovieNotes, MovieNotePrimaryKeyType>;
   declare notes?: NonAttribute<MovieNotes[]>;
   declare lists?: NonAttribute<MovieLists[]>;
+  declare junction?: NonAttribute<MovieListsJunction>;
 
   declare id: CreationOptional<string>;
   declare guild_id: string;
