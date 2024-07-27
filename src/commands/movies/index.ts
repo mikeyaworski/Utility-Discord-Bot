@@ -635,6 +635,24 @@ async function handleList(interaction: AnyInteraction): Promise<IntentionalAny> 
   }
 }
 
+export async function startMovie(movie: Movie): Promise<void> {
+  await movie.update({ was_watched: true });
+  const movieNightConfig = await MovieNightConfig.findByPk(movie.guild_id);
+  if (movieNightConfig) {
+    const channel = await getChannel(movieNightConfig.channel_id);
+    if (channel && isGuildRegularTextChannel(channel)) {
+      const thread = await channel.threads.create({
+        name: movie.title,
+        invitable: true,
+      });
+      await thread.send({
+        content: `<@&${movieNightConfig.role_id}>`,
+        embeds: getMovieEmbeds(movie),
+      });
+    }
+  }
+}
+
 async function handlePick(interaction: AnyInteraction): Promise<IntentionalAny> {
   const inputs = await parseInput({
     slashCommandData: commandBuilder,
@@ -664,25 +682,7 @@ async function handlePick(interaction: AnyInteraction): Promise<IntentionalAny> 
       id: 'start',
       label: 'Start',
       style: ButtonStyle.Success,
-      cb: async () => {
-        await pickedMovie.update({
-          was_watched: true,
-        });
-        const movieNightConfig = await MovieNightConfig.findByPk(interaction.guildId!);
-        if (movieNightConfig) {
-          const channel = await getChannel(movieNightConfig.channel_id);
-          if (channel && isGuildRegularTextChannel(channel)) {
-            const thread = await channel.threads.create({
-              name: pickedMovie.title,
-              invitable: true,
-            });
-            await thread.send({
-              content: `<@&${movieNightConfig.role_id}>`,
-              embeds: getMovieEmbeds(pickedMovie),
-            });
-          }
-        }
-      },
+      cb: () => startMovie(pickedMovie),
     }],
     cleanupCb: async () => {
       await interaction.editReply({

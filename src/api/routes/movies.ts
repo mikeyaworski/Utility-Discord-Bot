@@ -8,7 +8,7 @@ import { guildMiddleware } from 'src/api/middlewares/guild';
 import { Movie, Movies } from 'src/models/movies';
 import { MovieNotes } from 'src/models/movie-notes';
 import { MovieLists, MovieList } from 'src/models/movie-lists';
-import { createMovie } from 'src/commands/movies';
+import { createMovie, startMovie } from 'src/commands/movies';
 import { error } from 'src/logging';
 import { camelCaseToSnakeCase, isValidKey } from 'src/utils';
 import { getErrorMsg } from 'src/discord-utils';
@@ -24,6 +24,7 @@ const router = express.Router();
  * PATCH /movies/:guildId/:movieId
  * DELETE /movies/:guildId/:movieId
  * PUT /movies/:guildId/:movieId/lists
+ * POST /movies/:guildId/:movieId/start
  *
  * GET /movies/:guildId/lists
  * POST /movies/:guildId/lists
@@ -229,6 +230,13 @@ router.put('/:guildId/:movieId/lists', authMiddleware, guildMiddleware, movieMid
     error(err);
     return res.status(400).send(getErrorMsg(err));
   }
+});
+
+// @ts-expect-error
+router.post('/:guildId/:movieId/start', authMiddleware, guildMiddleware, movieMiddleware, async (req: MovieRequest, res) => {
+  const { movie } = req;
+  await startMovie(movie);
+  res.status(204).end();
 });
 
 // @ts-expect-error
