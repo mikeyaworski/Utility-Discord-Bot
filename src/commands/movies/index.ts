@@ -623,13 +623,15 @@ async function handleList(interaction: AnyInteraction): Promise<IntentionalAny> 
         embeds: getMovieEmbeds(filteredMovies[0]),
       },
     });
-  } else {
+  } else if (filteredMovies.length <= 20) {
     const embeds = filteredMovies.map(movie => getMovieEmbeds(movie)).flat();
     await replyWithEmbeds({
       interaction,
       embeds,
       ephemeral: false,
     });
+  } else {
+    await interaction.editReply(`There are too many to list (${filteredMovies.length}). Please narrow your search.`);
   }
 }
 
