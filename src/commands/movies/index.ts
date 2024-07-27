@@ -628,7 +628,7 @@ async function handleList(interaction: AnyInteraction): Promise<IntentionalAny> 
     await replyWithEmbeds({
       interaction,
       embeds,
-      ephemeral: true,
+      ephemeral: false,
     });
   }
 }
