@@ -579,9 +579,12 @@ async function getFilteredMovies(inputs: FilterInputs): Promise<Movie[]> {
       where: {
         custom_id: inputs.list,
       },
+      through: {
+        as: 'junction',
+      },
     };
   }
-  return Movies.findAll(query).catch(() => {
+  const movies = await Movies.findAll(query).catch(() => {
     // We cannot use the same query for testing both list "id" and "custom_id"
     // since an error can be thrown if the value for "id" does not conform to UUID syntax
     if (inputs.list) {
@@ -591,9 +594,16 @@ async function getFilteredMovies(inputs: FilterInputs): Promise<Movie[]> {
         where: {
           id: inputs.list,
         },
+        through: {
+          as: 'junction',
+        },
       };
     }
     return Movies.findAll(query);
+  });
+  return movies.sort((a, b) => {
+    if (!inputs.list) return 0;
+    return a.lists![0].junction!.order - b.lists![0].junction!.order;
   });
 }
 
