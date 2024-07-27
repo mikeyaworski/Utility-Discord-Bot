@@ -1,7 +1,6 @@
 import type { Command, IntentionalAny, AnyInteraction, CommandOrModalRunMethod } from 'src/types';
 
 import axios from 'axios';
-import dotenv from 'dotenv';
 import { ButtonStyle } from 'discord.js';
 import { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } from '@discordjs/builders';
 import { CreationAttributes, FindOptions, InferAttributes, Op } from 'sequelize';
@@ -23,8 +22,6 @@ import {
 import { log } from 'src/logging';
 import { getRandomElement, isNumber } from 'src/utils';
 import { MovieNightConfig } from 'src/models/movie-night-config';
-
-dotenv.config();
 
 const rateLimiter = getRateLimiterFromEnv('MOVIES_USER_CREATE_LIMIT', 'MOVIES_GUILD_CREATE_LIMIT');
 

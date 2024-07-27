@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import axios from 'axios';
 import fetch from 'node-fetch';
 import Spotify from 'spotify-url-info';
@@ -16,8 +15,6 @@ import {
 import chunk from 'lodash.chunk';
 import get from 'lodash.get';
 import { Query, QueryType } from './types';
-
-dotenv.config();
 
 const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
 const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
