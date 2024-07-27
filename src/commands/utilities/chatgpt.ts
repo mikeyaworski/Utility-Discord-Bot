@@ -16,6 +16,7 @@ import { ENV_LIMITER_SPLIT_REGEX } from 'src/constants';
 
 export type ChatMessage = OpenAI.ChatCompletionMessageParam;
 
+const model = process.env.CHATGPT_MODEL || 'gpt-4o-mini';
 const apiKey = process.env.OPENAI_SECRET_KEY;
 const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
@@ -93,7 +94,7 @@ export async function getChatGptResponse(options: {
   };
 
   const chatCompletion = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model,
     messages: [
       ...conversation,
       newMessage,
