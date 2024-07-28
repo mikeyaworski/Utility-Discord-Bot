@@ -259,7 +259,11 @@ commandBuilder.addSubcommand(subcommand => {
   subcommand
     .setName('pick')
     .setDescription('Picks movies based on given parameters');
-  return applyFilterOptions(subcommand);
+  return applyFilterOptions(subcommand)
+    .addBooleanOption(option => option
+      .setName('ignore_list_order')
+      .setDescription('List orders are used by default')
+      .setRequired(false));
 });
 
 commandBuilder.addSubcommand(subcommand => {
@@ -667,21 +671,26 @@ async function handlePick(interaction: AnyInteraction): Promise<IntentionalAny> 
   const inputs = await parseInput({
     slashCommandData: commandBuilder,
     interaction,
-  }) as FilterInputs;
+  }) as FilterInputs & {
+    ignore_list_order?: boolean,
+  };
 
   const filteredMovies = await getFilteredMovies(inputs);
-  const pickedMovie = getRandomElement(filteredMovies);
+
+  if (!filteredMovies.length) {
+    await interaction.editReply('Could not find a movie that matches your filters.');
+    return;
+  }
+
+  const pickedMovie = !inputs.list || inputs.ignore_list_order
+    ? getRandomElement(filteredMovies)
+    : filteredMovies[0];
   await pickedMovie.reload({
     include: {
       model: MovieNotes,
       as: 'notes',
     },
   });
-
-  if (!pickedMovie) {
-    await interaction.editReply('Could not find a movie that matches your filters.');
-    return;
-  }
 
   await replyWithButtons({
     messageData: {
