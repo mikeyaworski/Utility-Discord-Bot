@@ -42,5 +42,14 @@ services:
   #     - 8080:8080
   #   depends_on:
   #     - utility-discord-bot
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - utility-discord-bot
 volumes:
   utility-discord-bot-db-data: {}

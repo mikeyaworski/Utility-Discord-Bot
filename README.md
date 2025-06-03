@@ -6,9 +6,9 @@ This is a private bot. To get this bot in your server, please host this yourself
 
 ### Hosting it on Cloud VMs
 
+- [Digital Ocean Droplet instructions](/docs/DO-Instructions.md)
 - [AWS instructions](/docs/AWS-Instructions.md)
 - [Google Cloud Engine (GCE) instructions](/docs/GCE-Instructions.md)
-- [Digital Ocean Droplet instructions](/docs/DO-Instructions.md)
 
 ### Hosting it on Heroku
 
@@ -29,6 +29,7 @@ Optional variables:
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
 - `OPENAI_SECRET_KEY`, `CHATGPT_MODEL`, `CHATGPT_USER_LIMIT`, `CHATGPT_WHITELIST_USER_LIMIT`, `CHATGPT_WHITELIST_USER_IDS`, `CHATGPT_GUILD_LIMIT` and `CHATGPT_CONVERSATION_TIME_LIMIT` are used to fetch queries from ChatGPT.
 - `TEXT_TO_SPEECH_WHITELIST_USER_IDS`, which is used to permit certain users to use text-to-speech with the player (uses Open AI under the hood).
+- `CLOUDFLARE_TUNNEL_TOKEN`, which is used to enable Cloudflare as a reverse proxy to expose your API to the internet.
 
 ```
 # Use "production" when deploying
@@ -38,6 +39,8 @@ PORT=3000
 
 # Replace with your hosted database URL when deploying
 DATABASE_URL=postgres://user:password@utility-discord-bot-db:5432/utility-discord-bot-db
+
+CLOUDFLARE_TUNNEL_TOKEN=...
 
 DISCORD_BOT_CLIENT_ID=...
 DISCORD_BOT_CLIENT_SECRET=...
@@ -121,7 +124,7 @@ As a result, there are 3 different places to insert cookies, depending on which 
 - ytdl-core
   - From the request headers in any network request on youtube.com, copy the value for the "cookie" header. The value should be pasted to the `YOUTUBE_COOKIES` environment variable (in your `.env` file). Wrap the value with quotes since it will contain special characters.
 
-## Contributing to the code
+## Contributing to the code (local development)
 
 1. If you want to contribute to the code, you will need to create a `.env` file in the root of the repository and use the template listed below.
 

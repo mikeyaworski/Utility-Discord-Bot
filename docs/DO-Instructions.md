@@ -8,6 +8,8 @@ These instructions describe a process for manually hosting the bot on a Digital 
 
 1. Create a PostgreSQL database somewhere (probably Supabase) and collect your database URL. You can find instructions on how to create a PostgreSQL database on Supabase [here](./Supabase-Instructions.md).
 
+1. If you plan to use Cloudflare to expose the API to the internet (as a reverse proxy), follow the [Cloudflare Tunnel instructions](./Cloudflare-Tunnel-Instructions.md) to create your tunnel configuration and get your tunnel token (which you can put into the `.env` file).
+
 1. Choose a Linux distrubution, e.g. Ubuntu. The supported platforms are `linux/amd64`, `linux/arm64`, and `linux/arm/v7`. The rest of the instructions assume you chose **Ubuntu**.
 
 1. For the cheapest viable option, choose a shared CPU (Basic), with the cheaper processor and no volumes. Choose whatever datacenter you want, leave the VPC network to default, and preferrably use SSH keys for authentication (follow their instructions). You won't need to manually SSH into the droplet, so adding authentication is optional.
@@ -55,18 +57,24 @@ These instructions describe a process for manually hosting the bot on a Digital 
     ```
     .data/google-application-service-account.json
     ```
-1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then generate an SSL certificate and run the nginx server:
-   1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
-   1. `npm run dhparam`
-   1. Update `deploy/nginx-conf-http/nginx.conf` and `deploy/nginx-conf-https/nginx.conf` by replacing the server name `api.utilitydiscordbot.com` (and possibly port number) with your own.
-   1. Update `deploy/docker-compose.yml` by replacing `api.utilitydiscordbot.com` and `michael@mikeyaworski.com` with your own.
+1. (Optional) If you want to expose your app to the outside world over HTTPS and a custom domain, then either generate an SSL certificate and run the nginx server, or use Cloudflare as a reverse proxy (recommended)
+   - Cloudflare: Follow the [Cloudflare Tunnel instructions](./Cloudflare-Tunnel-Instructions.md)
+   - Nginx:
+      1. Create a DNS A Record for your domain, and point it to the public IP address of your Digital Ocean Droplet.
+      1. `npm run dhparam`
+      1. Update `deploy/nginx-conf-http/nginx.conf` and `deploy/nginx-conf-https/nginx.conf` by replacing the server name `api.utilitydiscordbot.com` (and possibly port number) with your own.
+      1. Update `deploy/docker-compose.yml` by replacing `api.utilitydiscordbot.com` and `michael@mikeyaworski.com` with your own.
 1. Start the bot:
     ```
     npm run start:docker
     ```
-    Or, if you are running the nginx server mentioned in the previous step, instead start the bot with:
+    Or, if you are running one of the reverse proxy servers mentioned in the previous step, instead start the bot with:
     ```
-    npm run start:docker-compose
+    npm run start:with-cloudflare
+    ```
+    or
+    ```
+    npm run start:with-nginx
     ```
 
 1. View logs to see if everything is successful:
@@ -75,14 +83,19 @@ These instructions describe a process for manually hosting the bot on a Digital 
    ```
    Use `Ctrl + C` to get out of the logs.
 
-   If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+   If you are running the Cloudflare tunnel, then you may also want to view the logs of the tunnel:
    ```
-   docker logs certbot -f
-   docker logs http-server -f
-   docker logs https-server -f
+   npm run logs:cloudflare
    ```
 
-1. (Optional) If you enabled HTTPS, then you should also create a cronjob to run the `deploy/renew-ssl.sh` script. This will both renew the SSL certificate and restart the https nginx server, so that the server will use the new certificate.
+   If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
+   ```
+   npm run logs:cert
+   npm run logs:http
+   npm run logs:https
+   ```
+
+1. (Optional) If you enabled HTTPS with nginx, then you should also create a cronjob to run the `deploy/renew-ssl.sh` script. This will both renew the SSL certificate and restart the https nginx server, so that the server will use the new certificate.
    1. Type `pwd` and observe the result.
    1. Ensure that in `deploy/renew-ssl.sh`, the `cd` command uses the same path as your output from `pwd`.
    1. Type `crontab -e` and choose whichever option you want to open a text editor.
@@ -104,12 +117,18 @@ cd ~/utility-discord-bot
 npm run restart:docker
 ```
 
-With HTTPS:
+With Cloudflare:
 
 ```
 cd ~/utility-discord-bot
-npm run docker-pull
-npm run restart:docker-compose
+npm run restart:with-cloudflare
+```
+
+With nginx:
+
+```
+cd ~/utility-discord-bot
+npm run restart:with-nginx
 ```
 
 ## Updating
@@ -122,12 +141,20 @@ npm run docker-pull
 npm run restart:docker
 ```
 
-With HTTPS:
+With Cloudflare:
 
 ```
 cd ~/utility-discord-bot
 npm run docker-pull
-npm run restart:docker-compose
+npm run restart:with-cloudflare
+```
+
+With nginx:
+
+```
+cd ~/utility-discord-bot
+npm run docker-pull
+npm run restart:with-nginx
 ```
 
 ## Stopping
@@ -139,11 +166,18 @@ cd ~/utility-discord-bot
 npm run stop:docker
 ```
 
-With HTTPS:
+With Cloudflare:
 
 ```
 cd ~/utility-discord-bot
-npm run stop:docker-compose
+npm run stop:with-cloudflare
+```
+
+With nginx:
+
+```
+cd ~/utility-discord-bot
+npm run stop:with-nginx
 ```
 
 ## Reading Logs
@@ -153,6 +187,11 @@ cd ~/utility-discord-bot
 npm run logs:bot
 ```
 Use `Ctrl + C` to get out of the logs.
+
+If you are running the Cloudflare tunnel, then you may also want to view the logs of the tunnel:
+```
+npm run logs:cloudflare
+```
 
 If you are running the nginx server with HTTPS, then you may also want to view the logs of your nginx servers or certbots. You can do that with:
 ```

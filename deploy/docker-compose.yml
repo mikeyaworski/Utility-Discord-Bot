@@ -39,6 +39,19 @@ services:
       - 3000:3000
     networks:
       - app-network
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - utility-discord-bot
+    networks:
+      - app-network
+    profiles:
+      - cloudflare
   http-server:
     image: nginx:mainline-alpine
     container_name: http-server
@@ -52,6 +65,8 @@ services:
       - utility-discord-bot
     networks:
       - app-network
+    profiles:
+      - nginx
   certbot:
     image: certbot/certbot
     container_name: certbot
@@ -62,6 +77,8 @@ services:
     depends_on:
       - http-server
     command: certonly --webroot --webroot-path=/var/www/html --email michael@mikeyaworski.com --agree-tos --no-eff-email -d api.utilitydiscordbot.com
+    profiles:
+      - nginx
   # Note: This HTTPS server is separate from the HTTP server, since the HTTP server is used
   # to pass the ACME challenge. After we pass the challenge
   # and certbot generates the SSL certificate, we can start the HTTPS server.
@@ -81,6 +98,8 @@ services:
       - certbot
     networks:
       - app-network
+    profiles:
+      - nginx
 volumes:
   certbot-etc:
   certbot-var:
