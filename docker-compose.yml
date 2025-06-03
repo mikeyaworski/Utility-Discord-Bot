@@ -24,8 +24,6 @@ services:
       POSTGRES_DB: utility-discord-bot-db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-  # Note: hot reloading doesn't work in CRA 5
-  # https://github.com/facebook/create-react-app/issues/11879
   # utility-discord-bot-website:
   #   build: ../Utility-Discord-Bot-Website
   #   env_file:
