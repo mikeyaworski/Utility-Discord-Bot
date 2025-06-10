@@ -32,7 +32,7 @@ services:
   #     PORT: 8080
   #   restart: always
   #   container_name: utility-discord-bot-website
-  #   command: npm start
+  #   command: npm run dev
   #   volumes:
   #     - ../Utility-Discord-Bot-Website:/code/
   #     - /code/node_modules
