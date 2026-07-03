@@ -1,4 +1,7 @@
 import type { Request, Response, NextFunction, CookieOptions } from 'express';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
+import { doubleCsrf } from 'csrf-csrf';
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import get from 'lodash.get';
@@ -6,6 +9,8 @@ import type { IntentionalAny } from 'src/types';
 import { log, error } from 'src/logging';
 import { client } from 'src/client';
 import { LONG_COOKIE_TIMEOUT } from 'src/constants';
+
+dotenv.config();
 
 const cache = new NodeCache({
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -90,6 +95,52 @@ export async function getUserFromAuthToken(auth: string): Promise<User> {
   delete discordPromises[auth];
   return user;
 }
+export const csrf = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret',
+  getSessionIdentifier: (req: Request) => {
+    const token = req.cookies.auth;
+    if (!token) return ''; // This should never happen
+    return crypto.createHash('sha256').update(token).digest('hex');
+  },
+  cookieName: 'csrf',
+  // We could go for an HTTP-only cookie, but that means
+  // we have the overhead of a separate endpoint to fetch the CSRF token,
+  // which is a notable downside for a non-practical benefit to this project.
+  // For simplicity, we allow the client JS to read the cookie directly.
+  // Note: an endpoint to fetch the CSRF token is fine as long as it's protected
+  // by CORS policies and origin-checking.
+  cookieOptions: {
+    httpOnly: false,
+    secure: process.env.ENVIRONMENT === 'production',
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  },
+});
+
+export const loginCsrf = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret',
+  getSessionIdentifier: (req: Request) => {
+    const loginId = req.cookies['login-id'];
+    if (!loginId) return ''; // This should never happen
+    return loginId;
+  },
+  cookieName: 'login-csrf',
+  cookieOptions: {
+    httpOnly: false,
+    secure: process.env.ENVIRONMENT === 'production',
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  },
+});
+
+export function generateAnonymousId(req: Request, res: Response): void {
+  const anonId = crypto.randomBytes(16).toString('hex');
+  res.cookie('login-id', anonId, {
+    httpOnly: true,
+    secure: process.env.ENVIRONMENT === 'production',
+    sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+  });
+  // Need to set this on the request object so that generateCsrfToken can access it
+  req.cookies['login-id'] = anonId;
+}
 
 export function getBaseCookieOptions(): CookieOptions {
   return {
@@ -117,6 +168,12 @@ export function logIn(res: Response, tokenRes: TokenRes): string {
     ...getBaseCookieOptions(),
     maxAge: LONG_COOKIE_TIMEOUT,
   });
+  res.clearCookie('login-id');
+  res.clearCookie('login-csrf');
+  // Make sure the auth cookie is available on the request object for the CSRF token generation
+  res.req.cookies.auth = auth;
+  res.req.cookies.refresh_token = tokenRes.refresh_token;
+  csrf.generateCsrfToken(res.req, res);
   return auth;
 }
 

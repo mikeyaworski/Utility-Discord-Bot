@@ -6,6 +6,10 @@ import axios from 'axios';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
+// Middlewares
+import originMiddleware from 'src/api/middlewares/origin';
+import { csrf } from 'src/api/middlewares/auth';
+
 // Routers
 import authRouter from 'src/api/routes/auth';
 import remindersRouter from 'src/api/routes/reminders';
@@ -37,15 +41,17 @@ function preventSleep() {
   }, WAKE_INTERVAL);
 }
 
+export const ALLOWED_ORIGINS: RegExp[] = process.env.ENVIRONMENT === 'production'
+  ? [
+    /^https:\/\/utilitydiscordbot\.com$/,
+    /^https:\/\/utilitybot\.ca$/,
+  ] : [
+    /^https?:\/\/localhost(:\d+)?$/,
+  ];
+
 const corsOptions = Object.freeze({
   credentials: true,
-  origin: process.env.ENVIRONMENT === 'production'
-    ? [
-      /^https:\/\/utilitydiscordbot\.com$/,
-      /^https:\/\/utilitybot\.ca$/,
-    ] : [
-      /^https?:\/\/localhost(:\d+)?$/,
-    ],
+  origin: ALLOWED_ORIGINS,
 });
 
 const app = express();
@@ -57,9 +63,11 @@ export const socketIoServer = new SocketIoServer(httpServer, {
 export function initApi(): void {
   app.get('/', (req, res) => res.send('Healthy!'));
   app.use(cors(corsOptions));
+  app.use(originMiddleware);
   app.use(cookieParser());
   app.use(express.json());
   app.use('/auth', authRouter);
+  app.use(csrf.doubleCsrfProtection);
   app.use('/reminders', remindersRouter);
   app.use('/guilds', guildsRouter);
   app.use('/dms', dmsRouter);

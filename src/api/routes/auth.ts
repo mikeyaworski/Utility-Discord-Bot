@@ -6,12 +6,25 @@ import authMiddleware, {
   getBaseCookieOptions,
   clearCache,
   logIn,
+  loginCsrf,
+  generateAnonymousId,
+  csrf,
 } from 'src/api/middlewares/auth';
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+router.post('/login/csrf', async (req, res) => {
+  generateAnonymousId(req, res);
+  const token = loginCsrf.generateCsrfToken(req, res);
+  res.status(200).json({ token });
+});
+
+router.post('/login', loginCsrf.doubleCsrfProtection, async (req, res) => {
   const { code, redirectUri } = req.body;
+  if (!code || !redirectUri) {
+    res.status(400).end();
+    return;
+  }
   try {
     const tokenRes = await axios('https://discord.com/api/oauth2/token', {
       method: 'POST',
@@ -42,7 +55,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/logout', async (req, res) => {
+router.post('/logout', csrf.doubleCsrfProtection, async (req, res) => {
   clearCache(req.cookies.auth);
   res.clearCookie('auth', getBaseCookieOptions());
   res.clearCookie('refresh_token', getBaseCookieOptions());

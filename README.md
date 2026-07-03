@@ -84,6 +84,9 @@ MOVIES_GUILD_CREATE_LIMIT=150,14400
 # Create your own webhook secret if you intend to use the webhook API routes and want them protected
 WEBHOOK_SECRET=...
 
+# Create your own CSRF secret if you intend to use the API routes by exposing the app over HTTP
+CSRF_SECRET=...
+
 # Slash Commands in development. Remove this during deployment.
 SLASH_COMMANDS_GUILD_ID=...
 
