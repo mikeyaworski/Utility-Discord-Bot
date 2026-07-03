@@ -13,6 +13,15 @@ import authMiddleware, {
 
 const router = express.Router();
 
+router.get('/csrf', async (req, res) => {
+  if (!req.cookies.auth) {
+    res.status(400).send('CSRF token cannot be generated for unauthenticated users');
+    return;
+  }
+  const token = csrf.generateCsrfToken(req, res);
+  res.status(200).json({ token });
+});
+
 router.post('/login/csrf', async (req, res) => {
   generateAnonymousId(req, res);
   const token = loginCsrf.generateCsrfToken(req, res);

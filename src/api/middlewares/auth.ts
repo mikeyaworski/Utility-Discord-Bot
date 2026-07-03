@@ -103,14 +103,11 @@ export const csrf = doubleCsrf({
     return crypto.createHash('sha256').update(token).digest('hex');
   },
   cookieName: 'csrf',
-  // We could go for an HTTP-only cookie, but that means
-  // we have the overhead of a separate endpoint to fetch the CSRF token,
-  // which is a notable downside for a non-practical benefit to this project.
-  // For simplicity, we allow the client JS to read the cookie directly.
-  // Note: an endpoint to fetch the CSRF token is fine as long as it's protected
+  // The cookie is HTTP-only since the client JS is cross-site and cannot access the cookie anyway.
+  // Therefore, we need an endpoint to fetch the CSRF token, which is fine as long as it's protected
   // by CORS policies and origin-checking.
   cookieOptions: {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.ENVIRONMENT === 'production',
     sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
   },
@@ -125,7 +122,7 @@ export const loginCsrf = doubleCsrf({
   },
   cookieName: 'login-csrf',
   cookieOptions: {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.ENVIRONMENT === 'production',
     sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
   },
