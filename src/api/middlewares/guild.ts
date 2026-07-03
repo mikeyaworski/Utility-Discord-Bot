@@ -15,3 +15,9 @@ export async function guildMiddleware(req: AuthRequest, res: Response, next: Nex
   req.guild = guild;
   return next();
 }
+
+export async function isInSharedGuild(req: AuthRequest, res: Response, next: NextFunction): Promise<IntentionalAny> {
+  if (!req.user) return res.status(401).end();
+  if (!req.user.guilds.length) return res.status(403).send('User is not in any shared guilds with the bot');
+  return next();
+}

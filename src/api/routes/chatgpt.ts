@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { IntentionalAny } from 'src/types';
 import authMiddleware, { AuthRequest } from 'src/api/middlewares/auth';
+import { isInSharedGuild } from 'src/api/middlewares/guild';
 import { getChatGptResponse, ChatMessage } from 'src/commands/utilities/chatgpt';
 
 const router = express.Router();
@@ -46,7 +47,7 @@ async function handleMessage({
 }
 
 // @ts-expect-error
-router.post('/message', authMiddleware, (req: AuthRequest, res) => {
+router.post('/message', authMiddleware, isInSharedGuild, (req: AuthRequest, res) => {
   // TODO: Add queryImage support
   const { query, conversation } = req.body;
   handleMessage({
@@ -58,7 +59,7 @@ router.post('/message', authMiddleware, (req: AuthRequest, res) => {
 });
 
 // @ts-expect-error
-router.get('/message', authMiddleware, (req: AuthRequest, res) => {
+router.get('/message', authMiddleware, isInSharedGuild, (req: AuthRequest, res) => {
   const { query } = req.query;
   handleMessage({
     query,
