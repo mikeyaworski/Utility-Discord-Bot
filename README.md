@@ -24,6 +24,7 @@ Fill in your own `DISCORD_BOT_CLIENT_ID`, `DISCORD_BOT_CLIENT_SECRET` and `DISCO
 Optional variables:
 - `SLASH_COMMANDS_GUILD_ID`, which will only be used in development environments for easier slash command testing.
 - `WEBHOOK_SECRET`, which will only be used for the `/webhooks` API route. By default, this route is unused and is generally only useful if you would like a third party (e.g. IFTTT) to send messages via webhooks.
+- `CSRF_SECRET`, which is only necessary if you use the bot with a website. If using this, generate a random value for it.
 - `YOUTUBE_API_KEY`, which is used to fetch playlist videos for the player commands.
 - `YOUTUBE_COOKIES`, which is used to authenticate yourself when the player tries to play audio from YouTube.
 - `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, which are used to fetch playlist tracks for the player commands.
