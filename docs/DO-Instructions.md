@@ -10,15 +10,23 @@ These instructions describe a process for manually hosting the bot on a Digital 
 
 1. If you plan to use Cloudflare to expose the API to the internet (as a reverse proxy), follow the [Cloudflare Tunnel instructions](./Cloudflare-Tunnel-Instructions.md) to create your tunnel configuration and get your tunnel token (which you can put into the `.env` file).
 
-1. Choose a Linux distrubution, e.g. Ubuntu. The supported platforms are `linux/amd64`, `linux/arm64`, and `linux/arm/v7`. The rest of the instructions assume you chose **Ubuntu**.
+1. Choose a Linux distrubution, e.g. Ubuntu. The supported platforms are `linux/amd64` and `linux/arm64`. The rest of the instructions assume you chose **Ubuntu**.
 
 1. For the cheapest viable option, choose a shared CPU (Basic), with the cheaper processor and no volumes. Choose whatever datacenter you want, leave the VPC network to default, and preferrably use SSH keys for authentication (follow their instructions). You won't need to manually SSH into the droplet, so adding authentication is optional.
 
 1. Click on your droplet, go to Access and then click "Launch Droplet Console" to connect your droplet on the web. You can SSH into your droplet manually if you want, but this is unnecessary work.
 
-1. Assuming you chose Ubuntu for your distribution, Git will already be installed and you will have access to `apt`. If you use another distribution, you may need to install this software in different ways (e.g. your distribution may not have APT). At the end of the day, you need to have Docker installed and running. NPM and Git are optional, but they allow you to conveniently run scripts from the Git repo. So we will make sure all three are installed.
+1. Assuming you chose Ubuntu for your distribution, Git will already be installed and you will have access to `apt` and `snap`. If you use another distribution, you may need to install this software in different ways (e.g. your distribution may not have APT). At the end of the day, you need to have Docker installed and running. Node.js (with NPM) and Git are optional, but they allow you to conveniently run scripts from the Git repo. So we will make sure all three are installed.
+
+   Refresh the package lists first, since a fresh droplet's lists may be outdated, and then install Docker:
    ```
-   apt install docker.io npm docker-compose
+   apt update
+   apt install docker.io docker-compose
+   ```
+
+   Install a secure version of Node with snap. Ubuntu's `apt` only provides a very old version of Node, while snap provides current versions:
+   ```
+   snap install node --classic --channel=22
    ```
 
 1. As previously mentioned, this is optional, but useful. If you skip this step, you must replace `npm run ...` in all future steps with whatever that script actually does.
