@@ -1,4 +1,7 @@
-FROM node:24.22.1-alpine
+# Pinned to Alpine 3.23 (musl 1.2.5) because @discordjs/opus@0.10.0 only publishes
+# prebuilt binaries up to Node 22 (ABI v127) and for musl 1.2.5. Any other combination
+# falls back to a source build, which fails on arm64.
+FROM node:22.23.4-alpine3.23
 
 WORKDIR /code
 
