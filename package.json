@@ -2,7 +2,7 @@
   "name": "utility-discord-bot",
   "version": "1.0.0",
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "description": "https://discord.com/api/oauth2/authorize?client_id=783752800138952744&permissions=1573383287&scope=bot",
   "main": "src/index.ts",
@@ -115,7 +115,7 @@
     "@types/lodash.get": "^4.4.6",
     "@types/lodash.throttle": "^4.1.6",
     "@types/lodash.uniq": "^4.5.6",
-    "@types/node": "^18.19.34",
+    "@types/node": "^24.19.2",
     "@types/node-fetch": "^2.6.6",
     "@types/ws": "^7.4.6",
     "@typescript-eslint/eslint-plugin": "^5.48.2",
